@@ -1,0 +1,303 @@
+You are Replit Ghostwriter. Create a production-ready, full-stack TypeScript monorepo named **inktagram** that implements the complete “Tattoo Social Community” spec below.
+
+# 0) TECH & PROJECT SETUP
+- Monorepo with npm workspaces:
+  - apps/web  → Next.js 14 (App Router) + React + Tailwind + shadcn/ui + TanStack Query + Zod + React Hook Form + Zustand (light state) + next-auth JWT (custom) shim (we’ll use our own Express auth—see below) via fetch() to our server.
+  - apps/server → Node.js + Express + Prisma + PostgreSQL (Neon friendly) + Zod + Swagger (swagger-ui-express) + Multer + Cloudinary SDK + jsonwebtoken + bcrypt + ws (WebSocket) + bullmq (for background cleanups) + dayjs.
+  - packages/shared → shared types (zod schemas), API request helpers, event enums, constants.
+- TypeScript strict everywhere, ESLint + Prettier, Husky pre-commit (lint + typecheck).
+- Dev on port 5000 (proxy: web 5000/, server 5000/api via next rewrites).
+
+# 1) ENV & CONFIG
+Create `.env.example` with:
+- DATABASE_URL, PGHOST, PGPORT, PGUSER, PGPASSWORD, PGDATABASE
+- JWT_SECRET="inktagram-secret-key"
+- CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET
+- OPENAI_API_KEY
+- NEXT_PUBLIC_API_BASE_URL="http://localhost:5000"
+- WEBSOCKET_HEARTBEAT_MS=30000
+- STORY_TTL_HOURS=24
+Scripts:
+- root: `dev` (concurrently: server + web), `build`, `typecheck`, `lint`
+- server: `dev`, `build`, `start`, `prisma:migrate`, `prisma:studio`, `seed:all`
+- web: `dev`, `build`, `start`
+
+# 2) DATABASE (Prisma + PostgreSQL)
+Implement the following **22 tables** as Prisma models with sensible fields, indexes, and relations. Use UUID ids, createdAt/updatedAt, softDelete where relevant. Include composite indexes for join tables. Add examples of important fields; fill the rest with sensible defaults.
+
+Core
+- User (id, email UNIQUE, username UNIQUE, hashedPassword, role enum: ARTIST|STUDIO|ENTHUSIAST, bio, avatarUrl, isVerified, location {city, country, lat, lng}, links jsonb, socialHandles jsonb)
+- StudioProfile (id, userId UNIQUE→User, name, description, services jsonb, hours jsonb, paymentMethods jsonb)
+- ArtistProfile (id, userId UNIQUE→User, styles string[], rateCents int, availability jsonb, yearsExperience int)
+- Post (id, authorId→User, caption, media jsonb[{publicId,url,type,width,height,duration}], likeCount int, commentCount int, location jsonb, visibility enum: PUBLIC|FOLLOWERS)
+- Notification (id, userId→User, type enum: FOLLOW|LIKE|COMMENT|APPROVAL|SYSTEM, payload jsonb, isRead boolean default false)
+
+Messaging & Communication
+- Conversation (id, isGroup boolean, title nullable, lastMessageAt)
+- ConversationParticipant (id, conversationId→Conversation, userId→User, role enum: MEMBER|ADMIN, lastReadAt)
+- Message (id, conversationId→Conversation, senderId→User, body text nullable, media jsonb, voiceUrl nullable, replyToId self, reactions jsonb[{userId, emoji}], sentAt timestamptz)
+
+Stories & Highlights
+- Story (id, userId→User, media jsonb, expiresAt)
+- StoryHighlight (id, userId→User, title, coverUrl)
+- HighlightStory (id, highlightId→StoryHighlight, storyId→Story, sortOrder int)
+
+Professional Features
+- PortfolioItem (id, artistId→User, title, description, media jsonb, categories string[], sortOrder int)
+- StudioApprovalRequest (id, studioId→User, artistId→User, status enum: PENDING|APPROVED|REJECTED, note)
+- JobPosting (id, studioId→User, title, type enum: FULL_TIME|PART_TIME|CONTRACT|APPRENTICESHIP, description, location, isActive boolean, salaryMinCents int nullable, salaryMaxCents int nullable)
+- JobApplication (id, jobId→JobPosting, artistId→User, coverLetter, portfolioSnapshot jsonb, status enum: SUBMITTED|REVIEWING|ACCEPTED|REJECTED)
+
+Live Streaming
+- LivestreamEvent (id, hostId→User, title, scheduledFor nullable, startedAt nullable, endedAt nullable, status enum: SCHEDULED|LIVE|ENDED, viewerPeak int, viewerTotal int)
+- LivestreamParticipant (id, eventId→LivestreamEvent, userId→User, joinedAt, leftAt nullable, isHost boolean)
+- LiveComment (id, eventId→LivestreamEvent, userId→User, body, postedAt)
+- LiveReaction (id, eventId→LivestreamEvent, userId→User, emoji, postedAt)
+
+Consultations
+- ConsultationRequest (id, artistId→User, requesterId→User, preferredTimes jsonb, status enum: REQUESTED|CONFIRMED|DECLINED|COMPLETED, notes)
+
+Auxiliary (hashtags, follows, shares)
+- Hashtag (id, tag UNIQUE, uses int)
+- PostHashtag (id, postId→Post, hashtagId→Hashtag) (unique composite)
+- Follow (id, followerId→User, followingId→User) (unique composite)
+- PostShare (id, postId→Post, userId→User, platform enum: INSTAGRAM|TIKTOK|OTHER, sharedAt)
+
+Run prisma migrate + generate. Add seed scripts (see §9).
+
+# 3) AUTHENTICATION & AUTHZ
+- JWT-based auth: bcrypt for password, 7-day expiry, issued on login/register. Store JWT in localStorage on web; send in Authorization: Bearer.
+- Express middleware `requireAuth`, `requireRole(roles: Role[])`.
+- Rate-limit auth endpoints.
+
+# 4) STORAGE & INTEGRATIONS
+- Cloudinary uploader module with signed upload for posts, stories, portfolio.
+- OpenAI endpoint wrapper for AI tattoo recommendations (safe, simple prompt-completion stub; no images generated—text/design ideas only).
+- Storage interface `IStorage` implementing the 70+ operations enumerated (map to Prisma).
+
+# 5) API SURFACE (90+ ROUTES)
+Base path `/api`. Implement routers with Zod validation + typed handlers. Include Swagger docs at `/api/docs`.
+
+Authentication (3)
+- POST /api/auth/register
+- POST /api/auth/login
+- POST /api/auth/logout
+
+User Mgmt (5)
+- GET /api/users/me
+- GET /api/users/:id
+- PUT /api/users/me
+- GET /api/users/filtered
+- GET /api/users/suggestions
+
+Social (5)
+- POST /api/users/:id/follow
+- POST /api/users/:id/unfollow
+- GET /api/users/me/social-accounts
+- POST /api/users/me/social-accounts
+- DELETE /api/users/me/social-accounts/:platform
+
+Search & Discovery (8)
+- GET /api/search
+- GET /api/search/posts
+- GET /api/search/hashtags
+- GET /api/hashtags/popular
+- GET /api/hashtags/trending
+- GET /api/discovery/trending
+- GET /api/discovery/artists
+- GET /api/discovery/trending-locations
+
+Posts (11)
+- GET /api/posts
+- GET /api/posts/:id
+- POST /api/posts
+- POST /api/posts/:id/like
+- DELETE /api/posts/:id/like
+- POST /api/posts/:postId/comments
+- DELETE /api/posts/:postId/comments/:commentId
+- GET /api/posts/:postId/comments
+- POST /api/posts/:postId/share
+- GET /api/posts/:postId/shares
+- DELETE /api/posts/:id (author only)
+
+Portfolio (5)
+- GET /api/portfolio/:artistId
+- POST /api/portfolio
+- PUT /api/portfolio/:id
+- DELETE /api/portfolio/:id
+- PUT /api/portfolio/reorder
+
+Profiles (2)
+- GET /api/profiles/studio/:userId
+- GET /api/profiles/artist/:userId
+
+Notifications (2)
+- GET /api/notifications
+- PUT /api/notifications/:id/read
+
+Messaging (7)
+- GET /api/conversations
+- POST /api/conversations
+- GET /api/conversations/:id/messages
+- POST /api/conversations/:id/messages
+- PUT /api/conversations/:id/read
+- POST /api/messages/:id/reactions
+- DELETE /api/messages/:id/reactions
+
+Stories (7)
+- POST /api/stories
+- GET /api/stories
+- GET /api/stories/:userId
+- GET /api/story-highlights/:userId
+- POST /api/story-highlights
+- DELETE /api/story-highlights/:id
+- POST /api/story-highlights/:id/stories
+
+Studio Approvals (5)
+- GET /api/studios
+- POST /api/approval-requests
+- GET /api/approval-requests/studio/:studioId
+- GET /api/approval-requests/artist/:artistId
+- PATCH /api/approval-requests/:id
+
+Media Upload (4)
+- POST /api/upload
+- POST /api/upload/profile
+- POST /api/upload/portfolio
+- DELETE /api/upload/:publicId
+
+AI Features (1)
+- POST /api/ai/tattoo-recommendations
+
+Live Streaming (12)
+- GET /api/livestream-events
+- POST /api/livestream-events
+- PUT /api/livestream-events/:id
+- POST /api/livestream-events/:id/join
+- POST /api/livestream-events/:id/leave
+- GET /api/livestream-events/:filter?
+- POST /api/livestream-events/start-now
+- GET /api/live-events/:eventId/comments
+- POST /api/live-events/:eventId/comments
+- POST /api/live-events/:eventId/reactions
+- POST /api/live-events/:eventId/start
+- POST /api/live-events/:eventId/end
+
+Consultations (3)
+- POST /api/consultation-requests
+- GET /api/consultation-requests/:artistId
+- PUT /api/consultation-requests/:id
+
+Job Board (5)
+- GET /api/jobs
+- POST /api/jobs
+- GET /api/jobs/studio
+- POST /api/jobs/:jobId/apply
+- GET /api/jobs/applications
+
+# 6) REAL-TIME (WebSocket)
+Implement ws servers:
+- `/ws` messaging:
+  - events: USER_ONLINE, NEW_MESSAGE, READ_RECEIPT, TYPING, REACTION_ADDED/REMOVED, HEARTBEAT
+  - persist read receipts and reactions
+- `/ws/live/:eventId` live:
+  - broadcast viewer counts (join/leave), LIVE_COMMENT, LIVE_REACTION, START, END
+  - heartbeat ping/pong every WEBSOCKET_HEARTBEAT_MS
+  - update LivestreamEvent.viewerPeak & viewerTotal
+
+# 7) SERVER UTILITIES & CRON
+- `server/storyCleanup.ts`: BullMQ job every 10 minutes to expire stories (expiresAt < now) and delete media if needed.
+- `server/enhancedFeedAlgorithm.ts`: personalized feed (recent posts by followed users, boost by engagement & recency).
+- `server/cloudinary.ts`, `server/storage.ts` (IStorage interface with 70+ methods implemented via Prisma).
+
+# 8) FRONTEND (Next.js App Router)
+Pages/Routes:
+- / (Home) feed
+- /explore (discovery hub)
+- /create (new post + media upload)
+- /messages
+- /notifications
+- /profile (me)
+- /profile/edit
+- /user/:id
+- /studio-approvals
+- /apply-to-studios
+- /live-events
+- /live-room/:roomId
+- /ai-recommendations
+- /jobs
+- /auth (login/register)
+
+Implement UI with **shadcn/ui**. Provide **60+ components** including those listed in the spec:
+- Include core shadcn export list (accordion, alert-dialog, alert, aspect-ratio, avatar, badge, breadcrumb, button, calendar, card, carousel, chart, checkbox, collapsible, command, context-menu, dialog, drawer, dropdown-menu, form, hover-card, input-otp, input, label, menubar, navigation-menu, pagination, popover, progress, radio-group, resizable, scroll-area, select, separator, sheet, sidebar, skeleton, slider, switch, table, tabs, textarea, toast, toaster, toggle-group, toggle, tooltip)
+- Custom feature components:
+  AdvancedSearch, AdvancedSearchFilters, CommentSection, CreateStoryModal, DiscoveryHub, EnhancedUserInteractions, Layout, LiveStream, MediaUpload, MessageReactions, PortfolioManager, PostCard, PostGrid, PostSharing, PostViewer, SearchBar, SimplifiedDiscovery, SocialAccountsManager, SocialShareDialog, StoriesBar, StoryHighlights, StoryViewer, SuggestedUsers, TattooRecommendationWizard, TrendingHashtags, VideoPlayer, VoiceMessage
+- Hooks: useAuth, useToast, useMobile
+- lib/queryClient.ts with `apiRequest` helper (adds auth header automatically)
+
+# 9) SEED SCRIPTS
+Create under apps/server:
+- `server/seed.ts` (users, follows, hashtags, posts with media)
+- `server/seedPortfolio.ts`
+- `server/seedStories.ts`
+- `server/seedStoryHighlights.ts`
+- `server/seedMessages.ts`
+- `server/seedEnhancedMessages.ts`
+- `server/seedJobs.ts`
+- `server/seedApprovals.ts`
+- `server/seedComments.ts`
+- `server/createTestUsers.ts`
+Make seeds idempotent. Provide sample media placeholders.
+
+# 10) SECURITY & POLICIES
+- Input validation via Zod on all endpoints.
+- File size/type guards for uploads; accept images/video only.
+- Role checks: Studio (jobs, approvals), Artist (portfolio, applications, host consultations), Enthusiast (browse/follow/comment).
+- CORS configured for web app.
+- Pagination on all list endpoints; cursor-based where useful.
+
+# 11) FRONTEND FLOWS
+- Auth pages: register/login; store JWT in localStorage; TanStack Query `apiRequest` attaches token.
+- Home feed: infinite scrolling, like/comment/share, PostViewer modal.
+- Explore: trending posts, hashtags, locations, artist recommendations.
+- Messages: conversation list, real-time thread with typing, reactions, read receipts.
+- StoriesBar + StoryViewer, CreateStoryModal (24h).
+- PortfolioManager for artists (reorder via DnD).
+- Studio approvals page & artist applications page.
+- Live events list + /live-room/:roomId player using ws.
+- AI recommendations wizard (calls /api/ai/tattoo-recommendations).
+- Jobs board + apply flow; studio jobs management.
+
+# 12) OPENAPI / SWAGGER
+- Auto-generate Swagger docs at /api/docs with full schemas and examples.
+
+# 13) ACCEPTANCE CRITERIA (MVP)
+- All listed routes exist and pass Zod validation.
+- JWT auth works end-to-end; role enforcement verified.
+- Create post with Cloudinary upload from /create; feed shows it; like/comment works; shares tracked.
+- Follow/unfollow affects personalized feed and suggestions.
+- Stories expire automatically (worker).
+- DMs send/receive live; reactions and read receipts reflect in UI.
+- Live event can be created, started, receive comments/reactions over ws, ended; viewer metrics recorded.
+- Portfolio CRUD + reorder works.
+- Job posting & applications flow works (permissions enforced).
+- Studio approval requests flow works.
+- AI tattoo recommendations returns structured suggestions (styles, placement, size, aftercare tips).
+- All pages render with shadcn components; responsive and mobile-friendly.
+
+# 14) DX INSTRUCTIONS
+- Generate README at root with setup steps:
+  1) Copy .env.example → .env with keys
+  2) `npm i`
+  3) `npm run prisma:migrate`
+  4) `npm run seed:all`
+  5) `npm run dev`
+- Include screenshots or animated GIF placeholders in README.
+- Provide Postman collection export in apps/server for all endpoints.
+
+# 15) NICE-TO-HAVES (scaffold now, stub impl ok)
+- Social sharing mock adapters for Instagram/TikTok (no real OAuth needed).
+- Basic analytics endpoints for studios (counts, charts).
+- Notification center with server-sent events fallback if ws unavailable.
+
+Now implement all of the above. Create all files, folders, Prisma schema, Express routers, Next.js pages, components, hooks, utilities, seeds, and README. Ensure builds pass and the dev server runs with `npm run dev` from repo root.
