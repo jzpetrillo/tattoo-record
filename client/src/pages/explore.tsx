@@ -1,10 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
-import Sidebar from "@/components/layout/sidebar";
-import MobileNav from "@/components/layout/mobile-nav";
+import Header from "@/components/layout/header";
+import Marquee from "@/components/layout/marquee";
 import { Input } from "@/components/ui/input";
-import { Card } from "@/components/ui/card";
 import { useAuth } from "@/hooks/use-auth";
-import { apiRequest } from "@/lib/api";
 
 export default function Explore() {
   const { token } = useAuth();
@@ -21,75 +19,42 @@ export default function Explore() {
 
   return (
     <div className="min-h-screen bg-background">
-      <Sidebar />
-      <main className="lg:ml-64 xl:ml-72 pb-20 lg:pb-0">
-        <div className="sticky top-0 z-30 bg-card border-b border-border backdrop-blur-md bg-opacity-95 p-4">
-          <div className="max-w-4xl mx-auto">
-            <div className="relative">
-              <Input
-                type="text"
-                placeholder="Search artists, studios, hashtags, styles..."
-                className="w-full bg-secondary border-border rounded-full pl-12 pr-4 py-3"
-                data-testid="input-search"
-              />
-              <i className="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground"></i>
-            </div>
-          </div>
-        </div>
-
-        <div className="max-w-4xl mx-auto px-4 py-6 space-y-8">
+      <Header />
+      <div className="pt-16">
+        <Marquee text="EXPLORE THE LATEST WORK FROM TATTOO ARTISTS WORLDWIDE" />
+        
+        <div className="max-w-7xl mx-auto px-6 py-12 space-y-16">
           <section>
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-bold flex items-center gap-2">
-                <i className="fas fa-fire text-destructive"></i>
-                Trending Hashtags
-              </h2>
-            </div>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              {trendingHashtags?.map((tag: any) => (
-                <Card key={tag.id} className="p-4 hover:bg-secondary transition-colors cursor-pointer" data-testid={`hashtag-${tag.tag}`}>
-                  <p className="font-bold text-sm">#{tag.tag}</p>
-                  <p className="text-xs text-muted-foreground mt-1">{tag.uses.toLocaleString()} posts</p>
-                </Card>
-              ))}
-            </div>
-          </section>
-
-          <section>
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-bold">Trending Posts</h2>
-            </div>
-            <div className="grid grid-cols-3 gap-1">
+            <h2 className="text-3xl uppercase font-bold mb-8 tracking-tight">
+              Trending Work
+            </h2>
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-0 border-t border-l border-border">
               {trendingPosts?.map((item: any) => (
                 <div
                   key={item.post.id}
-                  className="relative aspect-square bg-secondary overflow-hidden cursor-pointer hover:opacity-90 transition-opacity"
+                  className="border-r border-b border-border group cursor-pointer"
                   data-testid={`trending-post-${item.post.id}`}
                 >
                   {item.post.media?.[0]?.url && (
-                    <img
-                      src={item.post.media[0].url}
-                      alt="Trending Post"
-                      className="w-full h-full object-cover"
-                    />
-                  )}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 hover:opacity-100 transition-opacity flex items-end p-3">
-                    <div className="flex items-center gap-3 text-white text-sm">
-                      <span>
-                        <i className="fas fa-heart"></i> {item.post.likeCount}
-                      </span>
-                      <span>
-                        <i className="fas fa-comment"></i> {item.post.commentCount}
-                      </span>
+                    <div className="relative aspect-square bg-secondary overflow-hidden">
+                      <img
+                        src={item.post.media[0].url}
+                        alt="Trending Post"
+                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                      />
                     </div>
+                  )}
+                  <div className="p-6">
+                    <p className="text-xs uppercase tracking-wider opacity-60">
+                      {item.author?.username}
+                    </p>
                   </div>
                 </div>
               ))}
             </div>
           </section>
         </div>
-      </main>
-      <MobileNav />
+      </div>
     </div>
   );
 }
