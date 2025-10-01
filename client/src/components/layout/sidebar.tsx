@@ -1,9 +1,24 @@
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
+import { apiRequest } from "@/lib/queryClient";
+import { useState } from "react";
 
 export default function Sidebar() {
-  const [location] = useLocation();
-  const { user } = useAuth();
+  const [location, setLocation] = useLocation();
+  const { user, clearAuth } = useAuth();
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+
+  const handleLogout = async () => {
+    setIsLoggingOut(true);
+    try {
+      await apiRequest("POST", "/api/auth/logout");
+    } catch (error) {
+      console.error("Logout error:", error);
+    } finally {
+      clearAuth();
+      setLocation("/");
+    }
+  };
 
   const navItems = [
     { path: "/", icon: "fa-home", label: "Home" },
@@ -77,21 +92,28 @@ export default function Sidebar() {
         </div>
 
         {user && (
-          <div className="p-4 border-t border-border">
+          <div className="p-4 border-t border-border space-y-2">
             <div className="flex items-center gap-3">
               <img
                 src={user.avatarUrl || "https://ui-avatars.com/api/?name=" + user.username}
                 alt="User Avatar"
                 className="w-10 h-10 rounded-full ring-2 ring-primary"
+                data-testid="img-profile-avatar"
               />
               <div className="flex-1 min-w-0">
                 <p className="font-medium text-sm truncate">{user.username}</p>
                 <p className="text-xs text-muted-foreground truncate">{user.role}</p>
               </div>
-              <button className="text-muted-foreground hover:text-foreground">
-                <i className="fas fa-ellipsis-v"></i>
-              </button>
             </div>
+            <button
+              onClick={handleLogout}
+              disabled={isLoggingOut}
+              className="w-full flex items-center gap-2 px-3 py-2 text-sm text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg transition-colors disabled:opacity-50"
+              data-testid="button-logout"
+            >
+              <i className="fas fa-sign-out-alt"></i>
+              <span>{isLoggingOut ? "Logging out..." : "Logout"}</span>
+            </button>
           </div>
         )}
       </div>

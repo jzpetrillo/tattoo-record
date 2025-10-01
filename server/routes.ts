@@ -73,6 +73,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.post("/api/auth/logout", requireAuth, async (req: AuthRequest, res) => {
+    try {
+      res.json({ message: "Logged out successfully" });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   // User Routes
   app.get("/api/users/me", requireAuth, async (req: AuthRequest, res) => {
     try {
