@@ -188,7 +188,11 @@ export default function Auth() {
 
           <div className="mt-4 text-center">
             <button
-              onClick={() => setIsLogin(!isLogin)}
+              onClick={() => {
+                setIsLogin(!isLogin);
+                loginForm.reset();
+                registerForm.reset();
+              }}
               className="text-sm text-primary hover:underline"
               data-testid="button-toggle-auth"
             >
