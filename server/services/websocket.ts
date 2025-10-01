@@ -10,7 +10,7 @@ interface WSClient extends WebSocket {
 }
 
 interface WSMessage {
-  type: "USER_ONLINE" | "NEW_MESSAGE" | "READ_RECEIPT" | "TYPING" | "REACTION_ADDED" | "REACTION_REMOVED" | "HEARTBEAT";
+  type: "USER_ONLINE" | "USER_OFFLINE" | "NEW_MESSAGE" | "READ_RECEIPT" | "TYPING" | "REACTION_ADDED" | "REACTION_REMOVED" | "HEARTBEAT";
   payload?: any;
 }
 

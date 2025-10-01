@@ -111,20 +111,22 @@ export class DatabaseStorage implements IStorage {
   async getPosts(options: { limit?: number; offset?: number; authorId?: string }) {
     const { limit = 20, offset = 0, authorId } = options;
     
-    let query = db
+    const conditions = [isNull(schema.posts.deletedAt)];
+    if (authorId) {
+      conditions.push(eq(schema.posts.authorId, authorId));
+    }
+
+    return db
       .select({
         post: schema.posts,
         author: schema.users
       })
       .from(schema.posts)
       .innerJoin(schema.users, eq(schema.posts.authorId, schema.users.id))
-      .where(isNull(schema.posts.deletedAt));
-
-    if (authorId) {
-      query = query.where(eq(schema.posts.authorId, authorId));
-    }
-
-    return query.orderBy(desc(schema.posts.createdAt)).limit(limit).offset(offset);
+      .where(and(...conditions))
+      .orderBy(desc(schema.posts.createdAt))
+      .limit(limit)
+      .offset(offset);
   }
 
   async createPost(post: schema.InsertPost) {
@@ -240,20 +242,20 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getStories(userId?: string) {
-    let query = db
+    const conditions: any[] = [sql`${schema.stories.expiresAt} > NOW()`];
+    if (userId) {
+      conditions.push(eq(schema.stories.userId, userId));
+    }
+
+    return db
       .select({
         story: schema.stories,
         user: schema.users
       })
       .from(schema.stories)
       .innerJoin(schema.users, eq(schema.stories.userId, schema.users.id))
-      .where(sql`${schema.stories.expiresAt} > NOW()`);
-
-    if (userId) {
-      query = query.where(eq(schema.stories.userId, userId));
-    }
-
-    return query.orderBy(desc(schema.stories.createdAt));
+      .where(and(...conditions))
+      .orderBy(desc(schema.stories.createdAt));
   }
 
   async getActiveStories() {
@@ -278,7 +280,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getConversations(userId: string) {
-    return db
+    const result: any = await db
       .select({
         conversation: schema.conversations,
         participants: sql`json_agg(${schema.users})`.as("participants")
@@ -289,6 +291,7 @@ export class DatabaseStorage implements IStorage {
       .where(eq(schema.conversationParticipants.userId, userId))
       .groupBy(schema.conversations.id)
       .orderBy(desc(schema.conversations.lastMessageAt));
+    return result;
   }
 
   async getMessages(conversationId: string, limit = 50) {
@@ -384,7 +387,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getLivestreamEvents(filters: any = {}) {
-    let query = db
+    const baseQuery = db
       .select({
         event: schema.livestreamEvents,
         host: schema.users
@@ -393,10 +396,12 @@ export class DatabaseStorage implements IStorage {
       .innerJoin(schema.users, eq(schema.livestreamEvents.hostId, schema.users.id));
 
     if (filters.status) {
-      query = query.where(eq(schema.livestreamEvents.status, filters.status));
+      return baseQuery
+        .where(eq(schema.livestreamEvents.status, filters.status))
+        .orderBy(desc(schema.livestreamEvents.createdAt));
     }
 
-    return query.orderBy(desc(schema.livestreamEvents.createdAt));
+    return baseQuery.orderBy(desc(schema.livestreamEvents.createdAt));
   }
 
   async updateLivestreamEvent(id: string, updates: Partial<schema.LivestreamEvent>) {

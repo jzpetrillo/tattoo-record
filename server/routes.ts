@@ -229,9 +229,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/stories", requireAuth, async (req: AuthRequest, res) => {
     try {
       const validated = validation.createStorySchema.parse(req.body);
+      const ttlHours = parseInt(process.env.STORY_TTL_HOURS || "24");
+      const expiresAt = new Date(Date.now() + ttlHours * 60 * 60 * 1000);
       const story = await storage.createStory({
         userId: req.userId!,
-        media: validated.media
+        media: validated.media,
+        expiresAt
       });
       res.json(story);
     } catch (error: any) {
@@ -296,9 +299,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const message = await storage.createMessage({
         conversationId: req.params.id,
         senderId: req.userId!,
-        body: req.body.body,
-        media: req.body.media,
-        replyToId: req.body.replyToId
+        body: req.body.body || null,
+        media: req.body.media || null,
+        replyToId: req.body.replyToId || null
       });
       res.json(message);
     } catch (error: any) {

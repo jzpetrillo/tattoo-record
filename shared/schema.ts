@@ -184,7 +184,7 @@ export const conversationParticipants = pgTable("conversation_participants", {
   userIdx: index("conversation_participants_user_idx").on(table.userId)
 }));
 
-export const messages = pgTable("messages", {
+export const messages: any = pgTable("messages", {
   id: uuid("id").primaryKey().defaultRandom(),
   conversationId: uuid("conversation_id").notNull().references(() => conversations.id, { onDelete: "cascade" }),
   senderId: uuid("sender_id").notNull().references(() => users.id, { onDelete: "cascade" }),
@@ -195,7 +195,7 @@ export const messages = pgTable("messages", {
     type: string;
   }>(),
   voiceUrl: text("voice_url"),
-  replyToId: uuid("reply_to_id").references(() => messages.id),
+  replyToId: uuid("reply_to_id"),
   reactions: jsonb("reactions").$type<Array<{
     userId: string;
     emoji: string;
@@ -434,7 +434,7 @@ export const conversationsRelations = relations(conversations, ({ many }) => ({
   messages: many(messages)
 }));
 
-export const messagesRelations = relations(messages, ({ one }) => ({
+export const messagesRelations = relations(messages, ({ one }): any => ({
   conversation: one(conversations, {
     fields: [messages.conversationId],
     references: [conversations.id]

@@ -1,9 +1,13 @@
 import OpenAI from "openai";
 
 // the newest OpenAI model is "gpt-5" which was released August 7, 2025. do not change this unless explicitly requested by the user
-const openai = new OpenAI({ 
-  apiKey: process.env.OPENAI_API_KEY 
-});
+let openai: OpenAI | null = null;
+
+if (process.env.OPENAI_API_KEY) {
+  openai = new OpenAI({ 
+    apiKey: process.env.OPENAI_API_KEY 
+  });
+}
 
 export interface TattooRecommendation {
   styles: string[];
@@ -22,6 +26,10 @@ export async function generateTattooRecommendations(
     size?: string;
   }
 ): Promise<TattooRecommendation> {
+  if (!openai) {
+    throw new Error("OpenAI API key not configured. Please set OPENAI_API_KEY environment variable.");
+  }
+  
   try {
     const prompt = `Based on the following tattoo preferences, provide detailed recommendations:
     

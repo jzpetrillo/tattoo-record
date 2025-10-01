@@ -108,7 +108,9 @@ async function handleJoin(
   payload: any
 ) {
   ws.userId = payload.userId;
-  const eventId = ws.eventId!;
+  const eventId = ws.eventId;
+  
+  if (!eventId || !ws.userId) return;
 
   if (!eventViewers.has(eventId)) {
     eventViewers.set(eventId, new Set());
@@ -116,11 +118,11 @@ async function handleJoin(
   eventViewers.get(eventId)!.add(ws.userId);
 
   await db.insert(livestreamParticipants).values({
-    eventId,
+    eventId: eventId,
     userId: ws.userId,
     joinedAt: new Date(),
     isHost: payload.isHost || false
-  });
+  } as any);
 
   const viewerCount = eventViewers.get(eventId)!.size;
 

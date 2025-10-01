@@ -31,8 +31,8 @@ export default function Sidebar() {
         <nav className="flex-1 p-4 space-y-2 overflow-y-auto scrollbar-hide">
           {navItems.map((item) => (
             <Link key={item.path} href={item.path}>
-              <a
-                className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors relative ${
+              <div
+                className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors relative cursor-pointer ${
                   location === item.path
                     ? "bg-primary/10 text-primary"
                     : "text-muted-foreground hover:bg-secondary hover:text-foreground"
@@ -46,15 +46,15 @@ export default function Sidebar() {
                     {item.badge}
                   </span>
                 )}
-              </a>
+              </div>
             </Link>
           ))}
 
           <div className="pt-4 border-t border-border mt-4">
             {secondaryItems.map((item) => (
               <Link key={item.path} href={item.path}>
-                <a
-                  className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+                <div
+                  className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors cursor-pointer ${
                     location === item.path
                       ? "bg-primary/10 text-primary"
                       : "text-muted-foreground hover:bg-secondary hover:text-foreground"
@@ -63,7 +63,7 @@ export default function Sidebar() {
                 >
                   <i className={`fas ${item.icon} text-lg w-5`}></i>
                   <span className="font-medium">{item.label}</span>
-                </a>
+                </div>
               </Link>
             ))}
           </div>
