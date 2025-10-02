@@ -12,7 +12,7 @@ export default function Search() {
   const [searchQuery, setSearchQuery] = useState("");
 
   const { data: searchData, isLoading } = useQuery<{ users: any[]; posts: any[]; hashtags: any[] }>({
-    queryKey: ["/api/search", { q: searchQuery }],
+    queryKey: [`/api/search?q=${searchQuery}`],
     enabled: !!token && searchQuery.length > 0,
   });
 
