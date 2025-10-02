@@ -32,14 +32,14 @@ export default function SidebarNav() {
   ];
 
   return (
-    <aside className="fixed left-0 top-0 h-screen w-64 border-r border-border bg-background flex flex-col px-3 py-8 hidden lg:flex">
+    <aside className="fixed left-0 top-0 h-screen w-64 border-r border-border bg-background flex flex-col px-4 py-6 hidden lg:flex">
       {/* Logo */}
-      <div className="mb-10 px-3">
-        <h1 className="text-2xl font-bold">Inktagram</h1>
+      <div className="mb-8 px-2">
+        <h1 className="text-xl font-bold uppercase tracking-wide">Inktagram</h1>
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 space-y-1">
+      <nav className="flex-1 space-y-0.5">
         {navItems.map((item) => {
           const Icon = item.icon;
           const isActive = location === item.path;
@@ -47,15 +47,15 @@ export default function SidebarNav() {
           return (
             <Link key={item.path} href={item.path}>
               <div
-                className={`flex items-center gap-4 px-3 py-3 rounded-lg cursor-pointer transition-colors ${
+                className={`flex items-center gap-3 px-2 py-2.5 cursor-pointer transition-all ${
                   isActive 
-                    ? "font-bold" 
-                    : "hover:bg-secondary"
+                    ? "font-semibold" 
+                    : "hover:bg-secondary/50"
                 }`}
                 data-testid={`nav-${item.label.toLowerCase()}`}
               >
-                <Icon className={`w-6 h-6 ${isActive ? "fill-current stroke-current" : ""}`} strokeWidth={isActive ? 2.5 : 2} />
-                <span className="text-base">{item.label}</span>
+                <Icon className={`w-5 h-5 ${isActive ? "fill-current stroke-current" : ""}`} strokeWidth={isActive ? 2.5 : 1.5} />
+                <span className="text-sm">{item.label}</span>
               </div>
             </Link>
           );
@@ -63,9 +63,9 @@ export default function SidebarNav() {
       </nav>
 
       {/* More button at bottom */}
-      <button className="flex items-center gap-4 px-3 py-3 rounded-lg hover:bg-secondary transition-colors w-full" data-testid="nav-more">
-        <Menu className="w-6 h-6" />
-        <span className="text-base">More</span>
+      <button className="flex items-center gap-3 px-2 py-2.5 hover:bg-secondary/50 transition-all w-full text-sm" data-testid="nav-more">
+        <Menu className="w-5 h-5" strokeWidth={1.5} />
+        <span>More</span>
       </button>
     </aside>
   );

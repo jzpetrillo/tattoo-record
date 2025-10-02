@@ -18,7 +18,7 @@ export default function MobileNav() {
   return (
     <>
       <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-background border-t border-border z-50 safe-area-bottom">
-        <div className="flex items-center justify-around px-2 py-2">
+        <div className="flex items-center justify-around px-2 py-1.5">
           {navItems.map((item, index) => {
             const Icon = item.icon;
             const isActive = item.path && location === item.path;
@@ -28,11 +28,10 @@ export default function MobileNav() {
                 <button
                   key={index}
                   onClick={item.action}
-                  className="flex flex-col items-center gap-1 p-2 transition-colors"
+                  className="flex flex-col items-center gap-0.5 p-2 transition-colors"
                   data-testid={`mobile-nav-${item.label.toLowerCase()}`}
                 >
-                  <Icon className="w-6 h-6" strokeWidth={2} />
-                  <span className="text-xs">{item.label}</span>
+                  <Icon className="w-5 h-5" strokeWidth={1.5} />
                 </button>
               );
             }
@@ -40,16 +39,13 @@ export default function MobileNav() {
             return (
               <Link key={item.path} href={item.path!}>
                 <button
-                  className="flex flex-col items-center gap-1 p-2 transition-colors"
+                  className="flex flex-col items-center gap-0.5 p-2 transition-colors"
                   data-testid={`mobile-nav-${item.label.toLowerCase()}`}
                 >
                   <Icon
-                    className={`w-6 h-6 ${isActive ? "fill-current" : ""}`}
-                    strokeWidth={isActive ? 2.5 : 2}
+                    className={`w-5 h-5 ${isActive ? "fill-current" : ""}`}
+                    strokeWidth={isActive ? 2.5 : 1.5}
                   />
-                  <span className={`text-xs ${isActive ? "font-semibold" : ""}`}>
-                    {item.label}
-                  </span>
                 </button>
               </Link>
             );
