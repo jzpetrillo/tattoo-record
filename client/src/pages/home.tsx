@@ -118,30 +118,9 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-background">
       <Header />
-      <div className="pt-16">
-        <Marquee text="WELCOME TO INKTAG MAGAZINE, AN INDEPENDENT PLATFORM FOR TATTOO ARTISTS AND ENTHUSIASTS" />
-        
-        <div className="py-12">
-          <div className="max-w-7xl mx-auto px-6">
-            <div className="grid md:grid-cols-2 gap-12 items-center mb-24">
-              <div>
-                <h1 className="editorial-title mb-6">
-                  THE<br />
-                  ARTIST<br />
-                  ISSUE
-                </h1>
-                <div className="h-1 w-24 bg-foreground mb-6"></div>
-                <p className="text-sm uppercase tracking-wider opacity-60">
-                  Issue 01 / Now Available
-                </p>
-              </div>
-              <div className="aspect-square bg-muted"></div>
-            </div>
-          </div>
-        </div>
-
+      <main className="pt-20 pb-20 max-w-2xl mx-auto px-4">
         <PostFeed />
-      </div>
+      </main>
     </div>
   );
 }

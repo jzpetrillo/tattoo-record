@@ -14,50 +14,64 @@ export default function Profile() {
   return (
     <div className="min-h-screen bg-background">
       <Header />
-      <div className="pt-16">
-        <Marquee text={`${user?.username?.toUpperCase()} / ${user?.role}`} />
-        
-        <div className="max-w-7xl mx-auto px-6 py-12">
-          <div className="mb-16">
-            <h1 className="text-6xl uppercase font-bold mb-4 tracking-tight" data-testid="text-username">
-              {user?.username}
-            </h1>
-            <p className="text-sm uppercase tracking-wider opacity-60 mb-8">
-              {user?.role} / {user?.email}
-            </p>
-            <div className="flex gap-8 text-sm uppercase tracking-wider">
-              <div>
-                <span className="font-bold">{userPosts?.length || 0}</span> Works
-              </div>
-              <div>
-                <span className="font-bold">0</span> Followers
-              </div>
-              <div>
-                <span className="font-bold">0</span> Following
-              </div>
+      <main className="pt-20 pb-20 max-w-5xl mx-auto px-4">
+        {/* Profile Header */}
+        <div className="mb-8 pb-8 border-b border-border">
+          <div className="flex items-start gap-8">
+            {/* Avatar */}
+            <div className="w-32 h-32 rounded-full bg-secondary flex items-center justify-center flex-shrink-0">
+              <span className="text-4xl font-bold">{user?.username?.[0]?.toUpperCase()}</span>
             </div>
-          </div>
 
-          <div>
-            <h2 className="text-2xl uppercase font-bold mb-8 tracking-tight">Work</h2>
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-0 border-t border-l border-border">
-              {userPosts?.map((item: any) => (
-                <div key={item.post.id} className="border-r border-b border-border group cursor-pointer" data-testid={`post-${item.post.id}`}>
-                  {item.post.media?.[0]?.url && (
-                    <div className="relative aspect-square bg-secondary overflow-hidden">
-                      <img
-                        src={item.post.media[0].url}
-                        alt="Post"
-                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                      />
-                    </div>
-                  )}
+            {/* Profile Info */}
+            <div className="flex-1">
+              <div className="mb-4">
+                <h1 className="text-2xl font-semibold mb-1" data-testid="text-username">
+                  {user?.username}
+                </h1>
+                <p className="text-sm text-muted-foreground">
+                  {user?.role} • {user?.email}
+                </p>
+              </div>
+
+              {/* Stats */}
+              <div className="flex gap-8 mb-4">
+                <div className="text-center">
+                  <div className="font-semibold">{userPosts?.length || 0}</div>
+                  <div className="text-sm text-muted-foreground">posts</div>
                 </div>
-              ))}
+                <div className="text-center">
+                  <div className="font-semibold">0</div>
+                  <div className="text-sm text-muted-foreground">followers</div>
+                </div>
+                <div className="text-center">
+                  <div className="font-semibold">0</div>
+                  <div className="text-sm text-muted-foreground">following</div>
+                </div>
+              </div>
+
+              {user?.bio && (
+                <p className="text-sm">{user.bio}</p>
+              )}
             </div>
           </div>
         </div>
-      </div>
+
+        {/* Posts Grid */}
+        <div className="grid grid-cols-3 gap-1">
+          {userPosts?.map((item: any) => (
+            <div key={item.post.id} className="aspect-square bg-secondary group cursor-pointer" data-testid={`post-${item.post.id}`}>
+              {item.post.media?.[0]?.url && (
+                <img
+                  src={item.post.media[0].url}
+                  alt="Post"
+                  className="w-full h-full object-cover group-hover:opacity-90 transition-opacity"
+                />
+              )}
+            </div>
+          ))}
+        </div>
+      </main>
     </div>
   );
 }
