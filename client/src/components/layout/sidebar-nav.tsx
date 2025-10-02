@@ -9,7 +9,9 @@ import {
   Heart, 
   PlusSquare, 
   User,
-  Menu
+  Menu,
+  Briefcase,
+  Radio
 } from "lucide-react";
 
 export default function SidebarNav() {
@@ -23,6 +25,8 @@ export default function SidebarNav() {
     { path: "/reels", label: "Reels", icon: Video },
     { path: "/messages", label: "Messages", icon: MessageCircle },
     { path: "/notifications", label: "Notifications", icon: Heart },
+    { path: "/live", label: "Live", icon: Radio },
+    { path: "/jobs", label: "Jobs", icon: Briefcase },
     { path: "/create", label: "Create", icon: PlusSquare },
     { path: "/profile", label: "Profile", icon: User },
   ];
