@@ -15,13 +15,18 @@ export async function getPersonalizedFeed(
   const followedUserIds = followedUsers.map((f) => f.followingId);
 
   if (followedUserIds.length === 0) {
-    return getPublicFeed(limit, offset);
+    return getPublicFeed(limit, offset, userId);
   }
 
   const feedPosts = await db
     .select({
       post: posts,
       author: users,
+      isLiked: sql<boolean>`EXISTS(
+        SELECT 1 FROM ${postLikes} 
+        WHERE ${postLikes.postId} = ${posts.id} 
+        AND ${postLikes.userId} = ${userId}
+      )`.as("is_liked"),
       engagementScore: sql<number>`
         (${posts.likeCount} * 2 + ${posts.commentCount} * 3) / 
         EXTRACT(EPOCH FROM (NOW() - ${posts.createdAt})) * 3600
@@ -43,11 +48,16 @@ export async function getPersonalizedFeed(
   return feedPosts;
 }
 
-export async function getPublicFeed(limit: number = 20, offset: number = 0) {
+export async function getPublicFeed(limit: number = 20, offset: number = 0, userId?: string) {
   const feedPosts = await db
     .select({
       post: posts,
       author: users,
+      isLiked: userId ? sql<boolean>`EXISTS(
+        SELECT 1 FROM ${postLikes} 
+        WHERE ${postLikes.postId} = ${posts.id} 
+        AND ${postLikes.userId} = ${userId}
+      )`.as("is_liked") : sql<boolean>`false`.as("is_liked"),
       engagementScore: sql<number>`
         (${posts.likeCount} * 2 + ${posts.commentCount} * 3) / 
         EXTRACT(EPOCH FROM (NOW() - ${posts.createdAt})) * 3600
