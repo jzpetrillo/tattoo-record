@@ -1,4 +1,4 @@
-import Sidebar from "@/components/layout/sidebar";
+import SidebarNav from "@/components/layout/sidebar-nav";
 import MobileNav from "@/components/layout/mobile-nav";
 import ConversationList from "@/components/messages/conversation-list";
 import ChatWindow from "@/components/messages/chat-window";
@@ -9,8 +9,8 @@ export default function Messages() {
 
   return (
     <div className="min-h-screen bg-background">
-      <Sidebar />
-      <main className="lg:ml-64 xl:ml-72 h-screen flex">
+      <SidebarNav />
+      <main className="lg:ml-64 h-screen flex">
         <ConversationList 
           onSelectConversation={setSelectedConversation} 
           selectedConversation={selectedConversation}

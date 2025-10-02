@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import Sidebar from "@/components/layout/sidebar";
+import SidebarNav from "@/components/layout/sidebar-nav";
 import MobileNav from "@/components/layout/mobile-nav";
 import LiveStreamCard from "@/components/live/live-stream-card";
 import { useAuth } from "@/hooks/use-auth";
@@ -14,8 +14,8 @@ export default function LiveEvents() {
 
   return (
     <div className="min-h-screen bg-background">
-      <Sidebar />
-      <main className="lg:ml-64 xl:ml-72 pb-20 lg:pb-0">
+      <SidebarNav />
+      <main className="lg:ml-64 pb-20 lg:pb-0">
         <div className="max-w-6xl mx-auto px-4 py-6">
           <div className="mb-6">
             <h1 className="text-2xl font-bold mb-2">Live Events</h1>

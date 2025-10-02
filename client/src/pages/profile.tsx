@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
-import Header from "@/components/layout/header";
-import Marquee from "@/components/layout/marquee";
+import SidebarNav from "@/components/layout/sidebar-nav";
+import MobileNav from "@/components/layout/mobile-nav";
 import { useAuth } from "@/hooks/use-auth";
 
 export default function Profile() {
@@ -13,8 +13,8 @@ export default function Profile() {
 
   return (
     <div className="min-h-screen bg-background">
-      <Header />
-      <main className="pt-20 pb-20 max-w-5xl mx-auto px-4">
+      <SidebarNav />
+      <main className="lg:ml-64 pb-20 lg:pb-8 pt-4 max-w-5xl mx-auto px-4">
         {/* Profile Header */}
         <div className="mb-8 pb-8 border-b border-border">
           <div className="flex items-start gap-8">
@@ -72,6 +72,7 @@ export default function Profile() {
           ))}
         </div>
       </main>
+      <MobileNav />
     </div>
   );
 }

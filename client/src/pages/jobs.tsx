@@ -3,7 +3,8 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import Header from "@/components/layout/header";
+import SidebarNav from "@/components/layout/sidebar-nav";
+import MobileNav from "@/components/layout/mobile-nav";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -89,8 +90,8 @@ export default function Jobs() {
 
   return (
     <div className="min-h-screen bg-background">
-      <Header />
-      <main className="pt-20 pb-20 max-w-4xl mx-auto px-4">
+      <SidebarNav />
+      <main className="lg:ml-64 pb-20 lg:pb-8 pt-4 max-w-4xl mx-auto px-4">
         <div className="mb-6 flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold mb-1">Job Board</h1>
@@ -293,6 +294,7 @@ export default function Jobs() {
           </div>
         )}
       </main>
+      <MobileNav />
     </div>
   );
 }
