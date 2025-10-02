@@ -19,7 +19,12 @@ Preferred communication style: Simple, everyday language.
 - TanStack Query (React Query) manages server state, caching, and data synchronization
 - Local component state for UI-specific concerns
 
-**UI Component System**: Built on shadcn/ui components with Radix UI primitives, providing accessible, customizable components styled with Tailwind CSS. The design system uses CSS variables for theming with a dark-mode-first approach.
+**UI Component System**: Built on shadcn/ui components with Radix UI primitives, providing accessible, customizable components styled with Tailwind CSS. The design system uses a clean, minimalist black-and-white aesthetic inspired by editorial magazine layouts (nestmag.online), with pure white backgrounds, black text, minimal borders, and reduced border radius for sharper edges.
+
+**Navigation Components**: Consistent navigation across all pages using `SidebarNav` (desktop) and `MobileNav` (mobile):
+- SidebarNav: Fixed left sidebar with uppercase logo, minimal spacing, small icons (5x5), clean hover states
+- MobileNav: Bottom navigation with icon-only design, no labels for minimal footprint
+- All pages (home, messages, jobs, profile, live-events, explore, search) use the same navigation components for consistency
 
 **Form Handling**: React Hook Form combined with Zod for schema validation provides type-safe form management with minimal re-renders.
 
