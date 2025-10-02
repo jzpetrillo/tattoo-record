@@ -187,7 +187,7 @@ async function generateTestData() {
         await db.insert(schema.messages).values({
           conversationId: conversation.id,
           senderId: j % 2 === 0 ? user1.id : user2.id,
-          content: `Hey! Message ${j + 1}`,
+          body: `Hey! Message ${j + 1}`,
         });
       }
     }
