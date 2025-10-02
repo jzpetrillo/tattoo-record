@@ -28,7 +28,12 @@ export default function PostFeed() {
       ) : (
         <div className="space-y-6">
           {posts?.map((item: any) => (
-            <PostCard key={item.post.id} post={item.post} author={item.author} />
+            <PostCard 
+              key={item.post.id} 
+              post={item.post} 
+              author={item.author} 
+              isLiked={item.isLiked}
+            />
           ))}
         </div>
       )}
