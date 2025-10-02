@@ -27,7 +27,7 @@ export default function LiveEvents() {
   const [description, setDescription] = useState("");
 
   const { data: liveEvents } = useQuery({
-    queryKey: ["/api/livestream-events", { status: "LIVE" }],
+    queryKey: ["/api/livestream-events?status=LIVE"],
   });
 
   const goLiveMutation = useMutation({
