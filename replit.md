@@ -58,8 +58,9 @@ Both implement heartbeat mechanisms for connection health monitoring.
 - Social features (posts, comments, likes, follows, hashtags)
 - Messaging (conversations, messages, participants)
 - Stories & highlights
-- Professional features (portfolios, studio approvals, jobs)
+- Professional features (portfolios, studio approval requests, jobs)
 - Live streaming (events, participants, comments, reactions)
+- Artist-Studio Connections (studio_approval_requests table with PENDING/APPROVED/REJECTED status)
 
 **Indexes**: Composite indexes are applied to join tables (post_likes, follows, conversation_participants) for efficient querying of relationships. Individual indexes on foreign keys optimize lookups.
 
@@ -79,3 +80,33 @@ Both implement heartbeat mechanisms for connection health monitoring.
 - Vite for frontend development with HMR and Replit-specific plugins (cartographer, dev-banner, runtime error overlay)
 - tsx for TypeScript execution in development
 - esbuild for server bundling in production
+
+### Key Features
+
+**Artist-Studio Connection System**: Formal connection workflow allowing artists to request affiliation with tattoo studios:
+
+*Artist Flow*:
+1. Search for studios via StudioConnectionDialog component
+2. Send connection request with optional introduction message
+3. View connected studio on profile (Building2 icon + studio name)
+
+*Studio Flow*:
+1. View pending connection requests on profile page
+2. Approve or reject requests with single-click actions
+3. Display connected artists as circular highlights (Instagram-style)
+4. Connected artists shown with gradient-bordered avatars
+
+*API Endpoints*:
+- `POST /api/studio-approvals` - Create request (ARTIST role required)
+- `GET /api/studio-approvals` - List requests with filters (studioId, artistId, status)
+- `PUT /api/studio-approvals/:id/approve` - Approve request (STUDIO role required)
+- `PUT /api/studio-approvals/:id/reject` - Reject request (STUDIO role required)
+- `GET /api/studios/:studioId/artists` - Get approved artists
+- `GET /api/artists/:artistId/studio` - Get artist's studio connection
+
+*Database*: `studio_approval_requests` table tracks all requests with status enum (PENDING, APPROVED, REJECTED), artist/studio IDs, optional notes, and timestamps.
+
+**Profile Page Design**: Instagram-inspired layout with gradient-bordered avatars, stats row (posts/followers/following), bio section, and role-specific information:
+- *Studios*: Display address (MapPin icon), website link (Globe icon), connected artists as circular highlights
+- *Artists*: Display studio connection (Building2 icon) or "Connect to Studio" button
+- Clean tabs interface (POSTS/SAVED) with 3-column posts grid

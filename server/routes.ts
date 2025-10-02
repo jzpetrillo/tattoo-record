@@ -140,9 +140,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const limit = parseInt(req.query.limit as string) || 20;
       const offset = parseInt(req.query.offset as string) || 0;
+      const authorId = req.query.authorId as string;
       
-      const feed = await getPersonalizedFeed(req.userId!, limit, offset);
-      res.json(feed);
+      if (authorId) {
+        const posts = await storage.getPosts({ limit, offset, authorId });
+        res.json(posts);
+      } else {
+        const feed = await getPersonalizedFeed(req.userId!, limit, offset);
+        res.json(feed);
+      }
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }

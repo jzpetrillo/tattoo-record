@@ -2,7 +2,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import SidebarNav from "@/components/layout/sidebar-nav";
 import MobileNav from "@/components/layout/mobile-nav";
 import { useAuth } from "@/hooks/use-auth";
-import { Building2, Check, X } from "lucide-react";
+import { Building2, Check, X, MapPin, Globe, Grid3x3, Bookmark } from "lucide-react";
 import { StudioConnectionDialog } from "@/components/studio-connection-dialog";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
@@ -60,57 +60,84 @@ export default function Profile() {
   return (
     <div className="min-h-screen bg-background">
       <SidebarNav />
-      <main className="lg:ml-64 pb-20 lg:pb-8 pt-4 max-w-5xl mx-auto px-4">
+      <main className="lg:ml-64 pb-20 lg:pb-8 max-w-4xl mx-auto px-4 pt-8">
         {/* Profile Header */}
-        <div className="mb-8 pb-8 border-b border-border">
-          <div className="flex items-start gap-8">
-            {/* Avatar */}
-            <div className="w-32 h-32 rounded-full bg-secondary flex items-center justify-center flex-shrink-0">
-              <span className="text-4xl font-bold">{user?.username?.[0]?.toUpperCase()}</span>
+        <div className="flex gap-8 md:gap-16 mb-11">
+          {/* Avatar */}
+          <div className="flex-shrink-0">
+            <div className="w-20 h-20 md:w-36 md:h-36 rounded-full bg-gradient-to-tr from-yellow-400 via-pink-500 to-purple-500 p-0.5">
+              <div className="w-full h-full rounded-full bg-background p-1">
+                <div className="w-full h-full rounded-full bg-secondary flex items-center justify-center">
+                  <span className="text-2xl md:text-5xl font-bold">{user?.username?.[0]?.toUpperCase()}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Profile Info */}
+          <div className="flex-1 min-w-0">
+            {/* Username and Actions */}
+            <div className="flex items-center gap-4 mb-5">
+              <h1 className="text-xl font-normal" data-testid="text-username">
+                {user?.username}
+              </h1>
+              {user?.role === "ARTIST" && !studioConnection?.studio && (
+                <StudioConnectionDialog />
+              )}
             </div>
 
-            {/* Profile Info */}
-            <div className="flex-1">
-              <div className="mb-4">
-                <h1 className="text-2xl font-semibold mb-1" data-testid="text-username">
-                  {user?.username}
-                </h1>
-                <p className="text-sm text-muted-foreground">
-                  {user?.role} • {user?.email}
-                </p>
-                
-                {user?.role === "ARTIST" && studioConnection?.studio && (
-                  <div className="mt-2 flex items-center gap-2 text-sm" data-testid="studio-connection">
-                    <Building2 className="w-4 h-4" />
-                    <span className="font-medium">{studioConnection.studio.username}</span>
-                  </div>
-                )}
-                
-                {user?.role === "ARTIST" && !studioConnection?.studio && (
-                  <div className="mt-3">
-                    <StudioConnectionDialog />
-                  </div>
-                )}
+            {/* Stats */}
+            <div className="flex gap-8 mb-5">
+              <div className="flex gap-1">
+                <span className="font-semibold">{userPosts?.length || 0}</span>
+                <span className="text-muted-foreground">posts</span>
               </div>
+              <button className="flex gap-1 hover:opacity-70 transition-opacity" data-testid="button-followers">
+                <span className="font-semibold">0</span>
+                <span className="text-muted-foreground">followers</span>
+              </button>
+              <button className="flex gap-1 hover:opacity-70 transition-opacity" data-testid="button-following">
+                <span className="font-semibold">0</span>
+                <span className="text-muted-foreground">following</span>
+              </button>
+            </div>
 
-              {/* Stats */}
-              <div className="flex gap-8 mb-4">
-                <div className="text-center">
-                  <div className="font-semibold">{userPosts?.length || 0}</div>
-                  <div className="text-sm text-muted-foreground">posts</div>
-                </div>
-                <div className="text-center">
-                  <div className="font-semibold">0</div>
-                  <div className="text-sm text-muted-foreground">followers</div>
-                </div>
-                <div className="text-center">
-                  <div className="font-semibold">0</div>
-                  <div className="text-sm text-muted-foreground">following</div>
-                </div>
-              </div>
-
+            {/* Bio and Details */}
+            <div className="space-y-1">
+              <div className="font-semibold text-sm">{user?.email}</div>
+              
               {user?.bio && (
-                <p className="text-sm">{user.bio}</p>
+                <p className="text-sm whitespace-pre-wrap">{user.bio}</p>
+              )}
+
+              {/* Studio Connection (for Artists) */}
+              {user?.role === "ARTIST" && studioConnection?.studio && (
+                <div className="flex items-center gap-1.5 text-sm" data-testid="studio-connection">
+                  <Building2 className="w-4 h-4" />
+                  <span className="font-medium">{studioConnection.studio.username}</span>
+                </div>
+              )}
+
+              {/* Studio Address */}
+              {user?.role === "STUDIO" && user?.location && (
+                <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                  <MapPin className="w-4 h-4" />
+                  <span>{user.location.city}{user.location.country && `, ${user.location.country}`}</span>
+                </div>
+              )}
+
+              {/* Studio Website */}
+              {user?.role === "STUDIO" && user?.links?.website && (
+                <a 
+                  href={user.links.website} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1.5 text-sm text-blue-600 dark:text-blue-400 hover:underline"
+                  data-testid="link-studio-website"
+                >
+                  <Globe className="w-4 h-4" />
+                  <span>{user.links.website}</span>
+                </a>
               )}
             </div>
           </div>
@@ -119,10 +146,10 @@ export default function Profile() {
         {/* Pending Connection Requests (for Studios) */}
         {user?.role === "STUDIO" && pendingRequests && pendingRequests.length > 0 && (
           <div className="mb-8 pb-8 border-b border-border">
-            <h2 className="text-lg font-semibold mb-4">Pending Connection Requests</h2>
+            <h2 className="text-sm font-semibold mb-4 uppercase tracking-wider text-muted-foreground">Pending Requests</h2>
             <div className="space-y-3">
               {pendingRequests.map((item: any) => (
-                <div key={item.request.id} className="flex items-center justify-between p-4 bg-secondary rounded-md" data-testid={`pending-request-${item.request.id}`}>
+                <div key={item.request.id} className="flex items-center justify-between p-4 bg-secondary/50 rounded-lg" data-testid={`pending-request-${item.request.id}`}>
                   <div className="flex-1">
                     <div className="font-medium">{item.artist.username}</div>
                     {item.request.note && (
@@ -135,6 +162,7 @@ export default function Profile() {
                       onClick={() => approveMutation.mutate(item.request.id)}
                       disabled={approveMutation.isPending || rejectMutation.isPending}
                       data-testid={`button-approve-${item.request.id}`}
+                      className="h-8 w-8 p-0"
                     >
                       <Check className="w-4 h-4" />
                     </Button>
@@ -144,6 +172,7 @@ export default function Profile() {
                       onClick={() => rejectMutation.mutate(item.request.id)}
                       disabled={approveMutation.isPending || rejectMutation.isPending}
                       data-testid={`button-reject-${item.request.id}`}
+                      className="h-8 w-8 p-0"
                     >
                       <X className="w-4 h-4" />
                     </Button>
@@ -154,27 +183,44 @@ export default function Profile() {
           </div>
         )}
 
-        {/* Connected Artists Section (for Studios) */}
+        {/* Connected Artists Highlights (for Studios) */}
         {user?.role === "STUDIO" && connectedArtists && connectedArtists.length > 0 && (
-          <div className="mb-8 pb-8 border-b border-border">
-            <h2 className="text-lg font-semibold mb-4">Connected Artists</h2>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-              {connectedArtists.map((item: any) => (
-                <div key={item.artist.id} className="text-center" data-testid={`connected-artist-${item.artist.id}`}>
-                  <div className="w-16 h-16 rounded-full bg-secondary flex items-center justify-center mx-auto mb-2">
-                    <span className="text-xl font-bold">{item.artist.username[0].toUpperCase()}</span>
+          <div className="mb-8">
+            <div className="flex items-center gap-4 overflow-x-auto pb-2 px-1 scrollbar-hide">
+              {connectedArtists.slice(0, 10).map((item: any) => (
+                <div key={item.artist.id} className="flex flex-col items-center flex-shrink-0" data-testid={`connected-artist-${item.artist.id}`}>
+                  <div className="w-16 h-16 rounded-full bg-gradient-to-tr from-yellow-400 via-pink-500 to-purple-500 p-0.5 mb-1">
+                    <div className="w-full h-full rounded-full bg-background p-0.5">
+                      <div className="w-full h-full rounded-full bg-secondary flex items-center justify-center">
+                        <span className="text-sm font-bold">{item.artist.username[0].toUpperCase()}</span>
+                      </div>
+                    </div>
                   </div>
-                  <p className="text-sm font-medium truncate">{item.artist.username}</p>
+                  <span className="text-xs truncate max-w-[70px]">{item.artist.username}</span>
                 </div>
               ))}
             </div>
           </div>
         )}
 
+        {/* Tabs */}
+        <div className="border-t border-border">
+          <div className="flex items-center justify-center gap-12">
+            <button className="flex items-center gap-2 py-3 border-t-2 border-foreground -mt-px" data-testid="tab-posts">
+              <Grid3x3 className="w-3 h-3" />
+              <span className="text-xs font-semibold uppercase tracking-widest">Posts</span>
+            </button>
+            <button className="flex items-center gap-2 py-3 text-muted-foreground" data-testid="tab-saved">
+              <Bookmark className="w-3 h-3" />
+              <span className="text-xs font-semibold uppercase tracking-widest">Saved</span>
+            </button>
+          </div>
+        </div>
+
         {/* Posts Grid */}
-        <div className="grid grid-cols-3 gap-1">
+        <div className="grid grid-cols-3 gap-1 mt-1">
           {userPosts?.map((item: any) => (
-            <div key={item.post.id} className="aspect-square bg-secondary group cursor-pointer" data-testid={`post-${item.post.id}`}>
+            <div key={item.post.id} className="aspect-square bg-secondary group cursor-pointer relative" data-testid={`post-${item.post.id}`}>
               {item.post.media?.[0]?.url && (
                 <img
                   src={item.post.media[0].url}
@@ -185,6 +231,12 @@ export default function Profile() {
             </div>
           ))}
         </div>
+
+        {userPosts?.length === 0 && (
+          <div className="text-center py-12 text-muted-foreground">
+            <p className="text-2xl font-light">No posts yet</p>
+          </div>
+        )}
       </main>
       <MobileNav />
     </div>
