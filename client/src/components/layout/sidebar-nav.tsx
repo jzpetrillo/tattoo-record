@@ -28,7 +28,7 @@ export default function SidebarNav() {
   ];
 
   return (
-    <aside className="fixed left-0 top-0 h-screen w-64 border-r border-border bg-background flex flex-col px-3 py-8">
+    <aside className="fixed left-0 top-0 h-screen w-64 border-r border-border bg-background flex flex-col px-3 py-8 hidden lg:flex">
       {/* Logo */}
       <div className="mb-10 px-3">
         <h1 className="text-2xl font-bold">Inktagram</h1>
@@ -50,7 +50,7 @@ export default function SidebarNav() {
                 }`}
                 data-testid={`nav-${item.label.toLowerCase()}`}
               >
-                <Icon className={`w-6 h-6 ${isActive ? "fill-current" : ""}`} />
+                <Icon className={`w-6 h-6 ${isActive ? "fill-current stroke-current" : ""}`} strokeWidth={isActive ? 2.5 : 2} />
                 <span className="text-base">{item.label}</span>
               </div>
             </Link>
