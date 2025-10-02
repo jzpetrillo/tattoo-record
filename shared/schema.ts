@@ -509,6 +509,12 @@ export const insertNotificationSchema = createInsertSchema(notifications).omit({
   createdAt: true
 });
 
+export const insertStudioApprovalRequestSchema = createInsertSchema(studioApprovalRequests).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true
+});
+
 // Types
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -528,3 +534,5 @@ export type LivestreamEvent = typeof livestreamEvents.$inferSelect;
 export type InsertLivestreamEvent = z.infer<typeof insertLivestreamEventSchema>;
 export type Notification = typeof notifications.$inferSelect;
 export type InsertNotification = z.infer<typeof insertNotificationSchema>;
+export type StudioApprovalRequest = typeof studioApprovalRequests.$inferSelect;
+export type InsertStudioApprovalRequest = z.infer<typeof insertStudioApprovalRequestSchema>;

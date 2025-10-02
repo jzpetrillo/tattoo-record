@@ -1,4 +1,7 @@
 import { z } from "zod";
+import { insertStudioApprovalRequestSchema as _insertStudioApprovalRequestSchema } from "@shared/schema";
+
+export const insertStudioApprovalRequestSchema = _insertStudioApprovalRequestSchema;
 
 export const loginSchema = z.object({
   email: z.string().email("Invalid email address"),

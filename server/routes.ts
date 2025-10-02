@@ -554,5 +554,77 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Studio Approval Routes
+  app.post("/api/studio-approvals", requireAuth, requireRole(["ARTIST"]), async (req: AuthRequest, res) => {
+    try {
+      const validated = validation.insertStudioApprovalRequestSchema.parse({
+        ...req.body,
+        artistId: req.userId,
+        status: "PENDING"
+      });
+      const request = await storage.createStudioApprovalRequest(validated);
+      res.json(request);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+
+  app.get("/api/studio-approvals", requireAuth, async (req: AuthRequest, res) => {
+    try {
+      const filters: any = {};
+      
+      if (req.query.studioId) {
+        filters.studioId = req.query.studioId as string;
+      }
+      if (req.query.artistId) {
+        filters.artistId = req.query.artistId as string;
+      }
+      if (req.query.status) {
+        filters.status = req.query.status as string;
+      }
+
+      const requests = await storage.getStudioApprovalRequests(filters);
+      res.json(requests);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.put("/api/studio-approvals/:id/approve", requireAuth, requireRole(["STUDIO"]), async (req: AuthRequest, res) => {
+    try {
+      await storage.updateStudioApprovalStatus(req.params.id, "APPROVED");
+      res.json({ message: "Request approved" });
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+
+  app.put("/api/studio-approvals/:id/reject", requireAuth, requireRole(["STUDIO"]), async (req: AuthRequest, res) => {
+    try {
+      await storage.updateStudioApprovalStatus(req.params.id, "REJECTED");
+      res.json({ message: "Request rejected" });
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+
+  app.get("/api/studios/:studioId/artists", async (req, res) => {
+    try {
+      const artists = await storage.getApprovedArtists(req.params.studioId);
+      res.json(artists);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get("/api/artists/:artistId/studio", async (req, res) => {
+    try {
+      const studio = await storage.getArtistStudio(req.params.artistId);
+      res.json(studio);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   return httpServer;
 }

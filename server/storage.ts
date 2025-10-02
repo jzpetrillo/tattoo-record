@@ -69,6 +69,13 @@ export interface IStorage {
   markNotificationAsRead(id: string): Promise<void>;
   markAllNotificationsAsRead(userId: string): Promise<void>;
   createNotification(notification: schema.InsertNotification): Promise<schema.Notification>;
+  
+  // Studio approval operations
+  createStudioApprovalRequest(request: schema.InsertStudioApprovalRequest): Promise<schema.StudioApprovalRequest>;
+  getStudioApprovalRequests(filters: { studioId?: string; artistId?: string; status?: string }): Promise<any[]>;
+  updateStudioApprovalStatus(id: string, status: string): Promise<void>;
+  getApprovedArtists(studioId: string): Promise<any[]>;
+  getArtistStudio(artistId: string): Promise<any>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -501,6 +508,94 @@ export class DatabaseStorage implements IStorage {
       .values(notification)
       .returning();
     return created;
+  }
+
+  async createStudioApprovalRequest(request: schema.InsertStudioApprovalRequest) {
+    const [created] = await db
+      .insert(schema.studioApprovalRequests)
+      .values(request)
+      .returning();
+    return created;
+  }
+
+  async getStudioApprovalRequests(filters: { studioId?: string; artistId?: string; status?: string }) {
+    const conditions: any[] = [];
+    
+    if (filters.studioId) {
+      conditions.push(eq(schema.studioApprovalRequests.studioId, filters.studioId));
+    }
+    if (filters.artistId) {
+      conditions.push(eq(schema.studioApprovalRequests.artistId, filters.artistId));
+    }
+    if (filters.status) {
+      conditions.push(eq(schema.studioApprovalRequests.status, filters.status as any));
+    }
+
+    const requests = await db
+      .select()
+      .from(schema.studioApprovalRequests)
+      .where(conditions.length > 0 ? and(...conditions) : undefined)
+      .orderBy(desc(schema.studioApprovalRequests.createdAt));
+
+    const enrichedRequests = await Promise.all(
+      requests.map(async (request) => {
+        const [artist] = await db.select().from(schema.users).where(eq(schema.users.id, request.artistId)).limit(1);
+        const [studio] = await db.select().from(schema.users).where(eq(schema.users.id, request.studioId)).limit(1);
+        return { request, artist, studio };
+      })
+    );
+
+    return enrichedRequests;
+  }
+
+  async updateStudioApprovalStatus(id: string, status: string) {
+    await db
+      .update(schema.studioApprovalRequests)
+      .set({ status: status as any, updatedAt: new Date() })
+      .where(eq(schema.studioApprovalRequests.id, id));
+  }
+
+  async getApprovedArtists(studioId: string) {
+    return db
+      .select({
+        request: schema.studioApprovalRequests,
+        artist: schema.users
+      })
+      .from(schema.studioApprovalRequests)
+      .innerJoin(
+        schema.users,
+        eq(schema.studioApprovalRequests.artistId, schema.users.id)
+      )
+      .where(
+        and(
+          eq(schema.studioApprovalRequests.studioId, studioId),
+          eq(schema.studioApprovalRequests.status, 'APPROVED')
+        )
+      )
+      .orderBy(desc(schema.studioApprovalRequests.updatedAt));
+  }
+
+  async getArtistStudio(artistId: string) {
+    const [result] = await db
+      .select({
+        request: schema.studioApprovalRequests,
+        studio: schema.users
+      })
+      .from(schema.studioApprovalRequests)
+      .innerJoin(
+        schema.users,
+        eq(schema.studioApprovalRequests.studioId, schema.users.id)
+      )
+      .where(
+        and(
+          eq(schema.studioApprovalRequests.artistId, artistId),
+          eq(schema.studioApprovalRequests.status, 'APPROVED')
+        )
+      )
+      .orderBy(desc(schema.studioApprovalRequests.updatedAt))
+      .limit(1);
+    
+    return result;
   }
 }
 
