@@ -1,56 +1,67 @@
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 import { useState } from "react";
+import { Plus } from "lucide-react";
 import StoryViewer from "./story-viewer";
 
 export default function StoriesBar() {
-  const { token } = useAuth();
+  const { token, user } = useAuth();
   const [viewingStory, setViewingStory] = useState<string | null>(null);
 
-  const { data: stories } = useQuery({
+  const { data: stories } = useQuery<any[]>({
     queryKey: ["/api/stories"],
     enabled: !!token,
   });
 
+  // Get unique users with active stories
+  const storyUsers = stories?.reduce((acc: any[], item: any) => {
+    if (!acc.find((u: any) => u.id === item.user.id)) {
+      acc.push(item.user);
+    }
+    return acc;
+  }, []) || [];
+
   return (
     <>
-      <section className="border-b border-border bg-card">
-        <div className="max-w-4xl mx-auto px-4 py-4">
-          <div className="flex gap-4 overflow-x-auto scrollbar-hide pb-2">
-            <div className="flex flex-col items-center gap-2 flex-shrink-0">
-              <button
-                className="w-16 h-16 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center hover:scale-105 transition-transform"
-                data-testid="button-create-story"
-              >
-                <i className="fas fa-plus text-2xl text-white"></i>
-              </button>
-              <span className="text-xs text-muted-foreground font-medium">Your Story</span>
+      <div className="border-b border-border py-4 mb-4">
+        <div className="flex gap-4 overflow-x-auto scrollbar-hide px-1">
+          {/* Add your story */}
+          <div className="flex flex-col items-center gap-1 cursor-pointer flex-shrink-0" data-testid="button-create-story">
+            <div className="relative">
+              <div className="w-16 h-16 rounded-full bg-secondary flex items-center justify-center border-2 border-border">
+                <span className="text-lg font-semibold">{user?.username?.[0]?.toUpperCase()}</span>
+              </div>
+              <div className="absolute bottom-0 right-0 w-5 h-5 bg-primary rounded-full flex items-center justify-center border-2 border-background">
+                <Plus className="w-3 h-3 text-white" />
+              </div>
             </div>
+            <span className="text-xs">Your story</span>
+          </div>
 
-            {stories?.slice(0, 10).map((item: any) => (
-              <div
-                key={item.story.id}
-                className="flex flex-col items-center gap-2 flex-shrink-0 cursor-pointer"
-                onClick={() => setViewingStory(item.story.userId)}
-                data-testid={`story-${item.user.username}`}
-              >
-                <div className="story-ring">
-                  <div className="story-inner">
-                    <img
-                      src={item.user.avatarUrl || `https://ui-avatars.com/api/?name=${item.user.username}`}
-                      alt={item.user.username}
-                      className="w-14 h-14 rounded-full object-cover"
-                    />
+          {/* Other users' stories */}
+          {storyUsers.slice(0, 10).map((author: any) => (
+            <div 
+              key={author.id} 
+              className="flex flex-col items-center gap-1 cursor-pointer flex-shrink-0" 
+              onClick={() => setViewingStory(author.id)}
+              data-testid={`story-${author.username}`}
+            >
+              <div className="w-16 h-16 rounded-full bg-gradient-to-tr from-yellow-400 via-pink-500 to-purple-500 p-0.5">
+                <div className="w-full h-full rounded-full bg-background p-0.5">
+                  <div className="w-full h-full rounded-full bg-secondary flex items-center justify-center overflow-hidden">
+                    {author.avatarUrl ? (
+                      <img src={author.avatarUrl} alt={author.username} className="w-full h-full object-cover" />
+                    ) : (
+                      <span className="text-sm font-semibold">{author.username[0].toUpperCase()}</span>
+                    )}
                   </div>
                 </div>
-                <span className="text-xs text-foreground font-medium max-w-[64px] truncate">
-                  {item.user.username}
-                </span>
               </div>
-            ))}
-          </div>
+              <span className="text-xs max-w-[64px] truncate">{author.username}</span>
+            </div>
+          ))}
         </div>
-      </section>
+      </div>
 
       {viewingStory && (
         <StoryViewer userId={viewingStory} onClose={() => setViewingStory(null)} />
