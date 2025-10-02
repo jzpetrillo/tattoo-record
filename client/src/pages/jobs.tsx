@@ -22,8 +22,22 @@ const createJobSchema = z.object({
   type: z.enum(["FULL_TIME", "PART_TIME", "CONTRACT", "APPRENTICESHIP"]),
   description: z.string().min(1, "Description is required"),
   location: z.string().optional(),
-  salaryMinCents: z.string().optional().transform(val => val ? parseInt(val) * 100 : undefined),
-  salaryMaxCents: z.string().optional().transform(val => val ? parseInt(val) * 100 : undefined),
+  salaryMinCents: z.string().optional()
+    .refine((val) => !val || (!isNaN(Number(val)) && Number(val) > 0), {
+      message: "Minimum salary must be a positive number"
+    })
+    .transform(val => val && val.trim() !== "" && !isNaN(Number(val)) ? Math.floor(Number(val)) * 100 : undefined),
+  salaryMaxCents: z.string().optional()
+    .refine((val) => !val || (!isNaN(Number(val)) && Number(val) > 0), {
+      message: "Maximum salary must be a positive number"
+    })
+    .transform(val => val && val.trim() !== "" && !isNaN(Number(val)) ? Math.floor(Number(val)) * 100 : undefined),
+}).refine((data) => {
+  if (!data.salaryMinCents || !data.salaryMaxCents) return true;
+  return data.salaryMinCents <= data.salaryMaxCents;
+}, {
+  message: "Minimum salary cannot be greater than maximum salary",
+  path: ["salaryMinCents"],
 });
 
 export default function Jobs() {
@@ -31,7 +45,7 @@ export default function Jobs() {
   const { toast } = useToast();
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
 
-  const { data: jobs, isLoading } = useQuery({
+  const { data: jobs, isLoading } = useQuery<any[]>({
     queryKey: ["/api/jobs"],
     enabled: !!token,
   });
@@ -50,7 +64,7 @@ export default function Jobs() {
 
   const createJobMutation = useMutation({
     mutationFn: async (data: any) => {
-      const res = await apiRequest("POST", "/api/jobs", data, token!);
+      const res = await apiRequest("POST", "/api/jobs", data);
       if (!res.ok) throw new Error("Failed to create job");
       return res.json();
     },
