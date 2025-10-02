@@ -27,18 +27,17 @@ export default function LiveEvents() {
   const [description, setDescription] = useState("");
 
   const { data: liveEvents } = useQuery({
-    queryKey: ["/api/livestream-events?status=LIVE"],
-    enabled: !!token,
+    queryKey: ["/api/livestream-events", { status: "LIVE" }],
   });
 
   const goLiveMutation = useMutation({
     mutationFn: async () => {
-      return apiRequest("POST", "/api/livestream-events", {
+      const response = await apiRequest("POST", "/api/livestream-events", {
         title,
         description,
         status: "LIVE",
-        startedAt: new Date().toISOString(),
       }, token!);
+      return response;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/livestream-events"] });
