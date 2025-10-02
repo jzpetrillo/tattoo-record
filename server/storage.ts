@@ -63,6 +63,12 @@ export interface IStorage {
   searchPosts(query: string): Promise<any[]>;
   searchHashtags(query: string): Promise<any[]>;
   getTrendingHashtags(limit?: number): Promise<any[]>;
+  
+  // Notification operations
+  getNotifications(userId: string, limit?: number): Promise<any[]>;
+  markNotificationAsRead(id: string): Promise<void>;
+  markAllNotificationsAsRead(userId: string): Promise<void>;
+  createNotification(notification: schema.InsertNotification): Promise<schema.Notification>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -457,6 +463,44 @@ export class DatabaseStorage implements IStorage {
       .from(schema.hashtags)
       .orderBy(desc(schema.hashtags.uses))
       .limit(limit);
+  }
+
+  async getNotifications(userId: string, limit = 50) {
+    return db
+      .select({
+        notification: schema.notifications,
+        actor: schema.users
+      })
+      .from(schema.notifications)
+      .leftJoin(
+        schema.users,
+        sql`${schema.notifications.payload}->>'actorId' = ${schema.users.id}`
+      )
+      .where(eq(schema.notifications.userId, userId))
+      .orderBy(desc(schema.notifications.createdAt))
+      .limit(limit);
+  }
+
+  async markNotificationAsRead(id: string) {
+    await db
+      .update(schema.notifications)
+      .set({ isRead: true })
+      .where(eq(schema.notifications.id, id));
+  }
+
+  async markAllNotificationsAsRead(userId: string) {
+    await db
+      .update(schema.notifications)
+      .set({ isRead: true })
+      .where(eq(schema.notifications.userId, userId));
+  }
+
+  async createNotification(notification: schema.InsertNotification) {
+    const [created] = await db
+      .insert(schema.notifications)
+      .values(notification)
+      .returning();
+    return created;
   }
 }
 

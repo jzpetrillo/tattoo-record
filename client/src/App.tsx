@@ -8,9 +8,11 @@ import Home from "@/pages/home";
 import Search from "@/pages/search";
 import Explore from "@/pages/explore";
 import Messages from "@/pages/messages";
+import Notifications from "@/pages/notifications";
 import Profile from "@/pages/profile";
 import LiveEvents from "@/pages/live-events";
 import Jobs from "@/pages/jobs";
+import Create from "@/pages/create";
 import Auth from "@/pages/auth";
 
 function Router() {
@@ -20,11 +22,14 @@ function Router() {
       <Route path="/search" component={Search} />
       <Route path="/explore" component={Explore} />
       <Route path="/messages" component={Messages} />
+      <Route path="/notifications" component={Notifications} />
       <Route path="/profile" component={Profile} />
       <Route path="/profile/:username" component={Profile} />
       <Route path="/live-events" component={LiveEvents} />
       <Route path="/live" component={LiveEvents} />
       <Route path="/jobs" component={Jobs} />
+      <Route path="/create" component={Create} />
+      <Route path="/reels" component={Explore} />
       <Route path="/auth" component={Auth} />
       <Route component={NotFound} />
     </Switch>

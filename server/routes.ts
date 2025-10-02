@@ -478,6 +478,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Notification Routes
+  app.get("/api/notifications", requireAuth, async (req: AuthRequest, res) => {
+    try {
+      const limit = parseInt(req.query.limit as string) || 50;
+      const notifications = await storage.getNotifications(req.userId!, limit);
+      res.json(notifications);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post("/api/notifications/:id/read", requireAuth, async (req: AuthRequest, res) => {
+    try {
+      await storage.markNotificationAsRead(req.params.id);
+      res.json({ message: "Notification marked as read" });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post("/api/notifications/read-all", requireAuth, async (req: AuthRequest, res) => {
+    try {
+      await storage.markAllNotificationsAsRead(req.userId!);
+      res.json({ message: "All notifications marked as read" });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   app.get("/api/discovery/trending", async (req, res) => {
     try {
       const limit = parseInt(req.query.limit as string) || 20;

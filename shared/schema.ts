@@ -504,6 +504,11 @@ export const insertLivestreamEventSchema = createInsertSchema(livestreamEvents).
   updatedAt: true
 });
 
+export const insertNotificationSchema = createInsertSchema(notifications).omit({
+  id: true,
+  createdAt: true
+});
+
 // Types
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -521,3 +526,5 @@ export type JobPosting = typeof jobPostings.$inferSelect;
 export type InsertJobPosting = z.infer<typeof insertJobPostingSchema>;
 export type LivestreamEvent = typeof livestreamEvents.$inferSelect;
 export type InsertLivestreamEvent = z.infer<typeof insertLivestreamEventSchema>;
+export type Notification = typeof notifications.$inferSelect;
+export type InsertNotification = z.infer<typeof insertNotificationSchema>;

@@ -195,6 +195,28 @@ async function generateTestData() {
   
   console.log("Created conversations and messages");
   
+  // Create some test notifications
+  for (let i = 0; i < 30; i++) {
+    const user = users[Math.floor(Math.random() * users.length)];
+    const actor = users[Math.floor(Math.random() * users.length)];
+    
+    if (user.id !== actor.id) {
+      const notificationType = ["FOLLOW", "LIKE", "COMMENT", "SYSTEM"][Math.floor(Math.random() * 4)];
+      
+      await db.insert(schema.notifications).values({
+        userId: user.id,
+        type: notificationType as "FOLLOW" | "LIKE" | "COMMENT" | "SYSTEM",
+        payload: {
+          actorId: actor.id,
+          message: notificationType === "SYSTEM" ? "Welcome to Inktagram!" : undefined,
+        },
+        isRead: Math.random() > 0.5,
+      });
+    }
+  }
+  
+  console.log("Created test notifications");
+  
   console.log("✅ Test data generation complete!");
   console.log(`Total users: ${TOTAL_USERS}`);
   console.log(`Studios: ${STUDIOS}`);
