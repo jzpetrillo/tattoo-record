@@ -1,5 +1,6 @@
 import { useState } from "react";
 import SidebarNav from "@/components/layout/sidebar-nav";
+import MobileNav from "@/components/layout/mobile-nav";
 import StoriesBar from "@/components/stories/stories-bar";
 import SuggestedUsers from "@/components/layout/suggested-users";
 import PostFeed from "@/components/posts/post-feed";
@@ -117,15 +118,20 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen bg-background flex">
-      {/* Left Sidebar Navigation */}
+    <div className="min-h-screen bg-background">
+      {/* Left Sidebar Navigation - Desktop only */}
       <SidebarNav />
 
       {/* Main Content Area */}
-      <main className="flex-1 lg:ml-64">
-        <div className="max-w-[630px] mx-auto pt-8 pb-20">
+      <main className="lg:ml-64 pb-20 lg:pb-8">
+        {/* Mobile Header */}
+        <div className="lg:hidden sticky top-0 z-40 bg-background border-b border-border px-4 py-3">
+          <h1 className="text-xl font-bold">Inktagram</h1>
+        </div>
+
+        <div className="max-w-[630px] mx-auto lg:pt-8 px-4 lg:px-0">
           {/* Stories Bar */}
-          <div className="border border-border rounded-lg mb-6 bg-background">
+          <div className="border border-border rounded-lg mb-4 bg-background mt-4 lg:mt-0">
             <StoriesBar />
           </div>
 
@@ -134,7 +140,7 @@ export default function Home() {
         </div>
       </main>
 
-      {/* Right Sidebar - Suggestions */}
+      {/* Right Sidebar - Suggestions (Desktop only) */}
       <aside className="hidden xl:block w-80 fixed right-0 top-0 h-screen px-8 py-8">
         <div className="flex items-center gap-3 mb-6">
           <div className="w-12 h-12 rounded-full bg-secondary flex items-center justify-center">
@@ -148,6 +154,9 @@ export default function Home() {
 
         <SuggestedUsers />
       </aside>
+
+      {/* Mobile Bottom Navigation */}
+      <MobileNav />
     </div>
   );
 }
