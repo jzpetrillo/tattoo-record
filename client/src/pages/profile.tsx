@@ -1,11 +1,16 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import SidebarNav from "@/components/layout/sidebar-nav";
 import MobileNav from "@/components/layout/mobile-nav";
 import { useAuth } from "@/hooks/use-auth";
-import { Building2, MapPin, Globe } from "lucide-react";
+import { Building2, Check, X } from "lucide-react";
+import { StudioConnectionDialog } from "@/components/studio-connection-dialog";
+import { Button } from "@/components/ui/button";
+import { useToast } from "@/hooks/use-toast";
+import { queryClient, apiRequest } from "@/lib/queryClient";
 
 export default function Profile() {
   const { user, token } = useAuth();
+  const { toast } = useToast();
 
   const { data: userPosts } = useQuery({
     queryKey: [`/api/posts?authorId=${user?.id}`],
@@ -20,6 +25,36 @@ export default function Profile() {
   const { data: connectedArtists } = useQuery({
     queryKey: [`/api/studios/${user?.id}/artists`],
     enabled: !!token && !!user && user?.role === "STUDIO",
+  });
+
+  const { data: pendingRequests } = useQuery({
+    queryKey: ["/api/studio-approvals", { studioId: user?.id, status: "PENDING" }],
+    enabled: !!token && !!user && user?.role === "STUDIO",
+  });
+
+  const approveMutation = useMutation({
+    mutationFn: async (requestId: string) => {
+      return apiRequest(`/api/studio-approvals/${requestId}/approve`, {
+        method: "PUT",
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/studio-approvals"] });
+      queryClient.invalidateQueries({ queryKey: [`/api/studios/${user?.id}/artists`] });
+      toast({ description: "Request approved!" });
+    },
+  });
+
+  const rejectMutation = useMutation({
+    mutationFn: async (requestId: string) => {
+      return apiRequest(`/api/studio-approvals/${requestId}/reject`, {
+        method: "PUT",
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/studio-approvals"] });
+      toast({ description: "Request rejected" });
+    },
   });
 
   return (
@@ -50,6 +85,12 @@ export default function Profile() {
                     <span className="font-medium">{studioConnection.studio.username}</span>
                   </div>
                 )}
+                
+                {user?.role === "ARTIST" && !studioConnection?.studio && (
+                  <div className="mt-3">
+                    <StudioConnectionDialog />
+                  </div>
+                )}
               </div>
 
               {/* Stats */}
@@ -74,6 +115,44 @@ export default function Profile() {
             </div>
           </div>
         </div>
+
+        {/* Pending Connection Requests (for Studios) */}
+        {user?.role === "STUDIO" && pendingRequests && pendingRequests.length > 0 && (
+          <div className="mb-8 pb-8 border-b border-border">
+            <h2 className="text-lg font-semibold mb-4">Pending Connection Requests</h2>
+            <div className="space-y-3">
+              {pendingRequests.map((item: any) => (
+                <div key={item.request.id} className="flex items-center justify-between p-4 bg-secondary rounded-md" data-testid={`pending-request-${item.request.id}`}>
+                  <div className="flex-1">
+                    <div className="font-medium">{item.artist.username}</div>
+                    {item.request.note && (
+                      <p className="text-sm text-muted-foreground mt-1">{item.request.note}</p>
+                    )}
+                  </div>
+                  <div className="flex gap-2 ml-4">
+                    <Button
+                      size="sm"
+                      onClick={() => approveMutation.mutate(item.request.id)}
+                      disabled={approveMutation.isPending || rejectMutation.isPending}
+                      data-testid={`button-approve-${item.request.id}`}
+                    >
+                      <Check className="w-4 h-4" />
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => rejectMutation.mutate(item.request.id)}
+                      disabled={approveMutation.isPending || rejectMutation.isPending}
+                      data-testid={`button-reject-${item.request.id}`}
+                    >
+                      <X className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Connected Artists Section (for Studios) */}
         {user?.role === "STUDIO" && connectedArtists && connectedArtists.length > 0 && (
