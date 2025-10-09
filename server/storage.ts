@@ -76,6 +76,11 @@ export interface IStorage {
   updateStudioApprovalStatus(id: string, status: string): Promise<void>;
   getApprovedArtists(studioId: string): Promise<any[]>;
   getArtistStudio(artistId: string): Promise<any>;
+  
+  // Admin operations
+  getPendingUsers(): Promise<any[]>;
+  approveUser(userId: string): Promise<void>;
+  rejectUser(userId: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -596,6 +601,36 @@ export class DatabaseStorage implements IStorage {
       .limit(1);
     
     return result;
+  }
+
+  // Admin operations
+  async getPendingUsers() {
+    return db
+      .select()
+      .from(schema.users)
+      .where(eq(schema.users.verificationStatus, 'PENDING'))
+      .orderBy(desc(schema.users.createdAt));
+  }
+
+  async approveUser(userId: string) {
+    await db
+      .update(schema.users)
+      .set({ 
+        verificationStatus: 'APPROVED',
+        isVerified: true,
+        updatedAt: new Date() 
+      })
+      .where(eq(schema.users.id, userId));
+  }
+
+  async rejectUser(userId: string) {
+    await db
+      .update(schema.users)
+      .set({ 
+        verificationStatus: 'REJECTED',
+        updatedAt: new Date() 
+      })
+      .where(eq(schema.users.id, userId));
   }
 }
 

@@ -40,13 +40,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const hashedPassword = await bcrypt.hash(validated.password, 10);
+      
+      // Set verification status based on role
+      const verificationStatus = (validated.role === "ARTIST" || validated.role === "STUDIO") 
+        ? "PENDING" 
+        : null;
+      
       const user = await storage.createUser({
         ...validated,
-        hashedPassword
+        hashedPassword,
+        verificationStatus
       });
 
       const token = generateToken(user.id);
-      res.json({ token, user: { id: user.id, username: user.username, email: user.email, role: user.role } });
+      res.json({ token, user: { id: user.id, username: user.username, email: user.email, role: user.role, verificationStatus: user.verificationStatus } });
     } catch (error: any) {
       res.status(400).json({ message: error.message });
     }
@@ -67,7 +74,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const token = generateToken(user.id);
-      res.json({ token, user: { id: user.id, username: user.username, email: user.email, role: user.role } });
+      res.json({ token, user: { id: user.id, username: user.username, email: user.email, role: user.role, isVerified: user.isVerified, verificationStatus: user.verificationStatus } });
     } catch (error: any) {
       res.status(400).json({ message: error.message });
     }
@@ -629,6 +636,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(studio);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Admin Routes
+  app.get("/api/admin/pending-users", requireAuth, requireRole(["ADMIN"]), async (req: AuthRequest, res) => {
+    try {
+      const pendingUsers = await storage.getPendingUsers();
+      res.json(pendingUsers);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.put("/api/admin/users/:id/approve", requireAuth, requireRole(["ADMIN"]), async (req: AuthRequest, res) => {
+    try {
+      await storage.approveUser(req.params.id);
+      res.json({ message: "User approved successfully" });
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+
+  app.put("/api/admin/users/:id/reject", requireAuth, requireRole(["ADMIN"]), async (req: AuthRequest, res) => {
+    try {
+      await storage.rejectUser(req.params.id);
+      res.json({ message: "User rejected successfully" });
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
     }
   });
 

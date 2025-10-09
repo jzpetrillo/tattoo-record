@@ -16,7 +16,7 @@ import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
 // Enums
-export const roleEnum = pgEnum("role", ["ARTIST", "STUDIO", "ENTHUSIAST"]);
+export const roleEnum = pgEnum("role", ["ARTIST", "STUDIO", "ENTHUSIAST", "ADMIN"]);
 export const visibilityEnum = pgEnum("visibility", ["PUBLIC", "FOLLOWERS"]);
 export const notificationTypeEnum = pgEnum("notification_type", [
   "FOLLOW",
@@ -66,6 +66,7 @@ export const users = pgTable("users", {
   bio: text("bio"),
   avatarUrl: text("avatar_url"),
   isVerified: boolean("is_verified").notNull().default(false),
+  verificationStatus: approvalStatusEnum("verification_status"),
   location: jsonb("location").$type<{
     city?: string;
     country?: string;
