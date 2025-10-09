@@ -14,6 +14,7 @@ import LiveEvents from "@/pages/live-events";
 import Jobs from "@/pages/jobs";
 import Create from "@/pages/create";
 import Auth from "@/pages/auth";
+import AdminDashboard from "@/pages/admin";
 
 function Router() {
   return (
@@ -31,6 +32,7 @@ function Router() {
       <Route path="/create" component={Create} />
       <Route path="/reels" component={Explore} />
       <Route path="/auth" component={Auth} />
+      <Route path="/admin" component={AdminDashboard} />
       <Route component={NotFound} />
     </Switch>
   );

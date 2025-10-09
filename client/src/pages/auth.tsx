@@ -186,17 +186,24 @@ export default function Auth() {
             </Form>
           )}
 
-          <div className="mt-4 text-center">
+          <div className="mt-4 text-center space-y-2">
             <button
               onClick={() => {
                 setIsLogin(!isLogin);
                 loginForm.reset();
                 registerForm.reset();
               }}
-              className="text-sm text-primary hover:underline"
+              className="text-sm text-primary hover:underline block w-full"
               data-testid="button-toggle-auth"
             >
               {isLogin ? "Don't have an account? Sign up" : "Already have an account? Sign in"}
+            </button>
+            <button
+              onClick={() => setLocation("/admin")}
+              className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+              data-testid="button-admin-link"
+            >
+              Admin Access →
             </button>
           </div>
         </CardContent>

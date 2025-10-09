@@ -2,7 +2,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import SidebarNav from "@/components/layout/sidebar-nav";
 import MobileNav from "@/components/layout/mobile-nav";
 import { useAuth } from "@/hooks/use-auth";
-import { Building2, Check, X, MapPin, Globe, Grid3x3, Bookmark } from "lucide-react";
+import { Building2, Check, X, MapPin, Globe, Grid3x3, Bookmark, Star } from "lucide-react";
 import { StudioConnectionDialog } from "@/components/studio-connection-dialog";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
@@ -78,9 +78,14 @@ export default function Profile() {
           <div className="flex-1 min-w-0">
             {/* Username and Actions */}
             <div className="flex items-center gap-4 mb-5">
-              <h1 className="text-xl font-normal" data-testid="text-username">
-                {user?.username}
-              </h1>
+              <div className="flex items-center gap-2">
+                <h1 className="text-xl font-normal" data-testid="text-username">
+                  {user?.username}
+                </h1>
+                {user?.isVerified && (
+                  <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" data-testid="icon-verified" />
+                )}
+              </div>
               {user?.role === "ARTIST" && !studioConnection?.studio && (
                 <StudioConnectionDialog />
               )}
