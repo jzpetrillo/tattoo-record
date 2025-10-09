@@ -110,3 +110,38 @@ Both implement heartbeat mechanisms for connection health monitoring.
 - *Studios*: Display address (MapPin icon), website link (Globe icon), connected artists as circular highlights
 - *Artists*: Display studio connection (Building2 icon) or "Connect to Studio" button
 - Clean tabs interface (POSTS/SAVED) with 3-column posts grid
+- **Verified Badge**: Approved users display yellow star icon next to username
+
+**Admin Verification System**: Platform requires admin approval for artists and studios before they can fully use the platform:
+
+*User Roles*:
+- **ENTHUSIAST**: No approval required, can use platform immediately
+- **ARTIST**: Requires admin approval, account set to PENDING status upon registration
+- **STUDIO**: Requires admin approval, account set to PENDING status upon registration
+- **ADMIN**: Full access to admin dashboard for user verification
+
+*Verification Workflow*:
+1. Artist/Studio registers → Account status set to PENDING
+2. Admin reviews pending users in Admin Dashboard (`/admin`)
+3. Admin approves → User status set to APPROVED, isVerified = true, verified star appears on profile
+4. Admin rejects → User status set to REJECTED
+
+*Admin Dashboard* (`/admin`):
+- Lists all pending users with registration details
+- Approve/Reject buttons for each user
+- Shows user role, email, bio, location, registration date
+- Access via "Admin Access →" link on login page
+- Route: `/admin` (requires ADMIN role)
+
+*Admin Credentials* (for testing):
+- Email: admin@inktagram.com
+- Password: Admin1234!
+
+*API Endpoints*:
+- `GET /api/admin/pending-users` - List pending users (ADMIN only)
+- `PUT /api/admin/users/:id/approve` - Approve user (ADMIN only)
+- `PUT /api/admin/users/:id/reject` - Reject user (ADMIN only)
+
+*Database Fields*:
+- `users.verificationStatus`: PENDING | APPROVED | REJECTED
+- `users.isVerified`: boolean (true when APPROVED)

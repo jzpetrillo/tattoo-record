@@ -6,8 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Check, X, ShieldCheck } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import SidebarNav from "@/components/navigation/sidebar-nav";
-import MobileNav from "@/components/navigation/mobile-nav";
+import SidebarNav from "@/components/layout/sidebar-nav";
+import MobileNav from "@/components/layout/mobile-nav";
 
 export default function AdminDashboard() {
   const { token, user } = useAuth();
