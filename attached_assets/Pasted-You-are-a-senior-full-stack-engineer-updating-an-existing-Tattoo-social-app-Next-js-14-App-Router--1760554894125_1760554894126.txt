@@ -1,0 +1,201 @@
+You are a senior full-stack engineer updating an existing Tattoo social app (Next.js 14 App Router + Prisma + Postgres + Tailwind). Apply ALL changes below in one pass. Do not create a new project—modify the existing one in place. Keep current auth/session logic intact.
+
+# =========================
+# 1) DATA MODEL UPDATES
+# =========================
+Update prisma/schema.prisma:
+
+- Ensure a User model with:
+  id (String @id @default(cuid())),
+  email (String @unique),
+  username (String @unique),
+  firstName (String?),
+  lastName (String?),
+  bio (String?),
+  location (String?),
+  website (String?),
+  profileImageUrl (String?),
+  bannerImageUrl (String?),
+  userType (enum UserType: STUDIO | ARTIST | ENTHUSIAST),
+  // Artist-specific
+  studioId (String?),
+  instagram (String?),
+  tiktok (String?),
+  twitter (String?),
+  createdAt (DateTime @default(now())),
+  updatedAt (DateTime @updatedAt)
+  @@index([userType])
+  @@index([studioId])
+
+- Add Studio relation:
+  relation fields: studioId -> User.id
+  A studio is just a User with userType = STUDIO; artists link to their studio via studioId
+
+- Add Post model:
+  id (String @id @default(cuid())),
+  authorId (String),
+  type (enum PostType: POST | REEL | STORY),
+  caption (String?),
+  mediaUrl (String?),
+  createdAt (DateTime @default(now())),
+  updatedAt (DateTime @updatedAt)
+  relations: author -> User @relation(fields: [authorId], references: [id])
+  @@index([authorId])
+  @@index([type, createdAt])
+
+- Add Message model (simple 1:1 or 1:many):
+  id (String @id @default(cuid())),
+  senderId (String),
+  recipientId (String),
+  body (String),
+  createdAt (DateTime @default(now()))
+  relations: sender -> User @relation("UserSentMessages", fields: [senderId], references: [id])
+             recipient -> User @relation("UserReceivedMessages", fields: [recipientId], references: [id])
+  @@index([senderId])
+  @@index([recipientId])
+
+- Add Notification model:
+  id (String @id @default(cuid())),
+  userId (String),          // who receives it
+  kind (enum NotificationKind: LIKE | COMMENT | FOLLOW | MENTION | SYSTEM),
+  payload (Json?),
+  read (Boolean @default(false)),
+  createdAt (DateTime @default(now()))
+  relation: user -> User @relation(fields: [userId], references: [id])
+  @@index([userId, read])
+
+- Add enums if missing:
+  enum UserType { STUDIO ARTIST ENTHUSIAST }
+  enum PostType { POST REEL STORY }
+  enum NotificationKind { LIKE COMMENT FOLLOW MENTION SYSTEM }
+
+Run: npx prisma generate
+
+# =========================
+# 2) SEED SCRIPT (60 USERS + TEST CONTENT)
+# =========================
+Create/replace prisma/seed.ts to generate:
+- 20 Studios (userType=STUDIO) with location, website populated
+- 20 Artists (userType=ARTIST) each linked to a random Studio via studioId; include website + social handles (instagram/tiktok/twitter)
+- 20 Enthusiasts (userType=ENTHUSIAST)
+- For every user, create 3–5 Posts spread across POST, REEL, STORY (use placeholder images/videos already used in project or https://picsum.photos URLs)
+- Create 50 Messages between random pairs (avoid self-messaging)
+- Create 60 Notifications (mix of LIKE/COMMENT/FOLLOW/MENTION/SYSTEM) targeted at random users
+
+Implementation notes for seed.ts:
+- Use @faker-js/faker for names/locations/usernames and social handles. Install dev dep if missing.
+- Ensure username uniqueness (append numeric suffix if collision).
+- Studios: set website like https://studio-[username].tattoo
+- Artists: set website like https://[username]-art.com and random social @handles
+- Enthusiasts: leave studioId null
+- Posts: POST = image; REEL/STORY can be treated as short video or image with type set accordingly
+- Messages: simple bodies like “Hey, love your work!”, timestamps descending
+- Notifications.payload: include minimal info {actorId, postId?} as applicable
+- Export a main() that wipes existing seed data for these tables (safe deleteMany) then inserts new data in batches
+- Add "prisma": { "seed": "ts-node --compiler-options '{\"module\":\"commonjs\"}' prisma/seed.ts" } to package.json if missing
+- Run: npx prisma db push && npm run seed
+
+# =========================
+# 3) API / SERVER ROUTES
+# =========================
+Add App Router endpoints (or update existing) under app/api:
+
+- GET /api/users?type=STUDIO|ARTIST|ENTHUSIAST&take=...&skip=...
+  Returns basic profile list for Explore. If type omitted, return all.
+
+- GET /api/users/[id]  Returns full profile for Profile page (including:
+  user core fields, userType badge, studio (if artist) {id, username, website, location}, counts for posts/followers/following if those exist—else compute posts count only).
+
+- GET /api/posts?authorId=...&type=POST|REEL|STORY
+  Returns posts for profile grid and feed.
+
+- GET /api/messages?withUserId=...  Returns combined thread between current user and withUserId (use auth session to identify current user if already implemented; otherwise simulate with ?me= param temporarily).
+
+- GET /api/notifications  Returns latest notifications for the current user (or ?userId= for now).
+
+Ensure all handlers use Prisma with proper selects, pagination, and basic error handling.
+
+# =========================
+# 4) EXPLORE PAGE (POPULATE + FILTER)
+# =========================
+Update app/explore/page.tsx:
+- Fetch from /api/users with optional filter.
+- Add a filter control at top: Segmented control or select with: All, Studios, Artists, Enthusiasts.
+- Default: All users (paginated 24/page).
+- Cards:
+  - Avatar (profileImageUrl), username, userType badge.
+  - For STUDIO: show location + website (truncated) beneath.
+  - For ARTIST: show studio name (link to studio profile if available).
+  - For ENTHUSIAST: show location if present.
+- Clicking avatar or username navigates to /u/[username] profile.
+
+Styling:
+- Use clean grid (Tailwind): grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-6
+- Card hover: subtle lift (shadow-lg, -translate-y-0.5 transition)
+
+# =========================
+# 5) PROFILE PAGE (LOOK BETTER + GRID PATTERN + INFO BY TYPE)
+# =========================
+Update app/u/[username]/page.tsx (or equivalent):
+
+Header:
+- Banner image (bannerImageUrl or gradient fallback) with subtle pattern overlay (CSS bg-grid via Tailwind layer: add a custom utility that draws a faint grid using repeating-linear-gradient).
+- Overlapping circular avatar, bold username, full name if present.
+- UserType badge chip: STUDIO | ARTIST | ENTHUSIAST (distinct styles).
+- Bio text (line-clamp-3), location pin + location (if exists).
+- "Follow / Message" buttons (wire to existing actions if present; otherwise placeholders).
+
+Details by type (two-column info bar under header):
+- STUDIO: “Studio” label, Location, Website (clickable), optional “Approved Artists” count if available later.
+- ARTIST: “Artist” label, Studio (name → link /u/[studioUsername]), Website + social handles (instagram/tiktok/twitter as external links).
+- ENTHUSIAST: “Enthusiast” label, Location, Website if present.
+
+Posts Grid:
+- Tabs: Posts | Reels | Stories (show counts). Clicking tab filters client-side or refetches /api/posts?type=...
+- Masonry-like uniform grid: grid grid-cols-3 gap-1; square cells using aspect-square; images cover with object-cover.
+- Reels/Stories show a small “play” or “story” corner badge.
+
+General style:
+- Big, bold typography for names and section labels, Instagram-like layout, but with our modern grid aesthetic.
+- Preserve mobile responsiveness.
+
+# =========================
+# 6) FEED CLICKTHROUGHS + NAV LINKS
+# =========================
+- Ensure Feed page posts allow clicking the author avatar/username to navigate to /u/[username].
+- Add a top-nav “View Profile” for all logged-in users that routes to their public profile (/u/[session.username]).
+- Keep “My Profile” (private edit view) and “Dashboard” distinct if they exist; do not remove them.
+
+# =========================
+# 7) BASIC MESSAGES & NOTIFICATIONS UI (TEST)
+# =========================
+- Add simple pages:
+  - app/messages/page.tsx: left column list of recent conversations (unique recipient/sender pairs), right column shows thread.
+  - app/notifications/page.tsx: list of notifications with kind icon, short text, timestamp; unread items bold; clicking marks read (PATCH /api/notifications/[id]).
+
+# =========================
+# 8) UTILITIES & STYLES
+# =========================
+- Tailwind plugin: add a subtle “grid background” utility:
+  In globals.css add:
+  .bg-grid {
+    background-image:
+      linear-gradient(to right, rgba(0,0,0,0.04) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(0,0,0,0.04) 1px, transparent 1px);
+    background-size: 24px 24px;
+  }
+- Apply bg-grid to the profile banner wrapper (with a low opacity overlay so it’s subtle).
+
+# =========================
+# 9) TYPE SAFETY & GUARDS
+# =========================
+- Validate query params for /api/users and /api/posts; default to safe values if invalid.
+- When showing Studio info on ARTIST profile, guard if studio is missing (show “Independent”).
+- For external links, add rel="noopener noreferrer" target="_blank".
+
+# =========================
+# 10) TESTING / VERIFICATION
+# =========================
+- Run: npx prisma db push
+- Run: npm run seed
+- Op
