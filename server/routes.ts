@@ -89,6 +89,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // User Routes
+  app.get("/api/users", async (req, res) => {
+    try {
+      const type = req.query.type as string;
+      const take = parseInt(req.query.take as string) || 24;
+      const skip = parseInt(req.query.skip as string) || 0;
+      
+      const users = await storage.getUsers({ type, take, skip });
+      res.json(users);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   app.get("/api/users/me", requireAuth, async (req: AuthRequest, res) => {
     try {
       const user = await storage.getUser(req.userId!);
@@ -148,9 +161,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const limit = parseInt(req.query.limit as string) || 20;
       const offset = parseInt(req.query.offset as string) || 0;
       const authorId = req.query.authorId as string;
+      const type = req.query.type as "POST" | "REEL" | "STORY" | undefined;
       
       if (authorId) {
-        const posts = await storage.getPosts({ limit, offset, authorId });
+        const posts = await storage.getPosts({ limit, offset, authorId, type });
         res.json(posts);
       } else {
         const feed = await getPersonalizedFeed(req.userId!, limit, offset);
@@ -334,6 +348,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       await storage.markConversationAsRead(req.params.id, req.userId!);
       res.json({ message: "Marked as read" });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get("/api/messages", requireAuth, async (req: AuthRequest, res) => {
+    try {
+      const withUserId = req.query.withUserId as string;
+      if (!withUserId) {
+        return res.status(400).json({ message: "withUserId parameter required" });
+      }
+      
+      const conversation = await storage.getOrCreateConversation([req.userId!, withUserId]);
+      const messages = await storage.getMessages(conversation.id, 50);
+      res.json({ conversation, messages });
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }

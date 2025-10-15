@@ -5,6 +5,7 @@ import { eq, and, desc, isNull, sql, or, ilike, inArray } from "drizzle-orm";
 export interface IStorage {
   // User operations
   getUser(id: string): Promise<schema.User | undefined>;
+  getUsers(options: { type?: string; take?: number; skip?: number }): Promise<any[]>;
   getUserByEmail(email: string): Promise<schema.User | undefined>;
   getUserByUsername(username: string): Promise<schema.User | undefined>;
   createUser(user: schema.InsertUser): Promise<schema.User>;
@@ -12,7 +13,7 @@ export interface IStorage {
   
   // Post operations
   getPost(id: string): Promise<any>;
-  getPosts(options: { limit?: number; offset?: number; authorId?: string }): Promise<any[]>;
+  getPosts(options: { limit?: number; offset?: number; authorId?: string; type?: string }): Promise<any[]>;
   createPost(post: schema.InsertPost): Promise<schema.Post>;
   deletePost(id: string): Promise<void>;
   likePost(postId: string, userId: string): Promise<void>;
@@ -37,6 +38,7 @@ export interface IStorage {
   
   // Message operations
   createConversation(participantIds: string[], isGroup?: boolean, title?: string): Promise<any>;
+  getOrCreateConversation(participantIds: string[]): Promise<any>;
   getConversations(userId: string): Promise<any[]>;
   getMessages(conversationId: string, limit?: number): Promise<any[]>;
   createMessage(message: schema.InsertMessage): Promise<schema.Message>;
@@ -113,6 +115,42 @@ export class DatabaseStorage implements IStorage {
     return user;
   }
 
+  async getUsers(options: { type?: string; take?: number; skip?: number }) {
+    const { type, take = 24, skip = 0 } = options;
+    
+    const conditions = [isNull(schema.users.deletedAt)];
+    if (type && ["ARTIST", "STUDIO", "ENTHUSIAST"].includes(type)) {
+      conditions.push(eq(schema.users.role, type as any));
+    }
+
+    const users = await db
+      .select({
+        id: schema.users.id,
+        username: schema.users.username,
+        email: schema.users.email,
+        role: schema.users.role,
+        firstName: schema.users.firstName,
+        lastName: schema.users.lastName,
+        bio: schema.users.bio,
+        avatarUrl: schema.users.avatarUrl,
+        bannerImageUrl: schema.users.bannerImageUrl,
+        website: schema.users.website,
+        instagram: schema.users.instagram,
+        tiktok: schema.users.tiktok,
+        twitter: schema.users.twitter,
+        location: schema.users.location,
+        isVerified: schema.users.isVerified,
+        createdAt: schema.users.createdAt
+      })
+      .from(schema.users)
+      .where(and(...conditions))
+      .limit(take)
+      .offset(skip)
+      .orderBy(desc(schema.users.createdAt));
+
+    return users;
+  }
+
   async getPost(id: string) {
     const [result] = await db
       .select({
@@ -126,12 +164,15 @@ export class DatabaseStorage implements IStorage {
     return result;
   }
 
-  async getPosts(options: { limit?: number; offset?: number; authorId?: string }) {
-    const { limit = 20, offset = 0, authorId } = options;
+  async getPosts(options: { limit?: number; offset?: number; authorId?: string; type?: string }) {
+    const { limit = 20, offset = 0, authorId, type } = options;
     
     const conditions = [isNull(schema.posts.deletedAt)];
     if (authorId) {
       conditions.push(eq(schema.posts.authorId, authorId));
+    }
+    if (type && ["POST", "REEL", "STORY"].includes(type)) {
+      conditions.push(eq(schema.posts.type, type as any));
     }
 
     return db
@@ -295,6 +336,44 @@ export class DatabaseStorage implements IStorage {
     }
 
     return conversation;
+  }
+
+  async getOrCreateConversation(participantIds: string[]) {
+    if (participantIds.length !== 2) {
+      throw new Error("getOrCreateConversation requires exactly 2 participant IDs");
+    }
+
+    const [userId1, userId2] = participantIds;
+
+    const existingConversations = await db
+      .select({ conversation: schema.conversations })
+      .from(schema.conversations)
+      .innerJoin(
+        schema.conversationParticipants,
+        eq(schema.conversations.id, schema.conversationParticipants.conversationId)
+      )
+      .where(
+        and(
+          eq(schema.conversations.isGroup, false),
+          eq(schema.conversationParticipants.userId, userId1)
+        )
+      );
+
+    for (const { conversation } of existingConversations) {
+      const participants = await db
+        .select()
+        .from(schema.conversationParticipants)
+        .where(eq(schema.conversationParticipants.conversationId, conversation.id));
+
+      const participantUserIds = participants.map(p => p.userId).sort();
+      const targetUserIds = [userId1, userId2].sort();
+
+      if (JSON.stringify(participantUserIds) === JSON.stringify(targetUserIds)) {
+        return conversation;
+      }
+    }
+
+    return this.createConversation(participantIds, false);
   }
 
   async getConversations(userId: string) {

@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Link } from "wouter";
 
 interface PostCardProps {
   post: any;
@@ -81,15 +82,19 @@ export default function PostCard({ post, author, isLiked = false }: PostCardProp
     <article className="bg-card border border-border rounded-lg overflow-hidden" data-testid={`post-${post.id}`}>
       {/* Post header with author info */}
       <div className="p-4 flex items-center gap-3">
-        <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center">
-          <span className="text-sm font-semibold">{author.username[0].toUpperCase()}</span>
-        </div>
-        <div>
-          <h3 className="font-semibold text-sm" data-testid={`text-author-${post.id}`}>
-            {author.username}
-          </h3>
-          <p className="text-xs text-muted-foreground">{author.role}</p>
-        </div>
+        <Link href={`/u/${author.username}`} data-testid={`link-author-${post.id}`}>
+          <div className="flex items-center gap-3 cursor-pointer hover:opacity-80">
+            <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center">
+              <span className="text-sm font-semibold">{author.username[0].toUpperCase()}</span>
+            </div>
+            <div>
+              <h3 className="font-semibold text-sm" data-testid={`text-author-${post.id}`}>
+                {author.username}
+              </h3>
+              <p className="text-xs text-muted-foreground">{author.role}</p>
+            </div>
+          </div>
+        </Link>
       </div>
 
       {/* Post image */}

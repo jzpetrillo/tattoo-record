@@ -4,17 +4,32 @@ import { useAuth } from "@/hooks/use-auth";
 import { Link } from "wouter";
 import SidebarNav from "@/components/layout/sidebar-nav";
 import MobileNav from "@/components/layout/mobile-nav";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { Heart, MessageCircle, X } from "lucide-react";
+import { MapPin, Globe, Building2, Star } from "lucide-react";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+
+type UserType = "ALL" | "STUDIO" | "ARTIST" | "ENTHUSIAST";
 
 export default function Explore() {
   const { token } = useAuth();
-  const [selectedPost, setSelectedPost] = useState<any>(null);
+  const [selectedType, setSelectedType] = useState<UserType>("ALL");
 
-  const { data: trendingPosts = [] } = useQuery<any[]>({
-    queryKey: ["/api/discovery/trending?limit=20"],
+  const { data: users = [], isLoading } = useQuery<any[]>({
+    queryKey: ["/api/users", selectedType !== "ALL" ? `?type=${selectedType}` : ""],
     enabled: !!token,
   });
+
+  const getRoleBadgeColor = (role: string) => {
+    switch (role) {
+      case "STUDIO":
+        return "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200";
+      case "ARTIST":
+        return "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200";
+      case "ENTHUSIAST":
+        return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200";
+      default:
+        return "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200";
+    }
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -26,115 +41,141 @@ export default function Explore() {
           <h1 className="text-xl font-bold">Explore</h1>
         </div>
 
-        <div className="max-w-6xl mx-auto lg:pt-8 px-1 lg:px-4">
-          <h1 className="hidden lg:block text-2xl font-bold mb-6 px-3">Explore</h1>
+        <div className="max-w-7xl mx-auto lg:pt-8 px-4">
+          <h1 className="hidden lg:block text-3xl font-bold mb-6">Explore</h1>
 
-          <div className="grid grid-cols-3 gap-1">
-            {trendingPosts.map((item: any) => (
-              <div
-                key={item.post.id}
-                className="relative aspect-square bg-secondary overflow-hidden group cursor-pointer"
-                onClick={() => setSelectedPost(item)}
-                data-testid={`post-${item.post.id}`}
-              >
-                {item.post.media?.[0]?.url && (
-                  <img
-                    src={item.post.media[0].url}
-                    alt="Post"
-                    className="w-full h-full object-cover"
-                  />
-                )}
-                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
-                  <div className="flex items-center gap-6 text-white">
-                    <div className="flex items-center gap-2">
-                      <Heart className="w-6 h-6 fill-white" />
-                      <span className="font-semibold">{item.post.likesCount || 0}</span>
+          {/* Filter Controls */}
+          <div className="mb-8">
+            <Tabs 
+              value={selectedType} 
+              onValueChange={(value) => setSelectedType(value as UserType)}
+              className="w-full"
+            >
+              <TabsList className="grid w-full sm:w-auto grid-cols-4 gap-2" data-testid="filter-tabs">
+                <TabsTrigger value="ALL" data-testid="filter-all">All</TabsTrigger>
+                <TabsTrigger value="STUDIO" data-testid="filter-studios">Studios</TabsTrigger>
+                <TabsTrigger value="ARTIST" data-testid="filter-artists">Artists</TabsTrigger>
+                <TabsTrigger value="ENTHUSIAST" data-testid="filter-enthusiasts">Enthusiasts</TabsTrigger>
+              </TabsList>
+            </Tabs>
+          </div>
+
+          {/* Users Grid */}
+          {isLoading ? (
+            <div className="text-center py-12 text-muted-foreground">Loading...</div>
+          ) : users.length === 0 ? (
+            <div className="text-center py-12 text-muted-foreground">No users found</div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-6">
+              {users.map((user) => (
+                <Link 
+                  key={user.id} 
+                  href={`/u/${user.username}`}
+                  data-testid={`user-card-${user.id}`}
+                >
+                  <div className="bg-card border border-border rounded-sm p-6 hover:shadow-lg hover:-translate-y-0.5 transition-all cursor-pointer">
+                    {/* Avatar */}
+                    <div className="flex justify-center mb-4">
+                      <div className="relative">
+                        <div className="w-20 h-20 rounded-full bg-secondary flex items-center justify-center overflow-hidden">
+                          {user.avatarUrl ? (
+                            <img
+                              src={user.avatarUrl}
+                              alt={user.username}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <span className="text-2xl font-bold">
+                              {user.username?.[0]?.toUpperCase()}
+                            </span>
+                          )}
+                        </div>
+                        {user.isVerified && (
+                          <div className="absolute -bottom-1 -right-1 bg-yellow-400 rounded-full p-1">
+                            <Star className="w-4 h-4 text-white fill-current" />
+                          </div>
+                        )}
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <MessageCircle className="w-6 h-6 fill-white" />
-                      <span className="font-semibold">{item.post.commentsCount || 0}</span>
+
+                    {/* Username */}
+                    <h3 className="text-center font-semibold text-lg mb-1 truncate" data-testid={`text-username-${user.id}`}>
+                      {user.username}
+                    </h3>
+
+                    {/* Full Name */}
+                    {(user.firstName || user.lastName) && (
+                      <p className="text-center text-sm text-muted-foreground mb-2 truncate">
+                        {user.firstName} {user.lastName}
+                      </p>
+                    )}
+
+                    {/* Role Badge */}
+                    <div className="flex justify-center mb-3">
+                      <span className={`px-3 py-1 rounded-full text-xs font-medium ${getRoleBadgeColor(user.role)}`}>
+                        {user.role}
+                      </span>
+                    </div>
+
+                    {/* Bio */}
+                    {user.bio && (
+                      <p className="text-center text-sm text-muted-foreground line-clamp-2 mb-3">
+                        {user.bio}
+                      </p>
+                    )}
+
+                    {/* Type-specific Information */}
+                    <div className="space-y-2 text-sm">
+                      {user.role === "STUDIO" && (
+                        <>
+                          {user.location?.city && (
+                            <div className="flex items-center gap-2 text-muted-foreground" data-testid={`location-${user.id}`}>
+                              <MapPin className="w-4 h-4 shrink-0" />
+                              <span className="truncate">{user.location.city}, {user.location.country}</span>
+                            </div>
+                          )}
+                          {user.website && (
+                            <div className="flex items-center gap-2 text-muted-foreground" data-testid={`website-${user.id}`}>
+                              <Globe className="w-4 h-4 shrink-0" />
+                              <span className="truncate">{user.website.replace(/^https?:\/\//, '')}</span>
+                            </div>
+                          )}
+                        </>
+                      )}
+
+                      {user.role === "ARTIST" && (
+                        <>
+                          {user.location?.city && (
+                            <div className="flex items-center gap-2 text-muted-foreground">
+                              <MapPin className="w-4 h-4 shrink-0" />
+                              <span className="truncate">{user.location.city}, {user.location.country}</span>
+                            </div>
+                          )}
+                          {user.website && (
+                            <div className="flex items-center gap-2 text-muted-foreground">
+                              <Globe className="w-4 h-4 shrink-0" />
+                              <span className="truncate">{user.website.replace(/^https?:\/\//, '')}</span>
+                            </div>
+                          )}
+                        </>
+                      )}
+
+                      {user.role === "ENTHUSIAST" && user.location?.city && (
+                        <div className="flex items-center gap-2 text-muted-foreground">
+                          <MapPin className="w-4 h-4 shrink-0" />
+                          <span className="truncate">{user.location.city}, {user.location.country}</span>
+                        </div>
+                      )}
                     </div>
                   </div>
-                </div>
-              </div>
-            ))}
-          </div>
+                </Link>
+              ))}
+            </div>
+          )}
         </div>
       </main>
 
       <MobileNav />
-
-      {/* Post Detail Modal */}
-      <Dialog open={!!selectedPost} onOpenChange={() => setSelectedPost(null)}>
-        <DialogContent className="max-w-5xl p-0 gap-0">
-          {selectedPost && (
-            <div className="flex flex-col md:flex-row h-[90vh]">
-              {/* Image Section */}
-              <div className="flex-1 bg-black flex items-center justify-center">
-                {selectedPost.post.media?.[0]?.url && (
-                  <img
-                    src={selectedPost.post.media[0].url}
-                    alt="Post"
-                    className="max-h-full max-w-full object-contain"
-                  />
-                )}
-              </div>
-
-              {/* Details Section */}
-              <div className="w-full md:w-96 flex flex-col bg-background">
-                {/* Header */}
-                <div className="flex items-center justify-between p-4 border-b border-border">
-                  <Link href={`/profile/${selectedPost.author?.username}`}>
-                    <div className="flex items-center gap-3 cursor-pointer hover:opacity-80" data-testid="link-post-author">
-                      <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center">
-                        {selectedPost.author?.profile?.avatar ? (
-                          <img
-                            src={selectedPost.author.profile.avatar}
-                            alt={selectedPost.author.username}
-                            className="w-full h-full rounded-full object-cover"
-                          />
-                        ) : (
-                          <span className="text-sm font-semibold">
-                            {selectedPost.author?.username?.[0]?.toUpperCase()}
-                          </span>
-                        )}
-                      </div>
-                      <span className="font-semibold">{selectedPost.author?.username}</span>
-                    </div>
-                  </Link>
-                  <button
-                    onClick={() => setSelectedPost(null)}
-                    className="p-1 hover:bg-secondary rounded-full"
-                  >
-                    <X className="w-5 h-5" />
-                  </button>
-                </div>
-
-                {/* Caption */}
-                <div className="flex-1 overflow-y-auto p-4">
-                  <div className="flex gap-3">
-                    <Link href={`/profile/${selectedPost.author?.username}`}>
-                      <span className="font-semibold cursor-pointer hover:opacity-80">
-                        {selectedPost.author?.username}
-                      </span>
-                    </Link>
-                    <p className="flex-1">{selectedPost.post.caption}</p>
-                  </div>
-                </div>
-
-                {/* Actions */}
-                <div className="border-t border-border p-4">
-                  <div className="flex items-center gap-4 mb-2">
-                    <Heart className="w-6 h-6 cursor-pointer hover:opacity-70" />
-                    <MessageCircle className="w-6 h-6 cursor-pointer hover:opacity-70" />
-                  </div>
-                  <p className="text-sm font-semibold">{selectedPost.post.likesCount || 0} likes</p>
-                </div>
-              </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

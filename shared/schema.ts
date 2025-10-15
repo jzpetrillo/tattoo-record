@@ -55,6 +55,7 @@ export const consultationStatusEnum = pgEnum("consultation_status", [
   "COMPLETED"
 ]);
 export const platformEnum = pgEnum("platform", ["INSTAGRAM", "TIKTOK", "OTHER"]);
+export const postTypeEnum = pgEnum("post_type", ["POST", "REEL", "STORY"]);
 
 // Core Tables
 export const users = pgTable("users", {
@@ -63,8 +64,15 @@ export const users = pgTable("users", {
   username: varchar("username", { length: 50 }).notNull().unique(),
   hashedPassword: text("hashed_password").notNull(),
   role: roleEnum("role").notNull().default("ENTHUSIAST"),
+  firstName: varchar("first_name", { length: 100 }),
+  lastName: varchar("last_name", { length: 100 }),
   bio: text("bio"),
   avatarUrl: text("avatar_url"),
+  bannerImageUrl: text("banner_image_url"),
+  website: text("website"),
+  instagram: varchar("instagram", { length: 100 }),
+  tiktok: varchar("tiktok", { length: 100 }),
+  twitter: varchar("twitter", { length: 100 }),
   isVerified: boolean("is_verified").notNull().default(false),
   verificationStatus: approvalStatusEnum("verification_status"),
   location: jsonb("location").$type<{
@@ -106,6 +114,7 @@ export const artistProfiles = pgTable("artist_profiles", {
 export const posts = pgTable("posts", {
   id: uuid("id").primaryKey().defaultRandom(),
   authorId: uuid("author_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  type: postTypeEnum("type").notNull().default("POST"),
   caption: text("caption"),
   media: jsonb("media").$type<Array<{
     publicId: string;
@@ -129,6 +138,7 @@ export const posts = pgTable("posts", {
   deletedAt: timestamp("deleted_at")
 }, (table) => ({
   authorIdx: index("posts_author_idx").on(table.authorId),
+  typeIdx: index("posts_type_idx").on(table.type),
   createdAtIdx: index("posts_created_at_idx").on(table.createdAt)
 }));
 

@@ -60,9 +60,22 @@ export default function Profile() {
   return (
     <div className="min-h-screen bg-background">
       <SidebarNav />
-      <main className="lg:ml-64 pb-20 lg:pb-8 max-w-4xl mx-auto px-4 pt-8">
-        {/* Profile Header */}
-        <div className="flex gap-8 md:gap-16 mb-11">
+      <main className="lg:ml-64 pb-20 lg:pb-8">
+        {/* Banner Image with Grid Overlay */}
+        {user?.bannerImageUrl && (
+          <div className="relative w-full h-48 md:h-64 lg:h-80 overflow-hidden bg-secondary">
+            <img
+              src={user.bannerImageUrl}
+              alt="Profile banner"
+              className="w-full h-full object-cover"
+            />
+            <div className="absolute inset-0 bg-grid opacity-30" />
+          </div>
+        )}
+        
+        <div className="max-w-4xl mx-auto px-4">
+          {/* Profile Header */}
+          <div className={`flex gap-8 md:gap-16 mb-11 ${user?.bannerImageUrl ? '-mt-12 md:-mt-16' : 'pt-8'}`}>
           {/* Avatar */}
           <div className="flex-shrink-0">
             <div className="w-20 h-20 md:w-36 md:h-36 rounded-full bg-gradient-to-tr from-yellow-400 via-pink-500 to-purple-500 p-0.5">
@@ -144,7 +157,58 @@ export default function Profile() {
                   <span>{user.links.website}</span>
                 </a>
               )}
+
+              {/* Artist Website & Social Links */}
+              {user?.role === "ARTIST" && (user?.website || user?.instagram || user?.tiktok || user?.twitter) && (
+                <div className="flex flex-wrap items-center gap-3 text-sm mt-2">
+                  {user.website && (
+                    <a 
+                      href={user.website} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="text-blue-600 dark:text-blue-400 hover:underline"
+                      data-testid="link-artist-website"
+                    >
+                      {user.website.replace(/^https?:\/\//, '')}
+                    </a>
+                  )}
+                  {user.instagram && (
+                    <a 
+                      href={`https://instagram.com/${user.instagram.replace('@', '')}`}
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="text-muted-foreground hover:text-foreground"
+                      data-testid="link-instagram"
+                    >
+                      Instagram
+                    </a>
+                  )}
+                  {user.tiktok && (
+                    <a 
+                      href={`https://tiktok.com/@${user.tiktok.replace('@', '')}`}
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="text-muted-foreground hover:text-foreground"
+                      data-testid="link-tiktok"
+                    >
+                      TikTok
+                    </a>
+                  )}
+                  {user.twitter && (
+                    <a 
+                      href={`https://twitter.com/${user.twitter.replace('@', '')}`}
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="text-muted-foreground hover:text-foreground"
+                      data-testid="link-twitter"
+                    >
+                      Twitter
+                    </a>
+                  )}
+                </div>
+              )}
             </div>
+          </div>
           </div>
         </div>
 
