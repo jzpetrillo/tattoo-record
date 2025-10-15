@@ -26,6 +26,7 @@ function Router() {
       <Route path="/notifications" component={Notifications} />
       <Route path="/profile" component={Profile} />
       <Route path="/profile/:username" component={Profile} />
+      <Route path="/u/:username" component={Profile} />
       <Route path="/live-events" component={LiveEvents} />
       <Route path="/live" component={LiveEvents} />
       <Route path="/jobs" component={Jobs} />

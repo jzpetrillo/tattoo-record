@@ -7,10 +7,23 @@ import { StudioConnectionDialog } from "@/components/studio-connection-dialog";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
+import { useParams } from "wouter";
 
 export default function Profile() {
-  const { user, token } = useAuth();
+  const { user: currentUser, token } = useAuth();
   const { toast } = useToast();
+  const params = useParams();
+  const username = params.username;
+
+  // Fetch profile user data if viewing another user's profile
+  const { data: profileUserData, isLoading: isLoadingProfile } = useQuery({
+    queryKey: [`/api/users/${username}`],
+    enabled: !!username && !!token,
+  });
+
+  // Use profile user if viewing another user, otherwise use logged-in user
+  const user = username && profileUserData ? profileUserData : currentUser;
+  const isOwnProfile = !username || username === currentUser?.username;
 
   const { data: userPosts } = useQuery({
     queryKey: [`/api/posts?authorId=${user?.id}`],
@@ -29,7 +42,7 @@ export default function Profile() {
 
   const { data: pendingRequests } = useQuery({
     queryKey: ["/api/studio-approvals", { studioId: user?.id, status: "PENDING" }],
-    enabled: !!token && !!user && user?.role === "STUDIO",
+    enabled: !!token && !!user && user?.role === "STUDIO" && isOwnProfile,
   });
 
   const approveMutation = useMutation({
@@ -99,7 +112,7 @@ export default function Profile() {
                   <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" data-testid="icon-verified" />
                 )}
               </div>
-              {user?.role === "ARTIST" && !studioConnection?.studio && (
+              {isOwnProfile && user?.role === "ARTIST" && !studioConnection?.studio && (
                 <StudioConnectionDialog />
               )}
             </div>
@@ -213,7 +226,7 @@ export default function Profile() {
         </div>
 
         {/* Pending Connection Requests (for Studios) */}
-        {user?.role === "STUDIO" && pendingRequests && pendingRequests.length > 0 && (
+        {isOwnProfile && user?.role === "STUDIO" && pendingRequests && pendingRequests.length > 0 && (
           <div className="mb-8 pb-8 border-b border-border">
             <h2 className="text-sm font-semibold mb-4 uppercase tracking-wider text-muted-foreground">Pending Requests</h2>
             <div className="space-y-3">

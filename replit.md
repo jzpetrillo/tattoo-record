@@ -47,7 +47,7 @@ Both implement heartbeat mechanisms for connection health monitoring.
 
 **Background Jobs**: A scheduler runs periodic cleanup tasks, such as removing expired 24-hour stories and their associated media from Cloudinary.
 
-**API Design**: RESTful endpoints follow resource-based naming conventions with standard HTTP methods. Routes are organized by domain (auth, posts, messages, livestream, etc.) in the routes registry.
+**API Design**: RESTful endpoints follow resource-based naming conventions with standard HTTP methods. Routes are organized by domain (auth, posts, messages, livestream, etc.) in the routes registry. The `/api/users/:id` endpoint intelligently handles both numeric IDs and string usernames, detecting the parameter type and routing to the appropriate storage method.
 
 ### Data Storage Solutions
 
@@ -83,6 +83,12 @@ Both implement heartbeat mechanisms for connection health monitoring.
 
 ### Key Features
 
+**Feed Interaction**: Home feed displays posts from followed users with interactive elements:
+- **Clickable Author Info**: Post author avatars and usernames are clickable, navigating to their profile page via `/u/:username`
+- Uses `PostCard` component with `Link` from wouter for navigation
+- Each author link has unique data-testid for testing: `link-author-{postId}`
+- Hover states provide visual feedback
+
 **Artist-Studio Connection System**: Formal connection workflow allowing artists to request affiliation with tattoo studios:
 
 *Artist Flow*:
@@ -111,6 +117,9 @@ Both implement heartbeat mechanisms for connection health monitoring.
 - *Artists*: Display studio connection (Building2 icon) or "Connect to Studio" button
 - Clean tabs interface (POSTS/SAVED) with 3-column posts grid
 - **Verified Badge**: Approved users display yellow star icon next to username
+- **Cross-Profile Navigation**: Users can view other profiles via `/u/:username` route
+- **Dynamic Profile Loading**: Profile component fetches user data based on URL parameter
+- **Action Button Privacy**: Action buttons (Connect to Studio, approval controls) only visible when viewing own profile
 
 **Admin Verification System**: Platform requires admin approval for artists and studios before they can fully use the platform:
 

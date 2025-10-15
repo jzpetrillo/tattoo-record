@@ -116,7 +116,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/users/:id", async (req, res) => {
     try {
-      const user = await storage.getUser(req.params.id);
+      // Check if parameter is a number (ID) or string (username)
+      const param = req.params.id;
+      const isNumeric = /^\d+$/.test(param);
+      
+      const user = isNumeric 
+        ? await storage.getUser(param)
+        : await storage.getUserByUsername(param);
+        
       if (!user) {
         return res.status(404).json({ message: "User not found" });
       }
