@@ -1,6 +1,6 @@
 import { faker } from "@faker-js/faker";
 import { db } from "../server/db";
-import { users, posts, messages, conversations, conversationParticipants, notifications } from "../shared/schema";
+import { users, posts, messages, conversations, conversationParticipants, notifications, follows } from "../shared/schema";
 import { eq, inArray, sql } from "drizzle-orm";
 import bcrypt from "bcrypt";
 
@@ -253,6 +253,34 @@ async function createMessages(users: any[]) {
   console.log(`✅ Created ${TOTAL_MESSAGES} messages in ${conversationMap.size} conversations`);
 }
 
+async function createFollows(users: any[]) {
+  console.log("👥 Creating follow relationships...");
+  
+  let followsCreated = 0;
+  
+  // Each user follows 5-15 random other users
+  for (const user of users) {
+    const followCount = faker.number.int({ min: 5, max: 15 });
+    const otherUsers = users.filter(u => u.id !== user.id);
+    const usersToFollow = faker.helpers.arrayElements(otherUsers, Math.min(followCount, otherUsers.length));
+    
+    for (const userToFollow of usersToFollow) {
+      try {
+        await db.insert(follows).values({
+          followerId: user.id,
+          followingId: userToFollow.id
+        });
+        followsCreated++;
+      } catch (error) {
+        // Skip duplicates
+      }
+    }
+  }
+  
+  console.log(`✅ Created ${followsCreated} follow relationships`);
+  return followsCreated;
+}
+
 async function createNotifications(users: any[], posts: any[]) {
   console.log("🔔 Creating notifications...");
   
@@ -288,6 +316,7 @@ async function main() {
     await cleanupSeedData();
     const users = await createUsers();
     const posts = await createPosts(users);
+    const followsCount = await createFollows(users);
     await createMessages(users);
     await createNotifications(users, posts);
     
@@ -297,6 +326,7 @@ async function main() {
     console.log(`   - ${ARTISTS_COUNT} Artists`);
     console.log(`   - ${ENTHUSIASTS_COUNT} Enthusiasts`);
     console.log(`   - ${posts.length} Posts (mix of POST, REEL, STORY)`);
+    console.log(`   - ${followsCount} Follow relationships`);
     console.log(`   - ${TOTAL_MESSAGES} Messages`);
     console.log(`   - ${TOTAL_NOTIFICATIONS} Notifications`);
     console.log(`\n🔑 Test credentials: seed_[type]_[number]@inktagram.com / Test1234!`);
