@@ -112,14 +112,33 @@ Both implement heartbeat mechanisms for connection health monitoring.
 
 *Database*: `studio_approval_requests` table tracks all requests with status enum (PENDING, APPROVED, REJECTED), artist/studio IDs, optional notes, and timestamps.
 
-**Profile Page Design**: Instagram-inspired layout with gradient-bordered avatars, stats row (posts/followers/following), bio section, and role-specific information:
+**Profile Page Design**: Instagram-inspired layout with gradient-bordered avatars, stats row, bio section, and role-specific information:
+
+*Layout & Stats*:
+- Gradient-bordered avatar (Instagram-style ring effect)
+- Real-time stats row displaying post count, followers, and following counts
+- Stats fetched from GET `/api/users/:id/stats` endpoint
+- Post count label dynamically updates based on active tab (e.g., "4 reels", "0 stories", "12 posts")
+
+*Content Tabs*:
+- Three functional tabs: **Posts**, **Reels**, **Stories**
+- Each tab filters content by postType (POST, REEL, STORY) via API query parameters
+- Active tab indicated by dark border, inactive tabs show muted text with transparent border
+- Reels display Film icon overlay in top-right corner of grid items
+- Empty state messages adapt to active tab ("No posts/reels/stories yet")
+- 3-column grid layout for all content types
+
+*Role-Specific Information*:
 - *Studios*: Display address (MapPin icon), website link (Globe icon), connected artists as circular highlights
 - *Artists*: Display studio connection (Building2 icon) or "Connect to Studio" button
-- Clean tabs interface (POSTS/SAVED) with 3-column posts grid
+- *All Users*: Social links (website, Instagram, TikTok, Twitter) when available
+
+*Additional Features*:
 - **Verified Badge**: Approved users display yellow star icon next to username
 - **Cross-Profile Navigation**: Users can view other profiles via `/u/:username` route
 - **Dynamic Profile Loading**: Profile component fetches user data based on URL parameter
 - **Action Button Privacy**: Action buttons (Connect to Studio, approval controls) only visible when viewing own profile
+- **Banner Image**: Optional banner image with grid pattern overlay for visual depth
 
 **Admin Verification System**: Platform requires admin approval for artists and studios before they can fully use the platform:
 
