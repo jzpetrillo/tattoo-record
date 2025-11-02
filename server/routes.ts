@@ -691,6 +691,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Admin Routes
+  app.get("/api/admin/users", requireAuth, requireRole(["ADMIN"]), async (req: AuthRequest, res) => {
+    try {
+      const status = req.query.status as string | undefined;
+      const role = req.query.role as string | undefined;
+      
+      // Get all users (artists and studios only)
+      const allUsers = await storage.getUsers({ type: role, take: 1000, skip: 0 });
+      
+      // Filter by verification status
+      let filteredUsers = allUsers.filter((u: any) => 
+        u.role === "ARTIST" || u.role === "STUDIO"
+      );
+      
+      if (status === "PENDING") {
+        filteredUsers = filteredUsers.filter((u: any) => u.verificationStatus === "PENDING");
+      } else if (status === "APPROVED") {
+        filteredUsers = filteredUsers.filter((u: any) => u.verificationStatus === "APPROVED");
+      } else if (status === "REJECTED") {
+        filteredUsers = filteredUsers.filter((u: any) => u.verificationStatus === "REJECTED");
+      }
+      // else return ALL artists and studios
+      
+      res.json(filteredUsers);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   app.get("/api/admin/pending-users", requireAuth, requireRole(["ADMIN"]), async (req: AuthRequest, res) => {
     try {
       const pendingUsers = await storage.getPendingUsers();

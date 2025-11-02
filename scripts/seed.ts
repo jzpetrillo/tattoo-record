@@ -68,8 +68,8 @@ async function createUsers() {
         lat: parseFloat(faker.location.latitude()),
         lng: parseFloat(faker.location.longitude())
       },
-      verificationStatus: "APPROVED",
-      isVerified: true
+      verificationStatus: "PENDING",
+      isVerified: false
     }).returning();
     
     createdUsers.push({ ...user[0], userType: 'STUDIO' });
@@ -103,8 +103,8 @@ async function createUsers() {
         city: faker.location.city(),
         country: faker.location.country()
       },
-      verificationStatus: "APPROVED",
-      isVerified: true
+      verificationStatus: "PENDING",
+      isVerified: false
     }).returning();
     
     createdUsers.push({ ...user[0], userType: 'ARTIST', studioId: randomStudio.id });
