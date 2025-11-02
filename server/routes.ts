@@ -162,6 +162,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get("/api/users/:id/stats", async (req, res) => {
+    try {
+      const userId = req.params.id;
+      const followers = await storage.getFollowers(userId);
+      const following = await storage.getFollowing(userId);
+      
+      res.json({
+        followersCount: followers.length,
+        followingCount: following.length
+      });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   // Post Routes
   app.get("/api/posts", requireAuth, async (req: AuthRequest, res) => {
     try {
