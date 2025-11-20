@@ -44,6 +44,7 @@ export default function PostCard({ post, author, isLiked = false }: PostCardProp
           if (item.post?.id === post.id) {
             return {
               ...item,
+              isLiked: shouldLike,  // Toggle the liked state
               post: {
                 ...item.post,
                 likeCount: shouldLike ? item.post.likeCount + 1 : item.post.likeCount - 1
