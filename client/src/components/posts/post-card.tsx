@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 import { apiRequest } from "@/lib/api";
@@ -26,15 +26,47 @@ export default function PostCard({ post, author, isLiked = false }: PostCardProp
   const [selectedUser, setSelectedUser] = useState<string | null>(null);
 
   const likeMutation = useMutation({
-    mutationFn: async () => {
-      const method = isLiked ? "DELETE" : "POST";
+    mutationFn: async (shouldLike: boolean) => {
+      const method = shouldLike ? "POST" : "DELETE";
       await apiRequest(method, `/api/posts/${post.id}/like`, undefined, token!);
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/posts"] });
+    onMutate: async (shouldLike: boolean) => {
+      // Cancel outgoing refetches to avoid overwriting our optimistic update
+      await queryClient.cancelQueries({ queryKey: ["/api/posts"] });
+
+      // Snapshot the previous value
+      const previousPosts = queryClient.getQueryData(["/api/posts"]);
+
+      // Optimistically update the cache
+      queryClient.setQueryData(["/api/posts"], (old: any) => {
+        if (!old) return old;
+        return old.map((item: any) => {
+          if (item.post?.id === post.id) {
+            return {
+              ...item,
+              post: {
+                ...item.post,
+                likeCount: shouldLike ? item.post.likeCount + 1 : item.post.likeCount - 1
+              }
+            };
+          }
+          return item;
+        });
+      });
+
+      // Return context with previous value
+      return { previousPosts };
     },
-    onError: (error: Error) => {
+    onError: (error: Error, variables, context: any) => {
+      // Rollback to previous value on error
+      if (context?.previousPosts) {
+        queryClient.setQueryData(["/api/posts"], context.previousPosts);
+      }
       toast({ title: "Error", description: error.message, variant: "destructive" });
+    },
+    onSettled: () => {
+      // Always refetch after mutation to ensure server state is correct
+      queryClient.invalidateQueries({ queryKey: ["/api/posts"] });
     },
   });
 
@@ -112,7 +144,7 @@ export default function PostCard({ post, author, isLiked = false }: PostCardProp
       <div className="p-4 space-y-3">
         <div className="flex items-center gap-4">
           <button
-            onClick={() => likeMutation.mutate()}
+            onClick={() => likeMutation.mutate(!isLiked)}
             disabled={likeMutation.isPending}
             className={`hover:text-primary transition-colors ${isLiked ? 'text-red-500' : ''}`}
             data-testid={`button-like-${post.id}`}
