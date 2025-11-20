@@ -17,7 +17,17 @@ export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState("pending");
 
   const { data: users, isLoading } = useQuery({
-    queryKey: [`/api/admin/users?status=${activeTab.toUpperCase()}`],
+    queryKey: ["/api/admin/users", activeTab.toUpperCase()],
+    queryFn: async () => {
+      const res = await fetch(`/api/admin/users?status=${activeTab.toUpperCase()}`, {
+        headers: {
+          "Authorization": `Bearer ${token}`,
+        },
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error(`${res.status}: ${await res.text()}`);
+      return await res.json();
+    },
     enabled: !!token && user?.role === "ADMIN",
   });
 
@@ -26,7 +36,7 @@ export default function AdminDashboard() {
       return apiRequest("PUT", `/api/admin/users/${userId}/approve`);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [`/api/admin/users`] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
       toast({
         title: "User approved",
         description: "The user has been verified and approved successfully.",
@@ -46,7 +56,7 @@ export default function AdminDashboard() {
       return apiRequest("PUT", `/api/admin/users/${userId}/reject`);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [`/api/admin/users`] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
       toast({
         title: "User rejected",
         description: "The user verification has been rejected.",

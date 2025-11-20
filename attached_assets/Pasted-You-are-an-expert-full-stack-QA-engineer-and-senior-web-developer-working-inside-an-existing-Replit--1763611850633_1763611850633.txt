@@ -1,0 +1,259 @@
+You are an expert full-stack QA engineer and senior web developer working inside an existing Replit project.
+
+Your task is to **perform broad, end-to-end user and features testing for the entire application** using ONLY what already exists in the project (frameworks, routing, components, etc.). Do NOT install any new external tools unless such a framework is already present in the repo.
+
+---
+
+## Overall Goal
+
+Systematically review and verify that:
+
+1. **All user flows work from start to finish** for every user type.
+2. **All features, pages, buttons, and forms are active and functional**.
+3. **CRUD flows (add/edit/update/delete)** exist and behave correctly.
+4. **Navigation and UX are fully operational.**
+5. **Permissions and role-based access** work correctly.
+6. **No logic gaps** exist in how users move through the app.
+7. **Design consistency** is maintained across all pages and components.
+
+Use ONLY the existing code, patterns, and UI.
+
+---
+
+## Step 1 – Discover the App Structure
+
+1. Inspect the project to identify:
+   - Frontend framework (React, Next.js, Vue, etc.)
+   - Backend/API setup
+   - Routing structure
+   - All user roles and their permissions
+   - All main feature areas (Auth, Dashboard, Projects, Campaigns, Profiles, Settings, Admin, etc.)
+
+2. Create an internal map (markdown or comments) documenting:
+   - User roles
+   - Routes and subroutes
+   - Main features
+   - Core entities (Projects, Users, Campaigns, Posts, etc.)
+
+---
+
+## Step 2 – Identify All Key User Flows
+
+Extract all expected user flows for:
+
+### Guest
+- Visit public pages  
+- Register  
+- Log in  
+
+### Authenticated User (creator / client / standard user)
+- Log in
+- Access dashboard
+- Create/view/edit/delete their entities
+- Update profile & settings
+- Search, filter, browse lists
+- Log out
+
+### Admin / Manager / Owner
+- Manage user accounts
+- Access dashboards and reports
+- Create/edit/update/delete global entities
+- Adjust configurations
+
+Document all expected flows in `TEST_FLOWS.md`.
+
+---
+
+## Step 3 – Verify All Routes and Pages are Reachable
+
+For every route in the router/config:
+
+- Confirm it can be accessed from the UI
+- Confirm it renders without errors
+- Confirm:
+  - The main heading loads
+  - Data loads correctly
+  - Necessary actions (create/edit/etc.) are visible
+  - No dead ends
+
+Flag any routes that exist in code but not in the UI.
+
+---
+
+## Step 4 – Test CRUD Functionality (Add/Edit/Update/Delete)
+
+For each major entity:
+
+### Create
+- Confirm “New” buttons are present
+- Confirm form loads
+- Submit valid data
+- Confirm success message and record creation
+
+### Read
+- Confirm list pages load data
+- Confirm detail pages show correct values
+
+### Update
+- Confirm “Edit” buttons work
+- Confirm data updates correctly and persists after reload
+
+### Delete / Archive
+- Confirm delete actions function and update the UI accordingly
+
+Flag missing or incomplete CRUD options anywhere CRUD is expected.
+
+---
+
+## Step 5 – Authentication, Permissions & Role Flows
+
+### Authentication
+- Test valid login
+- Test invalid login
+- Test logout
+- Test session behavior (e.g., redirect from protected pages when logged out)
+
+### Permissions
+- Verify each role only sees actions allowed for that role
+- Verify restricted pages reject unauthorized roles
+- Verify admin-only UI components are hidden from standard users
+
+---
+
+## Step 6 – Buttons, Links & Interactive Elements Testing
+
+On every key page:
+
+- Find and click **all primary actions**:
+  - Create, Edit, Save, Delete  
+  - Tabs  
+  - Pagination  
+  - Filters  
+  - Back buttons  
+  - Modal open/close buttons  
+  - File uploads  
+  - Submit buttons  
+
+Ensure:
+- Actions work as expected
+- Relevant UI feedback appears
+- No console or JS errors occur
+- Navigation updates correctly
+
+Flag:
+- Dead buttons  
+- Non-functional links  
+- Actions that do nothing  
+- Missing modals  
+
+---
+
+## Step 7 – UX Consistency & Error States
+
+Test:
+
+- Form validation (missing/invalid data)
+- Error messages and banners
+- Invalid URL routing (404 pages)
+- Loading states (spinners, skeletons)
+- Empty states (no data yet)
+- Recovery paths (back to dashboard/home)
+
+Ensure:
+- Errors are displayed, not hidden
+- App doesn’t crash
+- User always has a path forward
+
+---
+
+## **Step 8 – DESIGN CONSISTENCY TESTING** *(Added Section)*
+
+Perform a **complete design consistency audit** across all pages and components. Ensure:
+
+### 1. Global Layout Consistency
+- Header/nav appears the same across all pages  
+- Logo placement is consistent  
+- Footer is consistent  
+- Page widths and responsive breakpoints behave predictably  
+- No pages use outdated or mismatched layouts  
+
+### 2. Typography Consistency
+- Heading hierarchy (H1/H2/H3) is consistent  
+- Font sizes, weights, and line heights are uniform  
+- Body text uses consistent classes/styles  
+- Avoid mismatched old styles vs. new styles
+
+### 3. Component Consistency
+Check consistent usage of:
+- Buttons (primary/secondary/destructive)
+- Cards, tables, lists
+- Form inputs (text fields, dropdowns, toggles)
+- Modals and side panels
+- Alerts, notifications, and banners
+
+Verify:
+- Spacing, padding, and margin systems are consistent  
+- Components use the same design tokens or classes  
+- No visual drift across routes  
+
+### 4. Color & Branding Consistency
+- Colors match the style guide / brand palette  
+- No off-brand colors in legacy pages  
+- Backgrounds and section dividers are consistent  
+- Dark/light theme behavior is stable (if applicable)
+
+### 5. Iconography & Imagery
+- Icon style and weight is consistent  
+- Images and illustrations follow a unified aesthetic  
+- No pixelated, misaligned, or stretched assets  
+
+### 6. Responsive Design
+Test each page at:
+- Mobile
+- Tablet
+- Desktop
+
+Ensure:
+- Layouts adapt correctly  
+- Buttons/inputs remain usable  
+- Nothing overlaps or renders off-screen  
+- No scroll traps or oversized fixed elements  
+
+### 7. Alignment & Spacing Check
+Perform a pass to verify:
+- Consistent spacing scale  
+- Consistent alignment of text, cards, buttons, and forms  
+- No random offsets or mismatched padding  
+
+Document any inconsistent patterns in `DESIGN_ISSUES.md`.
+
+---
+
+## Step 9 – Summarize Findings
+
+Produce or update:
+
+### **E2E_TEST_REPORT.md**
+- Table/checklist of:
+  - Routes
+  - User flows
+  - CRUD features
+  - Buttons/links
+  - Permissions
+  - Errors
+  - Design consistency (new section)
+- Mark each item:
+  - ✅ Working  
+  - ⚠️ Partially working  
+  - ❌ Broken / Missing  
+
+### **Inline TODO comments**  
+Insert TODOs directly in code wherever handlers, actions, or UI elements are missing or incomplete.
+
+---
+
+## Final Instructions
+
+Perform all of the above now for this project.  
+Use only the existing logic and structure.  
+Document everything clearly so I can immediately see which areas are complete and which need updates.

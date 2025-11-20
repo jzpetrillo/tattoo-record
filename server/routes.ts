@@ -696,25 +696,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const status = req.query.status as string | undefined;
       const role = req.query.role as string | undefined;
       
+      console.log(`[ADMIN] GET /api/admin/users - status: ${status}, role: ${role}`);
+      
       // Get all users (artists and studios only)
       const allUsers = await storage.getUsers({ type: role, take: 1000, skip: 0 });
+      console.log(`[ADMIN] Retrieved ${allUsers.length} total users from storage`);
       
       // Filter by verification status
       let filteredUsers = allUsers.filter((u: any) => 
         u.role === "ARTIST" || u.role === "STUDIO"
       );
+      console.log(`[ADMIN] After role filter: ${filteredUsers.length} artists/studios`);
       
       if (status === "PENDING") {
         filteredUsers = filteredUsers.filter((u: any) => u.verificationStatus === "PENDING");
+        console.log(`[ADMIN] After PENDING filter: ${filteredUsers.length} users`);
       } else if (status === "APPROVED") {
         filteredUsers = filteredUsers.filter((u: any) => u.verificationStatus === "APPROVED");
+        console.log(`[ADMIN] After APPROVED filter: ${filteredUsers.length} users`);
       } else if (status === "REJECTED") {
         filteredUsers = filteredUsers.filter((u: any) => u.verificationStatus === "REJECTED");
+        console.log(`[ADMIN] After REJECTED filter: ${filteredUsers.length} users`);
       }
       // else return ALL artists and studios
       
+      console.log(`[ADMIN] Returning ${filteredUsers.length} users`);
       res.json(filteredUsers);
     } catch (error: any) {
+      console.error(`[ADMIN] Error in /api/admin/users:`, error);
       res.status(500).json({ message: error.message });
     }
   });
