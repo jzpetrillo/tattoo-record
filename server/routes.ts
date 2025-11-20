@@ -116,11 +116,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/users/:id", async (req, res) => {
     try {
-      // Check if parameter is a number (ID) or string (username)
+      // Check if it's a UUID format (with hyphens) or a username
       const param = req.params.id;
-      const isNumeric = /^\d+$/.test(param);
+      const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(param);
       
-      const user = isNumeric 
+      const user = isUUID
         ? await storage.getUser(param)
         : await storage.getUserByUsername(param);
         
@@ -164,9 +164,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/users/:id/stats", async (req, res) => {
     try {
-      const userId = req.params.id;
-      const followers = await storage.getFollowers(userId);
-      const following = await storage.getFollowing(userId);
+      const param = req.params.id;
+      // Check if it's a UUID format (with hyphens)
+      const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(param);
+      
+      // Get user first to resolve username to ID if needed
+      const user = isUUID
+        ? await storage.getUser(param)
+        : await storage.getUserByUsername(param);
+        
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      const followers = await storage.getFollowers(user.id);
+      const following = await storage.getFollowing(user.id);
       
       res.json({
         followersCount: followers.length,

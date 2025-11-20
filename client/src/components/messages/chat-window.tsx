@@ -41,6 +41,13 @@ export default function ChatWindow({ conversationId }: ChatWindowProps) {
 
   const sendMessageMutation = useMutation({
     mutationFn: async () => {
+      console.log("[ChatWindow] Sending message:", {
+        conversationId,
+        message,
+        messageLength: message.length,
+        messageTrimmed: message.trim(),
+      });
+      
       await apiRequest(
         "POST",
         `/api/conversations/${conversationId}/messages`,
@@ -49,8 +56,12 @@ export default function ChatWindow({ conversationId }: ChatWindowProps) {
       );
     },
     onSuccess: () => {
+      console.log("[ChatWindow] Message sent successfully");
       setMessage("");
       queryClient.invalidateQueries({ queryKey: [`/api/conversations/${conversationId}/messages`] });
+    },
+    onError: (error) => {
+      console.error("[ChatWindow] Failed to send message:", error);
     },
   });
 
@@ -63,7 +74,7 @@ export default function ChatWindow({ conversationId }: ChatWindowProps) {
   }
 
   return (
-    <div className="hidden lg:flex flex-col flex-1">
+    <div className="flex flex-col flex-1">
       <div className="p-4 border-b border-border bg-card flex items-center justify-between">
         <div className="flex items-center gap-3">
           <img
