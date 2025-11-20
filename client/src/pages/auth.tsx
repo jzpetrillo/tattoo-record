@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
@@ -28,8 +28,15 @@ const registerSchema = z.object({
 export default function Auth() {
   const [isLogin, setIsLogin] = useState(true);
   const [, setLocation] = useLocation();
-  const { setAuth } = useAuth();
+  const { user, setAuth } = useAuth();
   const { toast } = useToast();
+
+  // Redirect authenticated users to home
+  useEffect(() => {
+    if (user) {
+      setLocation("/");
+    }
+  }, [user, setLocation]);
 
   const loginForm = useForm({
     resolver: zodResolver(loginSchema),
@@ -91,7 +98,7 @@ export default function Auth() {
                     <FormItem>
                       <FormLabel>Email</FormLabel>
                       <FormControl>
-                        <Input placeholder="your@email.com" {...field} data-testid="input-email" />
+                        <Input type="email" placeholder="your@email.com" {...field} data-testid="input-login-email" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -104,7 +111,7 @@ export default function Auth() {
                     <FormItem>
                       <FormLabel>Password</FormLabel>
                       <FormControl>
-                        <Input type="password" placeholder="••••••••" {...field} data-testid="input-password" />
+                        <Input type="password" placeholder="••••••••" {...field} data-testid="input-login-password" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -125,7 +132,14 @@ export default function Auth() {
                     <FormItem>
                       <FormLabel>Email</FormLabel>
                       <FormControl>
-                        <Input placeholder="your@email.com" {...field} data-testid="input-email" />
+                        <Input 
+                          type="email" 
+                          placeholder="your@email.com" 
+                          {...field} 
+                          id="register-email"
+                          data-testid="input-register-email" 
+                          autoComplete="email"
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -138,7 +152,14 @@ export default function Auth() {
                     <FormItem>
                       <FormLabel>Username</FormLabel>
                       <FormControl>
-                        <Input placeholder="yourname" {...field} data-testid="input-username" />
+                        <Input 
+                          type="text" 
+                          placeholder="yourname" 
+                          {...field} 
+                          id="register-username"
+                          data-testid="input-register-username" 
+                          autoComplete="username"
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -151,7 +172,14 @@ export default function Auth() {
                     <FormItem>
                       <FormLabel>Password</FormLabel>
                       <FormControl>
-                        <Input type="password" placeholder="••••••••" {...field} data-testid="input-password" />
+                        <Input 
+                          type="password" 
+                          placeholder="••••••••" 
+                          {...field} 
+                          id="register-password"
+                          data-testid="input-register-password" 
+                          autoComplete="new-password"
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>

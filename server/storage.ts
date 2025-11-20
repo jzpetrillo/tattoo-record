@@ -140,6 +140,7 @@ export class DatabaseStorage implements IStorage {
         twitter: schema.users.twitter,
         location: schema.users.location,
         isVerified: schema.users.isVerified,
+        verificationStatus: schema.users.verificationStatus,
         createdAt: schema.users.createdAt
       })
       .from(schema.users)
