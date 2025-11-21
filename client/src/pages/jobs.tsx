@@ -17,6 +17,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Plus, MapPin, DollarSign, Briefcase, MessageCircle } from "lucide-react";
+import { Link } from "wouter";
 
 const createJobSchema = z.object({
   title: z.string().min(1, "Title is required").max(255),
@@ -243,53 +244,43 @@ export default function Jobs() {
         ) : (
           <div className="space-y-4">
             {jobs?.map((item: any) => (
-              <Card key={item.job.id} className="p-6" data-testid={`job-${item.job.id}`}>
-                <div className="flex items-start gap-4 mb-4">
-                  <div className="w-12 h-12 rounded-full bg-secondary flex items-center justify-center flex-shrink-0">
-                    <span className="text-sm font-semibold">{item.studio.username[0].toUpperCase()}</span>
-                  </div>
-                  <div className="flex-1">
-                    <div className="flex items-start justify-between mb-2">
-                      <div>
-                        <h3 className="font-bold text-lg" data-testid={`text-job-title-${item.job.id}`}>
-                          {item.job.title}
-                        </h3>
-                        <p className="text-sm text-muted-foreground">{item.studio.username}</p>
-                      </div>
-                      <Badge variant="secondary" data-testid={`badge-job-type-${item.job.id}`}>
-                        {item.job.type.replace("_", " ")}
-                      </Badge>
+              <Link key={item.job.id} href={`/jobs/${item.job.id}`}>
+                <Card className="p-6 cursor-pointer hover:shadow-md transition-shadow" data-testid={`job-${item.job.id}`}>
+                  <div className="flex items-start gap-4 mb-4">
+                    <div className="w-12 h-12 rounded-full bg-secondary flex items-center justify-center flex-shrink-0">
+                      <span className="text-sm font-semibold">{item.studio.username[0].toUpperCase()}</span>
                     </div>
-                    
-                    <div className="flex flex-wrap gap-4 text-sm text-muted-foreground mb-3">
-                      {item.job.location && (
-                        <div className="flex items-center gap-1">
-                          <MapPin className="w-4 h-4" />
-                          <span>{item.job.location}</span>
+                    <div className="flex-1">
+                      <div className="flex items-start justify-between mb-2">
+                        <div>
+                          <h3 className="font-bold text-lg hover:text-primary transition-colors" data-testid={`text-job-title-${item.job.id}`}>
+                            {item.job.title}
+                          </h3>
+                          <p className="text-sm text-muted-foreground">{item.studio.username}</p>
                         </div>
-                      )}
-                      <div className="flex items-center gap-1">
-                        <DollarSign className="w-4 h-4" />
-                        <span>{formatSalary(item.job.salaryMinCents, item.job.salaryMaxCents)}</span>
+                        <Badge variant="secondary" data-testid={`badge-job-type-${item.job.id}`}>
+                          {item.job.type.replace("_", " ")}
+                        </Badge>
                       </div>
+                      
+                      <div className="flex flex-wrap gap-4 text-sm text-muted-foreground mb-3">
+                        {item.job.location && (
+                          <div className="flex items-center gap-1">
+                            <MapPin className="w-4 h-4" />
+                            <span>{item.job.location}</span>
+                          </div>
+                        )}
+                        <div className="flex items-center gap-1">
+                          <DollarSign className="w-4 h-4" />
+                          <span>{formatSalary(item.job.salaryMinCents, item.job.salaryMaxCents)}</span>
+                        </div>
+                      </div>
+
+                      <p className="text-sm leading-relaxed line-clamp-2">{item.job.description}</p>
                     </div>
-
-                    <p className="text-sm leading-relaxed mb-4">{item.job.description}</p>
-
-                    {user?.role === "ARTIST" && (
-                      <div className="flex gap-3">
-                        <Button className="flex-1" data-testid={`button-apply-${item.job.id}`}>
-                          Apply Now
-                        </Button>
-                        <Button variant="outline" data-testid={`button-message-${item.job.id}`}>
-                          <MessageCircle className="w-4 h-4 mr-2" />
-                          Message Studio
-                        </Button>
-                      </div>
-                    )}
                   </div>
-                </div>
-              </Card>
+                </Card>
+              </Link>
             ))}
           </div>
         )}

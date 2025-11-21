@@ -452,6 +452,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get("/api/jobs/:id", async (req, res) => {
+    try {
+      const job = await storage.getJobById(req.params.id);
+      if (!job) {
+        return res.status(404).json({ message: "Job not found" });
+      }
+      res.json(job);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   app.post("/api/jobs", requireAuth, requireRole(["STUDIO"]), async (req: AuthRequest, res) => {
     try {
       const validated = validation.createJobSchema.parse(req.body);
@@ -460,6 +472,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
         studioId: req.userId!
       });
       res.json(job);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+
+  app.put("/api/jobs/:id", requireAuth, requireRole(["STUDIO"]), async (req: AuthRequest, res) => {
+    try {
+      const job = await storage.getJobById(req.params.id);
+      if (!job) {
+        return res.status(404).json({ message: "Job not found" });
+      }
+      if (job.job.studioId !== req.userId) {
+        return res.status(403).json({ message: "Not authorized to edit this job" });
+      }
+      const validated = validation.createJobSchema.parse(req.body);
+      await storage.updateJob(req.params.id, validated);
+      res.json({ message: "Job updated successfully" });
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+
+  app.delete("/api/jobs/:id", requireAuth, requireRole(["STUDIO"]), async (req: AuthRequest, res) => {
+    try {
+      const job = await storage.getJobById(req.params.id);
+      if (!job) {
+        return res.status(404).json({ message: "Job not found" });
+      }
+      if (job.job.studioId !== req.userId) {
+        return res.status(403).json({ message: "Not authorized to delete this job" });
+      }
+      await storage.deleteJob(req.params.id);
+      res.json({ message: "Job deleted successfully" });
     } catch (error: any) {
       res.status(400).json({ message: error.message });
     }

@@ -52,7 +52,10 @@ export interface IStorage {
   
   // Job operations
   getJobs(filters?: any): Promise<any[]>;
+  getJobById(id: string): Promise<any>;
   createJob(job: schema.InsertJobPosting): Promise<schema.JobPosting>;
+  updateJob(id: string, updates: Partial<schema.JobPosting>): Promise<void>;
+  deleteJob(id: string): Promise<void>;
   applyToJob(jobId: string, artistId: string, data: any): Promise<void>;
   
   // Livestream operations
@@ -465,9 +468,36 @@ export class DatabaseStorage implements IStorage {
     return query.orderBy(desc(schema.jobPostings.createdAt));
   }
 
+  async getJobById(id: string) {
+    const [result] = await db
+      .select({
+        job: schema.jobPostings,
+        studio: schema.users
+      })
+      .from(schema.jobPostings)
+      .innerJoin(schema.users, eq(schema.jobPostings.studioId, schema.users.id))
+      .where(eq(schema.jobPostings.id, id));
+    
+    return result;
+  }
+
   async createJob(job: schema.InsertJobPosting) {
     const [newJob] = await db.insert(schema.jobPostings).values(job).returning();
     return newJob;
+  }
+
+  async updateJob(id: string, updates: Partial<schema.JobPosting>) {
+    await db
+      .update(schema.jobPostings)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(schema.jobPostings.id, id));
+  }
+
+  async deleteJob(id: string) {
+    await db
+      .update(schema.jobPostings)
+      .set({ isActive: false, updatedAt: new Date() })
+      .where(eq(schema.jobPostings.id, id));
   }
 
   async applyToJob(jobId: string, artistId: string, data: any) {
