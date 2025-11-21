@@ -31,8 +31,10 @@ export default function CreatePostModal({ open, onClose }: CreatePostModalProps)
 
   const createPostMutation = useMutation({
     mutationFn: async () => {
-      const mediaPromises = files.map((file) => uploadFile(file, "posts", token!));
-      const media = await Promise.all(mediaPromises);
+      // Upload files only if provided
+      const media = files.length > 0
+        ? await Promise.all(files.map((file) => uploadFile(file, "posts", token!)))
+        : [];
 
       await apiRequest(
         "POST",
@@ -318,7 +320,7 @@ export default function CreatePostModal({ open, onClose }: CreatePostModalProps)
           </Button>
           <Button
             onClick={handleSubmit}
-            disabled={files.length === 0 || isSubmitting}
+            disabled={(activeTab !== "post" && files.length === 0) || (activeTab === "post" && !caption && files.length === 0) || isSubmitting}
             className="flex-1"
             data-testid="button-share-post"
           >

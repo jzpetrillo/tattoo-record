@@ -24,7 +24,7 @@ export const createPostSchema = z.object({
     width: z.number().optional(),
     height: z.number().optional(),
     duration: z.number().optional()
-  })).min(1, "At least one media item required"),
+  })).optional().default([]),
   location: z.object({
     city: z.string().optional(),
     country: z.string().optional(),
@@ -32,6 +32,9 @@ export const createPostSchema = z.object({
     lng: z.number().optional()
   }).optional(),
   visibility: z.enum(["PUBLIC", "FOLLOWERS"]).default("PUBLIC")
+}).refine((data) => data.caption || (data.media && data.media.length > 0), {
+  message: "Post must have either a caption or media",
+  path: ["caption"]
 });
 
 export const createCommentSchema = z.object({
