@@ -89,6 +89,29 @@ Both implement heartbeat mechanisms for connection health monitoring.
 - Each author link has unique data-testid for testing: `link-author-{postId}`
 - Hover states provide visual feedback
 
+**Caption-Only Posts**: Platform supports creating posts without media attachments:
+
+*Creation Flow*:
+1. Navigate to Create → Post composer
+2. Enter caption text (required if no media)
+3. Optionally attach media files, or leave empty for caption-only
+4. Select visibility and click "Share Post"
+
+*Technical Implementation*:
+- **Frontend**: Skips Cloudinary upload when files array is empty, enables Share button when caption OR files exist
+- **Backend Validation**: 
+  - caption: optional string
+  - media: optional array (defaults to empty)
+  - Refine check: requires `caption.trim().length > 0 OR media.length > 0`
+  - Prevents empty/whitespace-only captions
+- **Feed Algorithm**: Personalized feed always includes author's own posts (userId in userIdsToShow), ensuring caption-only posts appear even for users with zero follows
+- **Display**: Caption-only posts render without media section, showing only text content and engagement buttons
+
+*API Endpoints*:
+- `POST /api/posts` - Create post with optional media array
+- `GET /api/posts` - Returns personalized feed including author's posts
+- `GET /api/posts?authorId=X` - Returns user's posts for profile view
+
 **Artist-Studio Connection System**: Formal connection workflow allowing artists to request affiliation with tattoo studios:
 
 *Artist Flow*:
