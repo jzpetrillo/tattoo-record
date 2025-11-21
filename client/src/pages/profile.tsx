@@ -2,12 +2,12 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import SidebarNav from "@/components/layout/sidebar-nav";
 import MobileNav from "@/components/layout/mobile-nav";
 import { useAuth } from "@/hooks/use-auth";
-import { Building2, Check, X, MapPin, Globe, Grid3x3, Bookmark, Star, Film, Image as ImageIcon } from "lucide-react";
+import { Building2, Check, X, MapPin, Globe, Grid3x3, Bookmark, Star, Film, Image as ImageIcon, MessageCircle } from "lucide-react";
 import { StudioConnectionDialog } from "@/components/studio-connection-dialog";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
-import { useParams } from "wouter";
+import { useParams, useLocation } from "wouter";
 import { useState } from "react";
 
 export default function Profile() {
@@ -16,6 +16,7 @@ export default function Profile() {
   const params = useParams();
   const username = params.username;
   const [activeTab, setActiveTab] = useState<"POSTS" | "REELS" | "STORIES">("POSTS");
+  const [, navigate] = useLocation();
 
   // Fetch profile user data if viewing another user's profile
   const { data: profileUserData, isLoading: isLoadingProfile } = useQuery({
@@ -120,6 +121,17 @@ export default function Profile() {
                   <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" data-testid="icon-verified" />
                 )}
               </div>
+              {!isOwnProfile && (
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => navigate(`/messages?withUserId=${user?.id}`)}
+                  data-testid="button-message-user"
+                >
+                  <MessageCircle className="w-4 h-4 mr-2" />
+                  Message
+                </Button>
+              )}
               {isOwnProfile && user?.role === "ARTIST" && !studioConnection?.studio && (
                 <StudioConnectionDialog />
               )}
