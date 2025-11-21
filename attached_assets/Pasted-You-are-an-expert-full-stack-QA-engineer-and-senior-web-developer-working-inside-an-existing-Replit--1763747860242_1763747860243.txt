@@ -1,0 +1,338 @@
+You are an expert full-stack QA engineer and senior web developer working inside an existing Replit project.
+
+Your task is to perform **full, end-to-end (E2E) testing of the entire application** for **all user types and roles**, covering:
+
+- Every **user flow**, from first entry to final outcome.
+- Every **feature, page, route, button, link, and form**.
+- Overall **design and UX consistency** across the app.
+- Detection of **unused or unhooked features**, **missing pages**, and **inconsistencies**.
+
+Use ONLY what already exists in this project (frameworks, routing, components, styles, utilities). Do NOT install new external tools unless a test framework is already configured here.
+
+Your goal is to produce a clear picture of:
+- What works end-to-end,
+- What’s partially working,
+- What’s broken or missing,
+- Where design or structure is inconsistent.
+
+---
+
+## Step 1 – Discover the App Structure (Global Scan)
+
+1. Scan the codebase to identify:
+   - Frontend framework (React, Next.js, Vue, plain JS, etc.).
+   - Backend/API setup and major endpoints.
+   - Routing structure (all routes, nested routes, protected routes).
+   - Defined **user roles** and permission schemes (e.g. `guest`, `user`, `creator`, `client`, `admin`, `manager`, `owner`).
+   - Core **domain entities** (e.g. `User`, `Project`, `Campaign`, `Order`, `Post`, `Invoice`, etc.).
+
+2. Create or update a markdown file (e.g. `APP_MAP.md`) summarizing:
+   - All user roles and their intended capabilities.
+   - All major feature areas:
+     - Authentication / onboarding
+     - Dashboard / home
+     - Search / discovery
+     - Profiles
+     - Projects / campaigns / jobs
+     - Payments / billing
+     - Settings / account
+     - Admin / reporting / config
+   - All known routes and subroutes.
+
+3. While scanning, note any **components, routes, or modules that appear unused**:
+   - Components that are never imported.
+   - Routes defined but not referenced in navigation.
+   - Features referenced in code but commented out or incomplete.
+   Document these in a section called **“Potential Unused or Orphaned Features”**.
+
+---
+
+## Step 2 – Identify All Key User Flows (By Role)
+
+For each role: `guest`, `authenticated user` (creator/client/etc.), `admin/manager/owner`:
+
+1. From code and UI, identify the **intended end-to-end flows**, such as:
+
+### Guest
+- Landing on the home page.
+- Browsing public pages (about, pricing, contact, etc.).
+- Registering / signing up (if supported).
+- Logging in.
+
+### Authenticated User (creator / client / standard user)
+- Logging in and reaching their dashboard/home.
+- Creating, viewing, editing, and deleting their core entities (projects/campaigns/orders/etc.).
+- Managing their profile and settings.
+- Using search, filters, and lists.
+- Interacting with key features (e.g. messaging, submissions, uploads, approvals if present).
+- Logging out.
+
+### Admin / Manager / Owner
+- Logging in to admin or management area.
+- Managing users and roles.
+- Reviewing and managing global entities (all projects, all campaigns, etc.).
+- Accessing reports or admin-specific dashboards.
+- Managing configurations or system-level settings.
+
+2. Document all these flows in `TEST_FLOWS.md`, organized by user role and feature area.  
+Mark explicitly which are **critical flows** (business-critical).
+
+---
+
+## Step 3 – Full Route & Page Coverage (Reachability and Existence)
+
+1. Enumerate **all routes** from the router/config.
+
+2. For each route:
+   - Confirm **whether it has a corresponding page/component**.
+   - Confirm whether it is **reachable from the UI** (via nav, buttons, links).
+   - Note if:
+     - Route is defined but has no component → **missing page**.
+     - Route has a component but no navigation path → **unlinked / hidden feature**.
+     - Navigation references a route that doesn’t exist → **broken/missing page**.
+
+3. For each reachable route:
+   - Load the route and ensure:
+     - The page renders without errors.
+     - The main header/section is visible.
+     - Any required data loads properly.
+     - There is a clear way to navigate out (not a dead end).
+
+Document all **missing pages**, **broken routes**, **unlinked routes**, and **orphan pages** in your report.
+
+---
+
+## Step 4 – End-to-End CRUD & Core Feature Flows
+
+For each **core entity** (e.g., Project, Campaign, Task, Post, Order), and for each role that should have access:
+
+1. **Create (Add) – Start to Finish**
+   - From the appropriate UI entry (button/link “New X”):
+     - Open the create form.
+     - Fill with valid data.
+     - Submit.
+     - Validate:
+       - Success message or redirect.
+       - New record appears in the relevant list and detail views.
+     - Confirm this flow works as a full path from “nothing” to “created and visible”.
+
+2. **Read (View)**
+   - Open list page and confirm entities display.
+   - Click into detail pages and verify:
+     - Correct data values.
+     - Associated info (related entities, status, etc.).
+
+3. **Update (Edit)**
+   - From list or detail view, click an “Edit” action.
+   - Modify some fields.
+   - Save and verify:
+     - Changes persist after reload.
+     - Lists and dashboards reflect updated values.
+
+4. **Delete / Archive**
+   - Trigger delete/archive.
+   - Confirm:
+     - A confirmation step exists (not accidental).
+     - After confirmation, item is removed from the list or marked archived.
+     - UI updates correctly and doesn’t show stale data.
+
+If the UI suggests the ability to add/edit/update/delete (buttons, links, icons, labels) but the flow is incomplete or nonfunctional, flag this as a **broken or missing feature**.
+
+---
+
+## Step 5 – Authentication & Role-Based Access (E2E)
+
+1. **Authentication Flows**
+   - For each role with credentials:
+     - Perform full login → access appropriate dashboard → perform at least one core action → logout.
+   - Attempt invalid logins:
+     - Wrong password, invalid email, empty fields.
+     - Ensure proper error messages and no crash.
+
+2. **Permissions & Access Control**
+   - For each route/feature, confirm:
+     - Roles that should have access **can** access and act.
+     - Roles that should not have access:
+       - Are blocked, redirected, or show an explicit “Not authorized” message.
+       - Do not see admin-only buttons or dangerous actions in UI.
+
+3. **Session Behaviors**
+   - Confirm logout clears access to protected pages.
+   - Confirm direct access to protected routes redirects guests appropriately.
+
+Note any **misconfigurations**, such as:
+- Admin functionality visible to regular users.
+- Hidden admin-only pages that can be accessed directly by URL.
+
+---
+
+## Step 6 – Buttons, Links, and Interactive Elements
+
+Across all critical pages (home, dashboard, lists, detail views, forms, settings, admin):
+
+1. Identify all **primary interactive elements**:
+   - Buttons (primary/secondary/destructive).
+   - Links (especially in nav, tables, cards).
+   - Tabs, accordions, dropdowns, toggles.
+   - Pagination controls.
+   - Search and filter controls.
+   - File upload fields.
+   - Modal open/close triggers.
+
+2. For each:
+   - Click and validate:
+     - The action performs the expected function (navigation, save, open modal, show details, etc.).
+     - The UI responds clearly (toast, message, state change).
+     - No JavaScript or runtime errors occur.
+
+3. Flag:
+   - Buttons that do nothing.
+   - Links that go nowhere or 404.
+   - UI elements wired in JSX/template but with missing handlers.
+   - Interactive components that never appear in the app but are defined in code (potential unused features).
+
+---
+
+## Step 7 – UX, Error Handling & Edge States
+
+1. **Validation & Error States**
+   - Intentionally submit forms with:
+     - Required fields empty.
+     - Invalid formats (emails, numbers, dates).
+   - Confirm:
+     - Validation messages appear with clear, consistent styling.
+     - No crash or blank screen.
+     - User can fix inputs and resubmit successfully.
+
+2. **404 and Nonexistent Routes**
+   - Visit clearly invalid URLs.
+   - Confirm:
+     - You see a proper 404 or error page.
+     - It matches the app’s design.
+     - There’s a clear path back to a safe page (home/dashboard).
+
+3. **Empty States & Loading States**
+   - Identify views that might show empty data (no projects, no messages, etc.).
+   - Confirm:
+     - Empty state messaging is handled gracefully.
+     - Instructions are clear.
+   - Validate loading indicators (spinners, skeletons) appear and disappear correctly.
+
+---
+
+## Step 8 – DESIGN CONSISTENCY TESTING (Global UI & Branding Pass)
+
+Perform a full **design consistency audit**:
+
+### 1. Global Layout
+- Header/navbar is consistent (structure, logo, links) across pages.
+- Footer is consistent in content and positioning.
+- Main content area uses consistent width and layout patterns.
+- Breakpoints behave consistently across routes (no layout that feels from a different era).
+
+### 2. Typography
+- Heading hierarchy (H1/H2/H3) is used consistently:
+  - Same font family, weight, and approximate sizes for each level.
+- Body text styles are consistent across pages.
+- No random fonts or outdated typographic styles.
+
+### 3. Components & UI Patterns
+- Buttons:
+  - Primary/secondary/destructive are visually consistent.
+  - Same border radius, padding, font style, and hover/focus states.
+- Cards, tables, lists, modals:
+  - Consistent spacing, elevation, and border styles.
+- Form fields:
+  - Inputs, selects, checkboxes, radios, toggles use consistent styles, error states, and labels.
+
+Mark any components or pages that use **inconsistent or older styling** or deviate from the main standards as **design drift**.
+
+### 4. Color & Branding
+- Colors align with the brand palette.
+- No rogue colors or out-of-place gradients.
+- Backgrounds, section dividers, and highlights are used consistently.
+- If themes exist (light/dark), ensure they apply uniformly and don’t break on certain pages.
+
+### 5. Icons & Imagery
+- Icons share a consistent style (line vs solid, size, stroke weight).
+- Images are not stretched or pixelated.
+- Illustration style is coherent across pages (if used).
+
+### 6. Responsive Behavior
+- Test representative pages at mobile, tablet, and desktop widths.
+- Ensure:
+  - Nav remains usable.
+  - Forms and buttons don’t overflow off-screen.
+  - Grids and cards wrap correctly.
+  - No overlapping or hidden content.
+
+### 7. Alignment & Spacing
+- Identify a consistent spacing scale (e.g., 4/8/16 px).
+- Check that:
+  - Sections, cards, and forms use these consistently.
+  - No random padding/margin values that break the rhythm.
+  - Content alignment (left/center) is consistent in similar views.
+
+Document all design inconsistencies in a dedicated file: `DESIGN_ISSUES.md`, grouped by:
+- Page
+- Component
+- Issue type (spacing, color, typography, layout, etc.)
+
+---
+
+## Step 9 – Unused, Orphaned, and Incomplete Features
+
+From your global scan and testing:
+
+- List any **components, hooks, routes, or modules** that:
+  - Are never imported or used.
+  - Are partially implemented (TODOs, commented-out code).
+  - Are wired in code (e.g., route exists) but have:
+    - No navigation entry,
+    - No working UI,
+    - No backend implementation.
+
+Mark them as:
+- **Unused** – safe to potentially remove or revisit.
+- **Orphaned** – built but not connected to flows.
+- **Incomplete** – visible in UI but missing full functionality.
+
+Add these to a section **“Unused / Orphan / Incomplete Features”** in your main report.
+
+---
+
+## Step 10 – Final E2E Summary Report
+
+Create or update `E2E_TEST_REPORT.md` with:
+
+1. **Checklists/Tables** for each area:
+   - Routes & Pages
+   - Auth & Roles
+   - CRUD flows (per entity)
+   - Buttons & Interactions
+   - UX & Errors
+   - Design Consistency
+   - Unused/Orphan/Incomplete Features
+
+2. For each item/flow, mark status:
+   - ✅ Fully working End-to-End
+   - ⚠️ Partially working / limited
+   - ❌ Broken / missing
+
+3. Include a brief summary for each ❌ or ⚠️:
+   - What was expected.
+   - What actually happens.
+   - Where in the code it appears to be handled (if obvious).
+
+4. Add inline `TODO` comments in code near problematic areas where appropriate.
+
+---
+
+## Final Instruction
+
+Perform **full end-to-end testing of all flows, all user types, all features, and the overall design** of this application following the steps above.
+
+Use only the existing stack, patterns, and utilities. When finished, ensure `APP_MAP.md`, `TEST_FLOWS.md`, `DESIGN_ISSUES.md`, and `E2E_TEST_REPORT.md` clearly show:
+- Coverage of all user flows,
+- Status of every major feature and page,
+- Any unused, missing, or inconsistent elements in the application.
