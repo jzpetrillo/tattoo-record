@@ -32,8 +32,13 @@ export const createPostSchema = z.object({
     lng: z.number().optional()
   }).optional(),
   visibility: z.enum(["PUBLIC", "FOLLOWERS"]).default("PUBLIC")
-}).refine((data) => data.caption || (data.media && data.media.length > 0), {
-  message: "Post must have either a caption or media",
+}).refine((data) => {
+  // Trim and check caption
+  const hasCaption = data.caption && data.caption.trim().length > 0;
+  const hasMedia = data.media && data.media.length > 0;
+  return hasCaption || hasMedia;
+}, {
+  message: "Post must have either a non-empty caption or media",
   path: ["caption"]
 });
 
