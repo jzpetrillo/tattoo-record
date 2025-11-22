@@ -7,6 +7,7 @@ import NotFound from "@/pages/not-found";
 import Home from "@/pages/home";
 import Search from "@/pages/search";
 import Explore from "@/pages/explore";
+import Reels from "@/pages/reels";
 import Messages from "@/pages/messages";
 import Notifications from "@/pages/notifications";
 import Profile from "@/pages/profile";
@@ -33,7 +34,7 @@ function Router() {
       <Route path="/jobs/:id" component={JobDetail} />
       <Route path="/jobs" component={Jobs} />
       <Route path="/create" component={Create} />
-      <Route path="/reels" component={Explore} />
+      <Route path="/reels" component={Reels} />
       <Route path="/auth" component={Auth} />
       <Route path="/admin" component={AdminDashboard} />
       <Route component={NotFound} />

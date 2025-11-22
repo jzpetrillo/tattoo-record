@@ -11,12 +11,22 @@ import {
   User,
   Menu,
   Briefcase,
-  Radio
+  Radio,
+  Settings,
+  Bookmark,
+  LogOut
 } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 export default function SidebarNav() {
-  const [location] = useLocation();
-  const { user } = useAuth();
+  const [location, setLocation] = useLocation();
+  const { user, clearAuth } = useAuth();
 
   const navItems = [
     { path: "/", label: "Home", icon: Home },
@@ -63,10 +73,38 @@ export default function SidebarNav() {
       </nav>
 
       {/* More button at bottom */}
-      <button className="flex items-center gap-3 px-2 py-2.5 hover:bg-secondary/50 transition-all w-full text-sm" data-testid="nav-more">
-        <Menu className="w-5 h-5" strokeWidth={1.5} />
-        <span>More</span>
-      </button>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <button className="flex items-center gap-3 px-2 py-2.5 hover:bg-secondary/50 transition-all w-full text-sm" data-testid="nav-more">
+            <Menu className="w-5 h-5" strokeWidth={1.5} />
+            <span>More</span>
+          </button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="start" className="w-56">
+          <DropdownMenuItem 
+            className="cursor-pointer text-destructive focus:text-destructive"
+            onClick={async () => {
+              try {
+                await fetch("/api/auth/logout", {
+                  method: "POST",
+                  headers: {
+                    "Content-Type": "application/json",
+                  },
+                });
+              } catch (error) {
+                console.error("Logout error:", error);
+              } finally {
+                clearAuth();
+                setLocation("/auth");
+              }
+            }}
+            data-testid="menu-logout"
+          >
+            <LogOut className="w-4 h-4 mr-2" />
+            Log Out
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
     </aside>
   );
 }
