@@ -27,6 +27,11 @@ export default function PostCard({ post, author, isLiked = false, isSaved = fals
   const [selectedUser, setSelectedUser] = useState<string | null>(null);
   const [saved, setSaved] = useState(isSaved);
 
+  // Sync saved state with isSaved prop from feed
+  useEffect(() => {
+    setSaved(isSaved);
+  }, [isSaved]);
+
   const likeMutation = useMutation({
     mutationFn: async (shouldLike: boolean) => {
       const method = shouldLike ? "POST" : "DELETE";
@@ -128,6 +133,7 @@ export default function PostCard({ post, author, isLiked = false, isSaved = fals
         description: shouldSave ? "Added to your saved posts" : "Removed from your saved posts"
       });
       queryClient.invalidateQueries({ queryKey: ["/api/saved-posts"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/posts"] });
     },
     onError: (error: Error) => {
       toast({ title: "Error", description: error.message, variant: "destructive" });

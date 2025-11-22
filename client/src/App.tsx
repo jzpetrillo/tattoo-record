@@ -18,6 +18,7 @@ import Create from "@/pages/create";
 import Auth from "@/pages/auth";
 import AdminDashboard from "@/pages/admin";
 import SavedPosts from "@/pages/saved-posts";
+import FlashSales from "@/pages/flash-sales";
 
 function Router() {
   return (
@@ -37,6 +38,7 @@ function Router() {
       <Route path="/create" component={Create} />
       <Route path="/reels" component={Reels} />
       <Route path="/saved" component={SavedPosts} />
+      <Route path="/flash-sales" component={FlashSales} />
       <Route path="/auth" component={Auth} />
       <Route path="/admin" component={AdminDashboard} />
       <Route component={NotFound} />

@@ -1,5 +1,5 @@
 import { db } from "../db";
-import { posts, follows, postLikes, users } from "@shared/schema";
+import { posts, follows, postLikes, savedPosts, users } from "@shared/schema";
 import { eq, desc, and, inArray, isNull, sql } from "drizzle-orm";
 
 export async function getPersonalizedFeed(
@@ -30,7 +30,12 @@ export async function getPersonalizedFeed(
         SELECT 1 FROM ${postLikes} 
         WHERE ${postLikes.postId} = ${posts.id} 
         AND ${postLikes.userId} = ${userId}
-      )`.as("is_liked"),
+      )`.as("isLiked"),
+      isSaved: sql<boolean>`EXISTS(
+        SELECT 1 FROM ${savedPosts} 
+        WHERE ${savedPosts.postId} = ${posts.id} 
+        AND ${savedPosts.userId} = ${userId}
+      )`.as("isSaved"),
       engagementScore: sql<number>`
         (${posts.likeCount} * 2 + ${posts.commentCount} * 3) / 
         EXTRACT(EPOCH FROM (NOW() - ${posts.createdAt})) * 3600
@@ -69,6 +74,11 @@ export async function getPublicFeed(limit: number = 20, offset: number = 0, user
         WHERE ${postLikes.postId} = ${posts.id} 
         AND ${postLikes.userId} = ${userId}
       )`.as("is_liked") : sql<boolean>`false`.as("is_liked"),
+      isSaved: userId ? sql<boolean>`EXISTS(
+        SELECT 1 FROM ${savedPosts} 
+        WHERE ${savedPosts.postId} = ${posts.id} 
+        AND ${savedPosts.userId} = ${userId}
+      )`.as("is_saved") : sql<boolean>`false`.as("is_saved"),
       engagementScore: sql<number>`
         (${posts.likeCount} * 2 + ${posts.commentCount} * 3) / 
         EXTRACT(EPOCH FROM (NOW() - ${posts.createdAt})) * 3600
@@ -109,5 +119,34 @@ export async function getTrendingPosts(limit: number = 20) {
     .orderBy(
       desc(sql`${posts.likeCount} + ${posts.commentCount}`)
     )
+    .limit(limit);
+}
+
+export async function getFeaturedPosts(limit: number = 20, userId?: string) {
+  return db
+    .select({
+      post: posts,
+      author: users,
+      isLiked: userId ? sql<boolean>`EXISTS(
+        SELECT 1 FROM ${postLikes} 
+        WHERE ${postLikes.postId} = ${posts.id} 
+        AND ${postLikes.userId} = ${userId}
+      )`.as("is_liked") : sql<boolean>`false`.as("is_liked"),
+      isSaved: userId ? sql<boolean>`EXISTS(
+        SELECT 1 FROM ${savedPosts} 
+        WHERE ${savedPosts.postId} = ${posts.id} 
+        AND ${savedPosts.userId} = ${userId}
+      )`.as("is_saved") : sql<boolean>`false`.as("is_saved"),
+    })
+    .from(posts)
+    .innerJoin(users, eq(posts.authorId, users.id))
+    .where(
+      and(
+        isNull(posts.deletedAt),
+        eq(posts.visibility, "PUBLIC"),
+        eq(posts.isFeatured, true)
+      )
+    )
+    .orderBy(desc(posts.createdAt))
     .limit(limit);
 }

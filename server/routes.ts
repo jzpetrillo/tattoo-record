@@ -9,7 +9,7 @@ import { generateTattooRecommendations } from "./services/openai";
 import { setupMessageWebSocket } from "./services/websocket";
 import { setupLiveWebSocket } from "./services/websocket-live";
 import { startStoryCleanupScheduler } from "./services/story-cleanup";
-import { getPersonalizedFeed, getTrendingPosts } from "./services/feed-algorithm";
+import { getPersonalizedFeed, getTrendingPosts, getFeaturedPosts } from "./services/feed-algorithm";
 import * as validation from "./utils/validation";
 
 const upload = multer({ storage: multer.memoryStorage() });
@@ -196,9 +196,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const offset = parseInt(req.query.offset as string) || 0;
       const authorId = req.query.authorId as string;
       const type = req.query.type as "POST" | "REEL" | "STORY" | undefined;
+      const featured = req.query.featured === "true";
       
       if (authorId) {
         const posts = await storage.getPosts({ limit, offset, authorId, type });
+        res.json(posts);
+      } else if (featured) {
+        const posts = await getFeaturedPosts(limit, req.userId);
         res.json(posts);
       } else {
         const feed = await getPersonalizedFeed(req.userId!, limit, offset);
@@ -571,7 +575,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/flash-sales", async (req, res) => {
     try {
       const artistId = req.query.artistId as string | undefined;
-      const activeOnly = req.query.active !== 'false';
+      const activeOnly = req.query.active === 'true' || req.query.active === undefined;
       const flashSales = await storage.getFlashSales(artistId, activeOnly);
       res.json(flashSales);
     } catch (error: any) {

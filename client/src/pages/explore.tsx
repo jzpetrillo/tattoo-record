@@ -1,21 +1,52 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 import { Link } from "wouter";
 import SidebarNav from "@/components/layout/sidebar-nav";
 import MobileNav from "@/components/layout/mobile-nav";
-import { MapPin, Globe, Building2, Star } from "lucide-react";
+import { MapPin, Globe, Building2, Star, TrendingUp, Hash } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Card } from "@/components/ui/card";
 
 type UserType = "ALL" | "STUDIO" | "ARTIST" | "ENTHUSIAST";
+
+const TATTOO_STYLES = ["Traditional", "Realism", "Watercolor", "Tribal", "Japanese", "Blackwork", "Geometric", "Minimalist"];
 
 export default function Explore() {
   const { token } = useAuth();
   const [selectedType, setSelectedType] = useState<UserType>("ALL");
+  const [selectedStyle, setSelectedStyle] = useState<string | null>(null);
+  const [locationFilter, setLocationFilter] = useState<string>("");
+
+  // Reset style filter when switching away from ARTIST role
+  useEffect(() => {
+    if (selectedType !== "ARTIST" && selectedStyle) {
+      setSelectedStyle(null);
+    }
+  }, [selectedType, selectedStyle]);
 
   const { data: users = [], isLoading } = useQuery<any[]>({
     queryKey: ["/api/users", selectedType !== "ALL" ? `?type=${selectedType}` : ""],
     enabled: !!token,
+  });
+
+  const { data: trendingHashtags = [] } = useQuery<any[]>({
+    queryKey: ["/api/hashtags/trending?limit=10"],
+    enabled: !!token,
+  });
+
+  const filteredUsers = users.filter(user => {
+    if (selectedStyle && user.role === "ARTIST") {
+      const userStyles = user.styles || [];
+      if (!userStyles.includes(selectedStyle)) return false;
+    }
+    if (locationFilter) {
+      const city = user.location?.city?.toLowerCase() || "";
+      const country = user.location?.country?.toLowerCase() || "";
+      const query = locationFilter.toLowerCase();
+      if (!city.includes(query) && !country.includes(query)) return false;
+    }
+    return true;
   });
 
   const getRoleBadgeColor = (role: string) => {
@@ -44,8 +75,36 @@ export default function Explore() {
         <div className="max-w-7xl mx-auto lg:pt-8 px-4">
           <h1 className="hidden lg:block text-3xl font-bold mb-6">Explore</h1>
 
+          {/* Trending Hashtags */}
+          {trendingHashtags.length > 0 && (
+            <Card className="mb-6 p-4 border-border" data-testid="trending-section">
+              <div className="flex items-center gap-2 mb-3">
+                <TrendingUp className="w-5 h-5" />
+                <h2 className="font-semibold uppercase text-sm tracking-wide">Trending</h2>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {trendingHashtags.map((tag: any) => (
+                  <Link
+                    key={tag.id}
+                    href={`/search?q=${encodeURIComponent('#' + tag.tag)}`}
+                    data-testid={`trending-tag-${tag.tag}`}
+                  >
+                    <div className="px-3 py-1.5 bg-secondary hover:bg-secondary/80 rounded-full text-sm flex items-center gap-2 transition-colors cursor-pointer">
+                      <Hash className="w-3 h-3" />
+                      <span className="font-medium">{tag.tag}</span>
+                      <span className="text-muted-foreground text-xs">
+                        {tag.count > 1000 ? `${(tag.count / 1000).toFixed(1)}k` : tag.count}
+                      </span>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            </Card>
+          )}
+
           {/* Filter Controls */}
-          <div className="mb-8">
+          <div className="mb-6 space-y-4">
+            {/* Role Filter */}
             <Tabs 
               value={selectedType} 
               onValueChange={(value) => setSelectedType(value as UserType)}
@@ -58,16 +117,48 @@ export default function Explore() {
                 <TabsTrigger value="ENTHUSIAST" data-testid="filter-enthusiasts">Enthusiasts</TabsTrigger>
               </TabsList>
             </Tabs>
+
+            {/* Discovery Filters */}
+            <div className="flex flex-col sm:flex-row gap-4">
+              {/* Style Filter (Artists only) */}
+              {selectedType === "ARTIST" && (
+                <div className="flex-1">
+                  <select
+                    value={selectedStyle || ""}
+                    onChange={(e) => setSelectedStyle(e.target.value || null)}
+                    className="w-full px-4 py-2 border border-border rounded bg-background text-sm"
+                    data-testid="filter-style"
+                  >
+                    <option value="">All Styles</option>
+                    {TATTOO_STYLES.map(style => (
+                      <option key={style} value={style}>{style}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              {/* Location Filter */}
+              <div className="flex-1">
+                <input
+                  type="text"
+                  value={locationFilter}
+                  onChange={(e) => setLocationFilter(e.target.value)}
+                  placeholder="Filter by location..."
+                  className="w-full px-4 py-2 border border-border rounded bg-background text-sm"
+                  data-testid="filter-location"
+                />
+              </div>
+            </div>
           </div>
 
           {/* Users Grid */}
           {isLoading ? (
             <div className="text-center py-12 text-muted-foreground">Loading...</div>
-          ) : users.length === 0 ? (
+          ) : filteredUsers.length === 0 ? (
             <div className="text-center py-12 text-muted-foreground">No users found</div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-6">
-              {users.map((user) => (
+              {filteredUsers.map((user) => (
                 <Link 
                   key={user.id} 
                   href={`/u/${user.username}`}

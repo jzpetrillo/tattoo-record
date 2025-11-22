@@ -2,8 +2,8 @@ import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 import PostCard from "@/components/posts/post-card";
 import { Bookmark } from "lucide-react";
-import SidebarNav from "@/components/navigation/sidebar-nav";
-import MobileNav from "@/components/navigation/mobile-nav";
+import SidebarNav from "@/components/layout/sidebar-nav";
+import MobileNav from "@/components/layout/mobile-nav";
 
 export default function SavedPostsPage() {
   const { user, token } = useAuth();

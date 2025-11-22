@@ -6,9 +6,11 @@ import SuggestedUsers from "@/components/layout/suggested-users";
 import PostFeed from "@/components/posts/post-feed";
 import { useAuth } from "@/hooks/use-auth";
 import { Link, useLocation } from "wouter";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
+import { Star, ChevronLeft, ChevronRight } from "lucide-react";
+import { Card } from "@/components/ui/card";
 
 /**
  * Demo accounts for quick login feature.
@@ -30,6 +32,24 @@ export default function Home() {
   const { user, setAuth } = useAuth();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const [featuredScrollPosition, setFeaturedScrollPosition] = useState(0);
+
+  const { data: featuredPosts = [], isLoading: featuredLoading } = useQuery({
+    queryKey: ["/api/posts?featured=true"],
+    enabled: !!user,
+  });
+
+  const scrollFeatured = (direction: 'left' | 'right') => {
+    const container = document.getElementById('featured-container');
+    if (container) {
+      const scrollAmount = 400;
+      const newPosition = direction === 'left' 
+        ? Math.max(0, featuredScrollPosition - scrollAmount)
+        : featuredScrollPosition + scrollAmount;
+      container.scrollTo({ left: newPosition, behavior: 'smooth' });
+      setFeaturedScrollPosition(newPosition);
+    }
+  };
 
   const createQuickLoginMutation = () => useMutation({
     mutationFn: async (credentials: { email: string; password: string }) => {
@@ -134,6 +154,70 @@ export default function Home() {
           <div className="border border-border rounded-lg mb-4 bg-background mt-4 lg:mt-0">
             <StoriesBar />
           </div>
+
+          {/* Featured Content */}
+          {!featuredLoading && featuredPosts.length > 0 && (
+            <Card className="mb-4 p-4 border-border" data-testid="featured-section">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <Star className="w-5 h-5 text-yellow-500 fill-current" />
+                  <h2 className="font-semibold uppercase text-sm tracking-wide">Featured</h2>
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => scrollFeatured('left')}
+                    className="p-1 hover:bg-secondary rounded transition-colors"
+                    data-testid="featured-scroll-left"
+                  >
+                    <ChevronLeft className="w-5 h-5" />
+                  </button>
+                  <button
+                    onClick={() => scrollFeatured('right')}
+                    className="p-1 hover:bg-secondary rounded transition-colors"
+                    data-testid="featured-scroll-right"
+                  >
+                    <ChevronRight className="w-5 h-5" />
+                  </button>
+                </div>
+              </div>
+              <div
+                id="featured-container"
+                className="flex gap-3 overflow-x-auto scrollbar-hide scroll-smooth"
+                style={{ scrollbarWidth: 'none' }}
+              >
+                {featuredPosts.map((item: any) => (
+                  <Link
+                    key={item.post.id}
+                    href={`/u/${item.author.username}`}
+                    data-testid={`featured-post-${item.post.id}`}
+                  >
+                    <div className="flex-shrink-0 w-48 cursor-pointer group">
+                      <div className="aspect-square bg-secondary rounded overflow-hidden mb-2 relative">
+                        {item.post.media?.[0] ? (
+                          <>
+                            <img
+                              src={item.post.media[0].url}
+                              alt="Featured post"
+                              className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                            />
+                            <div className="absolute top-2 right-2 bg-yellow-500 rounded-full p-1">
+                              <Star className="w-3 h-3 text-white fill-current" />
+                            </div>
+                          </>
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-muted-foreground">
+                            <Star className="w-8 h-8" />
+                          </div>
+                        )}
+                      </div>
+                      <p className="text-sm font-medium truncate">{item.author.username}</p>
+                      <p className="text-xs text-muted-foreground line-clamp-2">{item.post.caption}</p>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            </Card>
+          )}
 
           {/* Feed */}
           <PostFeed />
