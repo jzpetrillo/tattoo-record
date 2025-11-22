@@ -3,13 +3,13 @@ import { useAuth } from "@/hooks/use-auth";
 import { Link } from "wouter";
 import SidebarNav from "@/components/layout/sidebar-nav";
 import MobileNav from "@/components/layout/mobile-nav";
-import { Heart, MessageCircle, Bookmark, MoreHorizontal } from "lucide-react";
+import { Heart, MessageCircle } from "lucide-react";
 
 export default function Reels() {
   const { token } = useAuth();
 
   const { data: reels = [], isLoading } = useQuery<any[]>({
-    queryKey: ["/api/posts", { type: "REEL" }],
+    queryKey: ["/api/posts?type=REEL"],
     enabled: !!token,
   });
 
@@ -41,7 +41,7 @@ export default function Reels() {
               </p>
             </div>
           ) : (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-1">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-1" data-testid="reels-grid">
               {reels.map((item: any) => {
                 const post = item.post || item;
                 const author = item.author || {};
@@ -50,7 +50,7 @@ export default function Reels() {
                   <div
                     key={post.id}
                     className="relative aspect-[9/16] bg-secondary rounded-sm overflow-hidden group cursor-pointer"
-                    data-testid={`reel-${post.id}`}
+                    data-testid={`reel-card-${post.id}`}
                   >
                     {/* Reel Preview/Thumbnail */}
                     {post.media && post.media.length > 0 ? (
@@ -82,26 +82,28 @@ export default function Reels() {
                     {/* Hover Overlay with Stats */}
                     <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-end p-3 text-white">
                       {/* Author Info */}
-                      <Link href={`/u/${author.username}`}>
-                        <div className="flex items-center gap-2 mb-2">
-                          <div className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center overflow-hidden">
-                            {author.avatarUrl ? (
-                              <img
-                                src={author.avatarUrl}
-                                alt={author.username}
-                                className="w-full h-full object-cover"
-                              />
-                            ) : (
-                              <span className="text-xs font-bold">
-                                {author.username?.[0]?.toUpperCase()}
-                              </span>
-                            )}
+                      {author.username ? (
+                        <Link href={`/u/${author.username}`}>
+                          <div className="flex items-center gap-2 mb-2" data-testid={`reel-author-${post.id}`}>
+                            <div className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center overflow-hidden">
+                              {author.avatarUrl ? (
+                                <img
+                                  src={author.avatarUrl}
+                                  alt={author.username}
+                                  className="w-full h-full object-cover"
+                                />
+                              ) : (
+                                <span className="text-xs font-bold">
+                                  {author.username[0]?.toUpperCase()}
+                                </span>
+                              )}
+                            </div>
+                            <span className="text-xs font-medium truncate">
+                              {author.username}
+                            </span>
                           </div>
-                          <span className="text-xs font-medium truncate">
-                            {author.username}
-                          </span>
-                        </div>
-                      </Link>
+                        </Link>
+                      ) : null}
 
                       {/* Caption */}
                       {post.caption && (
@@ -110,11 +112,11 @@ export default function Reels() {
 
                       {/* Stats */}
                       <div className="flex items-center gap-3 text-xs">
-                        <div className="flex items-center gap-1">
+                        <div className="flex items-center gap-1" data-testid={`reel-likes-${post.id}`}>
                           <Heart className="w-3 h-3 fill-white" />
                           <span>{post.likesCount || 0}</span>
                         </div>
-                        <div className="flex items-center gap-1">
+                        <div className="flex items-center gap-1" data-testid={`reel-comments-${post.id}`}>
                           <MessageCircle className="w-3 h-3" />
                           <span>{post.commentsCount || 0}</span>
                         </div>
@@ -122,7 +124,7 @@ export default function Reels() {
                     </div>
 
                     {/* Play Icon Indicator */}
-                    <div className="absolute top-2 right-2">
+                    <div className="absolute top-2 right-2" data-testid={`reel-play-icon-${post.id}`}>
                       <div className="bg-black/50 rounded-full p-1.5">
                         <svg
                           className="w-4 h-4 text-white"
