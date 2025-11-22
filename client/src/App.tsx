@@ -17,6 +17,7 @@ import JobDetail from "@/pages/job-detail";
 import Create from "@/pages/create";
 import Auth from "@/pages/auth";
 import AdminDashboard from "@/pages/admin";
+import SavedPosts from "@/pages/saved-posts";
 
 function Router() {
   return (
@@ -35,6 +36,7 @@ function Router() {
       <Route path="/jobs" component={Jobs} />
       <Route path="/create" component={Create} />
       <Route path="/reels" component={Reels} />
+      <Route path="/saved" component={SavedPosts} />
       <Route path="/auth" component={Auth} />
       <Route path="/admin" component={AdminDashboard} />
       <Route component={NotFound} />

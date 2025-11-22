@@ -567,6 +567,108 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Flash Sales Routes
+  app.get("/api/flash-sales", async (req, res) => {
+    try {
+      const artistId = req.query.artistId as string | undefined;
+      const activeOnly = req.query.active !== 'false';
+      const flashSales = await storage.getFlashSales(artistId, activeOnly);
+      res.json(flashSales);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get("/api/flash-sales/:id", async (req, res) => {
+    try {
+      const flashSale = await storage.getFlashSale(req.params.id);
+      if (!flashSale) {
+        return res.status(404).json({ message: "Flash sale not found" });
+      }
+      res.json(flashSale);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post("/api/flash-sales", requireAuth, requireRole(["ARTIST"]), async (req: AuthRequest, res) => {
+    try {
+      const flashSale = await storage.createFlashSale({
+        ...req.body,
+        artistId: req.userId!
+      });
+      res.json(flashSale);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+
+  app.put("/api/flash-sales/:id", requireAuth, requireRole(["ARTIST"]), async (req: AuthRequest, res) => {
+    try {
+      const updated = await storage.updateFlashSale(req.params.id, req.body);
+      res.json(updated);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Booking Routes
+  app.get("/api/bookings", requireAuth, async (req: AuthRequest, res) => {
+    try {
+      const filters = {
+        artistId: req.query.artistId as string | undefined,
+        clientId: req.query.clientId as string | undefined,
+        status: req.query.status as string | undefined
+      };
+      const bookings = await storage.getBookings(filters);
+      res.json(bookings);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get("/api/bookings/:id", requireAuth, async (req: AuthRequest, res) => {
+    try {
+      const booking = await storage.getBooking(req.params.id);
+      if (!booking) {
+        return res.status(404).json({ message: "Booking not found" });
+      }
+      res.json(booking);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post("/api/bookings", requireAuth, async (req: AuthRequest, res) => {
+    try {
+      const booking = await storage.createBooking({
+        ...req.body,
+        clientId: req.userId!
+      });
+      res.json(booking);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+
+  app.put("/api/bookings/:id", requireAuth, async (req: AuthRequest, res) => {
+    try {
+      const updated = await storage.updateBooking(req.params.id, req.body);
+      res.json(updated);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.delete("/api/bookings/:id", requireAuth, async (req: AuthRequest, res) => {
+    try {
+      await storage.deleteBooking(req.params.id);
+      res.json({ message: "Booking cancelled" });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   // Livestream Routes
   app.get("/api/livestream-events", async (req, res) => {
     try {
