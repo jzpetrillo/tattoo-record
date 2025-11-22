@@ -2,230 +2,39 @@
 
 ## Overview
 
-Inktagram is a production-ready, full-stack tattoo social community platform that enables artists, studios, and enthusiasts to connect, share work, and collaborate. The platform features real-time messaging, live streaming capabilities, portfolio management, job postings, and AI-powered tattoo design recommendations. Built as a modern monorepo, it combines a React-based frontend with an Express backend, utilizing PostgreSQL for data persistence and WebSocket for real-time features.
+Inktagram is a production-ready, full-stack tattoo social community platform designed for artists, studios, and enthusiasts to connect, share work, and collaborate. It features real-time messaging, live streaming, portfolio management, job postings, and AI-powered tattoo design recommendations. The platform is built as a modern monorepo, leveraging React for the frontend, Express for the backend, PostgreSQL for data persistence, and WebSockets for real-time functionalities.
 
 ## User Preferences
-
 Preferred communication style: Simple, everyday language.
 
 ## System Architecture
 
-### Frontend Architecture
+### UI/UX Decisions
+The platform features a clean, minimalist black-and-white aesthetic inspired by editorial magazine layouts. It utilizes pure white backgrounds, black text, minimal borders, and reduced border radius for sharper edges. Consistent navigation is provided through a fixed left sidebar for desktop and a bottom navigation for mobile, both using icon-only designs where appropriate. Profile pages are inspired by Instagram, featuring gradient-bordered avatars, dynamic statistics, and role-specific information.
 
-**Framework & Routing**: The application uses a single-page architecture with Wouter for client-side routing. The frontend is built with React 18 and Vite as the build tool, providing fast development and optimized production builds.
+### Technical Implementations
+**Frontend**: Built with React 18 and Vite, using Wouter for routing. State management combines Zustand for authentication, TanStack Query for server state, and local component state for UI. shadcn/ui with Radix UI and Tailwind CSS form the component system. Form handling uses React Hook Form with Zod for validation.
+**Backend**: An Express.js server in TypeScript handles API requests. Drizzle ORM interfaces with PostgreSQL. JWT-based authentication with bcrypt hashing and RBAC (`ARTIST`, `STUDIO`, `ENTHUSIAST` roles) is implemented. Multer and Cloudinary manage file uploads and media storage. Two WebSocket servers handle real-time messaging and live streaming.
+**Data Storage**: PostgreSQL is the primary data store, utilizing Drizzle ORM. The schema includes over 22 tables for users, posts, messages, portfolios, jobs, and live events, with UUIDs for primary keys, timestamps, and soft deletes. JSONB columns store flexible data like media arrays and location data. Composite and foreign key indexes optimize queries.
 
-**State Management**: The application uses a hybrid state management approach:
-- Zustand with persistence middleware handles authentication state and user sessions
-- TanStack Query (React Query) manages server state, caching, and data synchronization
-- Local component state for UI-specific concerns
+### Feature Specifications
+*   **Caption-Only Posts**: Supports posts without media, requiring only text.
+*   **Artist-Studio Connection System**: Allows artists to request affiliation with studios, managed through a formal approval workflow.
+*   **Profile Page Design**: Instagram-inspired layout with gradient-bordered avatars, dynamic stats, content tabs (Posts, Reels, Stories), and role-specific information (e.g., studio address for studios, studio connection for artists). Includes verified badges and optional banner images.
+*   **Admin Verification System**: Requires admin approval for `ARTIST` and `STUDIO` roles, managed via an Admin Dashboard.
+*   **Save/Bookmark System**: Users can save posts to personalized collections. Implemented with `saved_posts` table, POST/DELETE `/api/saved-posts/:postId` endpoints, and isSaved flags in feed queries via SQL EXISTS. SavedPosts page at `/saved` displays bookmarked content. Cache invalidation updates both `/api/posts` and `/api/saved-posts` on mutations.
+*   **Trending Hashtags**: Real-time hashtag analytics on Explore page showing top trending tattoo styles. GET `/api/hashtags/trending` endpoint aggregates `hashtag_usage` table. Horizontal scrollable chips display usage counts. Composite indexes on (hashtagId, postId) optimize queries.
+*   **Featured Content**: Admin-curated posts appear in homepage carousel. `posts.isFeatured` boolean flag, `getFeaturedPosts()` function in feed-algorithm.ts returns posts with isLiked/isSaved personalization. GET `/api/posts?featured=true` endpoint serves carousel.
+*   **Flash Sales**: Limited-time flash tattoo sales with countdown timers and special pricing. `flash_sales` table tracks pricing (cents), slots, and date ranges. GET `/api/flash-sales?active=true` filters by date. FlashSalesPage at `/flash-sales` displays grid with urgency indicators ("Ending Soon" <24h, "Just Added" <7d). Pricing model: originalPriceCents, discountPriceCents, depositCents, availableSlots decrements with bookings.
+*   **Discovery Filters**: Advanced filtering on Explore page by role (ARTIST/STUDIO/ENTHUSIAST), tattoo style (12+ styles: Traditional, Realism, Japanese, etc.), and location (case-insensitive search). GET `/api/users?type={ROLE}` for backend filtering. TATTOO_STYLES constant defined in explore.tsx. useEffect resets style filter when switching from ARTIST role to prevent orphaned filters.
+*   **Booking System**: Comprehensive appointment scheduling connecting clients with artists. `bookings` table tracks status workflow (PENDING → APPROVED/REJECTED → COMPLETED/CANCELLED). Bookings page at `/bookings` with tab-based filtering and create booking dialog. Artists can approve/reject/complete bookings, clients can cancel. Query optimization uses hierarchical keys `["/api/bookings", { status }]` with custom queryFn. refetchQueries ensures immediate UI updates across tabs. Artist selection dropdown with staleTime: 0 for fresh data.
+*   **Feed Optimizations**: All feed queries (`getPersonalizedFeed`, `getPublicFeed`, `getFeaturedPosts`) include `isLiked` and `isSaved` flags via SQL EXISTS subqueries (e.g., `EXISTS(SELECT 1 FROM post_likes WHERE postId = posts.id AND userId = $userId)`). Single query returns posts + user interaction state, preventing N+1 problems. useEffect in PostCard syncs local state with feed prop changes. Cache invalidation: like/unlike invalidates `/api/posts`, save/unsave invalidates both `/api/posts` AND `/api/saved-posts`.
 
-**UI Component System**: Built on shadcn/ui components with Radix UI primitives, providing accessible, customizable components styled with Tailwind CSS. The design system uses a clean, minimalist black-and-white aesthetic inspired by editorial magazine layouts (nestmag.online), with pure white backgrounds, black text, minimal borders, and reduced border radius for sharper edges.
-
-**Navigation Components**: Consistent navigation across all pages using `SidebarNav` (desktop) and `MobileNav` (mobile):
-- SidebarNav: Fixed left sidebar with uppercase logo, minimal spacing, small icons (5x5), clean hover states
-- MobileNav: Bottom navigation with icon-only design, no labels for minimal footprint
-- All pages (home, messages, jobs, profile, live-events, explore, search) use the same navigation components for consistency
-
-**Form Handling**: React Hook Form combined with Zod for schema validation provides type-safe form management with minimal re-renders.
-
-**Real-time Communication**: WebSocket connections are established for messaging and live streaming features, with automatic reconnection handling and heartbeat mechanisms.
-
-### Backend Architecture
-
-**Server Framework**: Express.js with TypeScript provides the HTTP API layer. The server uses middleware for JSON parsing, request logging, and body capture for debugging.
-
-**Database Layer**: Drizzle ORM interfaces with PostgreSQL (Neon-compatible) using a connection pool from @neondatabase/serverless. The database schema defines 22+ tables covering users, posts, messages, stories, portfolios, jobs, and live streaming.
-
-**Authentication & Authorization**: JWT-based authentication with bcrypt password hashing. The `requireAuth` middleware validates tokens and attaches user context to requests. Role-based access control (RBAC) supports three user types: ARTIST, STUDIO, and ENTHUSIAST, enforced through the `requireRole` middleware.
-
-**File Upload & Storage**: Multer handles multipart form data uploads, while Cloudinary manages media storage and delivery. Media is organized into folders (posts, stories, portfolio) with automatic transformations and CDN distribution.
-
-**WebSocket Architecture**: Two separate WebSocket servers run on the same HTTP server:
-- `/ws` path handles real-time messaging with typing indicators, read receipts, and message reactions
-- `/ws/live` path manages live streaming events with viewer tracking and real-time comments
-Both implement heartbeat mechanisms for connection health monitoring.
-
-**Background Jobs**: A scheduler runs periodic cleanup tasks, such as removing expired 24-hour stories and their associated media from Cloudinary.
-
-**API Design**: RESTful endpoints follow resource-based naming conventions with standard HTTP methods. Routes are organized by domain (auth, posts, messages, livestream, etc.) in the routes registry. The `/api/users/:id` endpoint intelligently handles both numeric IDs and string usernames, detecting the parameter type and routing to the appropriate storage method.
-
-### Data Storage Solutions
-
-**Primary Database**: PostgreSQL serves as the primary data store with Drizzle ORM providing type-safe queries. The schema uses UUIDs for primary keys, timestamps for audit trails, and soft deletes for data retention.
-
-**Schema Organization**: The database is organized into logical domains:
-- Core entities (users, profiles)
-- Social features (posts, comments, likes, follows, hashtags)
-- Messaging (conversations, messages, participants)
-- Stories & highlights
-- Professional features (portfolios, studio approval requests, jobs)
-- Live streaming (events, participants, comments, reactions)
-- Artist-Studio Connections (studio_approval_requests table with PENDING/APPROVED/REJECTED status)
-
-**Indexes**: Composite indexes are applied to join tables (post_likes, follows, conversation_participants) for efficient querying of relationships. Individual indexes on foreign keys optimize lookups.
-
-**JSON Fields**: JSONB columns store flexible data structures like media arrays (with publicId, url, type, dimensions), location data (city, country, coordinates), user links, and social handles.
-
-### External Dependencies
-
-**Cloudinary**: Media management service handling image and video uploads, storage, transformations, and CDN delivery. Configured with cloud_name, api_key, and api_secret. Media is organized in an "inktagram" folder structure.
-
-**OpenAI API**: Powers the AI recommendation system for tattoo designs. Uses GPT models to generate personalized suggestions based on user preferences (style, placement, size, description). Returns structured recommendations including styles, placement options, colors, descriptions, and aftercare tips.
-
-**Neon Database**: Serverless PostgreSQL provider with WebSocket support for serverless environments. Uses connection pooling via @neondatabase/serverless package with ws for WebSocket protocol.
-
-**Authentication**: JWT (jsonwebtoken library) for stateless authentication with a configurable secret. Tokens include user ID and are verified on protected routes.
-
-**Development Tools**: 
-- Vite for frontend development with HMR and Replit-specific plugins (cartographer, dev-banner, runtime error overlay)
-- tsx for TypeScript execution in development
-- esbuild for server bundling in production
-
-### Key Features
-
-**Feed Interaction**: Home feed displays posts from followed users with interactive elements:
-- **Clickable Author Info**: Post author avatars and usernames are clickable, navigating to their profile page via `/u/:username`
-- Uses `PostCard` component with `Link` from wouter for navigation
-- Each author link has unique data-testid for testing: `link-author-{postId}`
-- Hover states provide visual feedback
-
-**Caption-Only Posts**: Platform supports creating posts without media attachments:
-
-*Creation Flow*:
-1. Navigate to Create → Post composer
-2. Enter caption text (required if no media)
-3. Optionally attach media files, or leave empty for caption-only
-4. Select visibility and click "Share Post"
-
-*Technical Implementation*:
-- **Frontend**: Skips Cloudinary upload when files array is empty, enables Share button when caption OR files exist
-- **Backend Validation**: 
-  - caption: optional string
-  - media: optional array (defaults to empty)
-  - Refine check: requires `caption.trim().length > 0 OR media.length > 0`
-  - Prevents empty/whitespace-only captions
-- **Feed Algorithm**: Personalized feed always includes author's own posts (userId in userIdsToShow), ensuring caption-only posts appear even for users with zero follows
-- **Display**: Caption-only posts render without media section, showing only text content and engagement buttons
-
-*API Endpoints*:
-- `POST /api/posts` - Create post with optional media array
-- `GET /api/posts` - Returns personalized feed including author's posts
-- `GET /api/posts?authorId=X` - Returns user's posts for profile view
-
-**Artist-Studio Connection System**: Formal connection workflow allowing artists to request affiliation with tattoo studios:
-
-*Artist Flow*:
-1. Search for studios via StudioConnectionDialog component
-2. Send connection request with optional introduction message
-3. View connected studio on profile (Building2 icon + studio name)
-
-*Studio Flow*:
-1. View pending connection requests on profile page
-2. Approve or reject requests with single-click actions
-3. Display connected artists as circular highlights (Instagram-style)
-4. Connected artists shown with gradient-bordered avatars
-
-*API Endpoints*:
-- `POST /api/studio-approvals` - Create request (ARTIST role required)
-- `GET /api/studio-approvals` - List requests with filters (studioId, artistId, status)
-- `PUT /api/studio-approvals/:id/approve` - Approve request (STUDIO role required)
-- `PUT /api/studio-approvals/:id/reject` - Reject request (STUDIO role required)
-- `GET /api/studios/:studioId/artists` - Get approved artists
-- `GET /api/artists/:artistId/studio` - Get artist's studio connection
-
-*Database*: `studio_approval_requests` table tracks all requests with status enum (PENDING, APPROVED, REJECTED), artist/studio IDs, optional notes, and timestamps.
-
-**Profile Page Design**: Instagram-inspired layout with gradient-bordered avatars, stats row, bio section, and role-specific information:
-
-*Layout & Stats*:
-- Gradient-bordered avatar (Instagram-style ring effect)
-- Real-time stats row displaying post count, followers, and following counts
-- Stats fetched from GET `/api/users/:id/stats` endpoint
-- Post count label dynamically updates based on active tab (e.g., "4 reels", "0 stories", "12 posts")
-
-*Content Tabs*:
-- Three functional tabs: **Posts**, **Reels**, **Stories**
-- Each tab filters content by postType (POST, REEL, STORY) via API query parameters
-- Active tab indicated by dark border, inactive tabs show muted text with transparent border
-- Reels display Film icon overlay in top-right corner of grid items
-- Empty state messages adapt to active tab ("No posts/reels/stories yet")
-- 3-column grid layout for all content types
-
-*Role-Specific Information*:
-- *Studios*: Display address (MapPin icon), website link (Globe icon), connected artists as circular highlights
-- *Artists*: Display studio connection (Building2 icon) or "Connect to Studio" button
-- *All Users*: Social links (website, Instagram, TikTok, Twitter) when available
-
-*Additional Features*:
-- **Verified Badge**: Approved users display yellow star icon next to username
-- **Cross-Profile Navigation**: Users can view other profiles via `/u/:username` route
-- **Dynamic Profile Loading**: Profile component fetches user data based on URL parameter
-- **Action Button Privacy**: Action buttons (Connect to Studio, approval controls) only visible when viewing own profile
-- **Banner Image**: Optional banner image with grid pattern overlay for visual depth
-
-**Admin Verification System**: Platform requires admin approval for artists and studios before they can fully use the platform:
-
-*User Roles*:
-- **ENTHUSIAST**: No approval required, can use platform immediately
-- **ARTIST**: Requires admin approval, account set to PENDING status upon registration
-- **STUDIO**: Requires admin approval, account set to PENDING status upon registration
-- **ADMIN**: Full access to admin dashboard for user verification
-
-*Verification Workflow*:
-1. Artist/Studio registers → Account status set to PENDING
-2. Admin reviews pending users in Admin Dashboard (`/admin`)
-3. Admin approves → User status set to APPROVED, isVerified = true, verified star appears on profile
-4. Admin rejects → User status set to REJECTED
-
-*Admin Dashboard* (`/admin`):
-- Lists all pending users with registration details
-- Approve/Reject buttons for each user
-- Shows user role, email, bio, location, registration date
-- Access via "Admin Access →" link on login page
-- Route: `/admin` (requires ADMIN role)
-
-*Admin Credentials* (for testing):
-- Email: admin@inktagram.com
-- Password: Admin1234!
-
-*API Endpoints*:
-- `GET /api/admin/pending-users` - List pending users (ADMIN only)
-- `PUT /api/admin/users/:id/approve` - Approve user (ADMIN only)
-- `PUT /api/admin/users/:id/reject` - Reject user (ADMIN only)
-
-*Database Fields*:
-- `users.verificationStatus`: PENDING | APPROVED | REJECTED
-- `users.isVerified`: boolean (true when APPROVED)
-
-## Database Seeding
-
-A comprehensive seed script is available to populate the database with realistic test data for all features.
-
-**How to Seed**:
-```bash
-npx tsx scripts/seed.ts
-```
-
-**What Gets Created**:
-- **66 users**: 1 admin, 15 studios, 30 artists, 20 enthusiasts
-- **893 posts and reels**: 10-15 posts + 5-10 reels per content creator
-- **Portfolio items**: 10-20 items per artist (459 total)
-- **Job postings**: 3-10 jobs per studio (61 total)
-- **Job applications**: 2-10 applications per active job (273 total)
-- **Messages**: 30 conversations with 10-30 messages each (573 total)
-- **Social interactions**: 958 follow relationships, 23,196 likes, 8,090 comments
-- **Studio connections**: 46 artist-studio approval requests (PENDING/APPROVED/REJECTED mix)
-- **Live stream events**: 56 scheduled/active/ended events
-- **Notifications**: 10-30 notifications per user (616 total)
-- **Hashtags**: 19 tattoo-related hashtags with usage counts
-
-**Test Credentials**:
-All users have password: `Test1234!`
-- Admin: `admin@inktagram.com`
-- Studios: `studio1@inktagram.com` through `studio15@inktagram.com`
-- Artists: `artist1@inktagram.com` through `artist30@inktagram.com`
-- Enthusiasts: `enthusiast1@inktagram.com` through `enthusiast20@inktagram.com`
-
-**Seed Script Location**: `scripts/seed.ts`
-
-The seed script clears all existing data before seeding, so it's safe to run multiple times during development.
+## External Dependencies
+*   **Cloudinary**: Media management for image and video uploads, storage, transformations, and CDN delivery.
+*   **OpenAI API**: Powers AI-driven tattoo design recommendations based on user preferences.
+*   **Neon Database**: Serverless PostgreSQL provider, utilized with `@neondatabase/serverless` for connection pooling.
+*   **JWT (jsonwebtoken)**: Used for stateless authentication.
+*   **Vite**: Frontend development and build tool.
+*   **tsx**: TypeScript execution in development.
+*   **esbuild**: Server bundling for production.
