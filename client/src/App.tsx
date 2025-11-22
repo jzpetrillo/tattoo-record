@@ -19,6 +19,7 @@ import Auth from "@/pages/auth";
 import AdminDashboard from "@/pages/admin";
 import SavedPosts from "@/pages/saved-posts";
 import FlashSales from "@/pages/flash-sales";
+import Bookings from "@/pages/bookings";
 
 function Router() {
   return (
@@ -39,6 +40,7 @@ function Router() {
       <Route path="/reels" component={Reels} />
       <Route path="/saved" component={SavedPosts} />
       <Route path="/flash-sales" component={FlashSales} />
+      <Route path="/bookings" component={Bookings} />
       <Route path="/auth" component={Auth} />
       <Route path="/admin" component={AdminDashboard} />
       <Route component={NotFound} />

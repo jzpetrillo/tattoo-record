@@ -14,6 +14,7 @@ import {
   Radio,
   Settings,
   Bookmark,
+  Calendar,
   LogOut
 } from "lucide-react";
 import {
@@ -37,6 +38,7 @@ export default function SidebarNav() {
     { path: "/notifications", label: "Notifications", icon: Heart },
     { path: "/live", label: "Live", icon: Radio },
     { path: "/jobs", label: "Jobs", icon: Briefcase },
+    { path: "/bookings", label: "Bookings", icon: Calendar },
     { path: "/create", label: "Create", icon: PlusSquare },
     { path: "/profile", label: "Profile", icon: User },
   ];
