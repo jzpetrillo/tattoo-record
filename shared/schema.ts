@@ -126,12 +126,15 @@ export const posts = pgTable("posts", {
   }>>().notNull().default([]),
   likeCount: integer("like_count").notNull().default(0),
   commentCount: integer("comment_count").notNull().default(0),
+  saveCount: integer("save_count").notNull().default(0),
   location: jsonb("location").$type<{
     city?: string;
     country?: string;
     lat?: number;
     lng?: number;
   }>(),
+  styles: jsonb("styles").$type<string[]>().default([]),
+  isFeatured: boolean("is_featured").notNull().default(false),
   visibility: visibilityEnum("visibility").notNull().default("PUBLIC"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
@@ -139,7 +142,8 @@ export const posts = pgTable("posts", {
 }, (table) => ({
   authorIdx: index("posts_author_idx").on(table.authorId),
   typeIdx: index("posts_type_idx").on(table.type),
-  createdAtIdx: index("posts_created_at_idx").on(table.createdAt)
+  createdAtIdx: index("posts_created_at_idx").on(table.createdAt),
+  featuredIdx: index("posts_featured_idx").on(table.isFeatured)
 }));
 
 export const postLikes = pgTable("post_likes", {
@@ -387,9 +391,12 @@ export const hashtags = pgTable("hashtags", {
   id: uuid("id").primaryKey().defaultRandom(),
   tag: varchar("tag", { length: 100 }).notNull().unique(),
   uses: integer("uses").notNull().default(0),
+  trendingScore: integer("trending_score").notNull().default(0),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow()
-});
+}, (table) => ({
+  trendingIdx: index("hashtags_trending_idx").on(table.trendingScore)
+}));
 
 export const postHashtags = pgTable("post_hashtags", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -419,6 +426,72 @@ export const postShares = pgTable("post_shares", {
   sharedAt: timestamp("shared_at").notNull().defaultNow()
 }, (table) => ({
   postIdx: index("post_shares_post_idx").on(table.postId)
+}));
+
+// Saved Posts (Bookmarks)
+export const savedPosts = pgTable("saved_posts", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  postId: uuid("post_id").notNull().references(() => posts.id, { onDelete: "cascade" }),
+  userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  collectionName: varchar("collection_name", { length: 100 }),
+  savedAt: timestamp("saved_at").notNull().defaultNow()
+}, (table) => ({
+  uniqueSave: uniqueIndex("unique_saved_post").on(table.postId, table.userId),
+  userIdx: index("saved_posts_user_idx").on(table.userId),
+  collectionIdx: index("saved_posts_collection_idx").on(table.userId, table.collectionName)
+}));
+
+// Flash Sales
+export const flashSales = pgTable("flash_sales", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  artistId: uuid("artist_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  title: varchar("title", { length: 255 }).notNull(),
+  description: text("description"),
+  media: jsonb("media").$type<Array<{
+    publicId: string;
+    url: string;
+    type: string;
+    width?: number;
+    height?: number;
+  }>>().notNull().default([]),
+  originalPriceCents: integer("original_price_cents").notNull(),
+  flashPriceCents: integer("flash_price_cents").notNull(),
+  availableSlots: integer("available_slots").notNull().default(1),
+  bookedSlots: integer("booked_slots").notNull().default(0),
+  expiresAt: timestamp("expires_at").notNull(),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow()
+}, (table) => ({
+  artistIdx: index("flash_sales_artist_idx").on(table.artistId),
+  activeIdx: index("flash_sales_active_idx").on(table.isActive),
+  expiresAtIdx: index("flash_sales_expires_at_idx").on(table.expiresAt)
+}));
+
+// Bookings & Appointments
+export const bookings = pgTable("bookings", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  artistId: uuid("artist_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  clientId: uuid("client_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  flashSaleId: uuid("flash_sale_id").references(() => flashSales.id, { onDelete: "set null" }),
+  title: varchar("title", { length: 255 }).notNull(),
+  description: text("description"),
+  referenceImages: jsonb("reference_images").$type<Array<{
+    publicId: string;
+    url: string;
+  }>>().default([]),
+  scheduledAt: timestamp("scheduled_at").notNull(),
+  durationMinutes: integer("duration_minutes").notNull().default(120),
+  depositCents: integer("deposit_cents"),
+  totalPriceCents: integer("total_price_cents"),
+  status: approvalStatusEnum("status").notNull().default("PENDING"),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow()
+}, (table) => ({
+  artistIdx: index("bookings_artist_idx").on(table.artistId),
+  clientIdx: index("bookings_client_idx").on(table.clientId),
+  scheduledAtIdx: index("bookings_scheduled_at_idx").on(table.scheduledAt)
 }));
 
 // Relations
@@ -472,6 +545,7 @@ export const insertPostSchema = createInsertSchema(posts).omit({
   id: true,
   likeCount: true,
   commentCount: true,
+  saveCount: true,
   createdAt: true,
   updatedAt: true,
   deletedAt: true
@@ -526,6 +600,24 @@ export const insertStudioApprovalRequestSchema = createInsertSchema(studioApprov
   updatedAt: true
 });
 
+export const insertSavedPostSchema = createInsertSchema(savedPosts).omit({
+  id: true,
+  savedAt: true
+});
+
+export const insertFlashSaleSchema = createInsertSchema(flashSales).omit({
+  id: true,
+  bookedSlots: true,
+  createdAt: true,
+  updatedAt: true
+});
+
+export const insertBookingSchema = createInsertSchema(bookings).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true
+});
+
 // Types
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -547,3 +639,10 @@ export type Notification = typeof notifications.$inferSelect;
 export type InsertNotification = z.infer<typeof insertNotificationSchema>;
 export type StudioApprovalRequest = typeof studioApprovalRequests.$inferSelect;
 export type InsertStudioApprovalRequest = z.infer<typeof insertStudioApprovalRequestSchema>;
+export type SavedPost = typeof savedPosts.$inferSelect;
+export type InsertSavedPost = z.infer<typeof insertSavedPostSchema>;
+export type FlashSale = typeof flashSales.$inferSelect;
+export type InsertFlashSale = z.infer<typeof insertFlashSaleSchema>;
+export type Booking = typeof bookings.$inferSelect;
+export type InsertBooking = z.infer<typeof insertBookingSchema>;
+export type Hashtag = typeof hashtags.$inferSelect;

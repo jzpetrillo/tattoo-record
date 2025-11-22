@@ -294,6 +294,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Saved Posts (Bookmarks) Routes
+  app.post("/api/saved-posts", requireAuth, async (req: AuthRequest, res) => {
+    try {
+      const { postId, collectionName } = req.body;
+      const saved = await storage.savePost(req.userId!, postId, collectionName);
+      res.json(saved);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+
+  app.delete("/api/saved-posts/:postId", requireAuth, async (req: AuthRequest, res) => {
+    try {
+      await storage.unsavePost(req.userId!, req.params.postId);
+      res.json({ message: "Post unsaved" });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get("/api/saved-posts", requireAuth, async (req: AuthRequest, res) => {
+    try {
+      const collectionName = req.query.collection as string | undefined;
+      const saved = await storage.getSavedPosts(req.userId!, collectionName);
+      res.json(saved);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get("/api/saved-posts/check/:postId", requireAuth, async (req: AuthRequest, res) => {
+    try {
+      const isSaved = await storage.isPostSaved(req.userId!, req.params.postId);
+      res.json({ isSaved });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get("/api/saved-posts/collections", requireAuth, async (req: AuthRequest, res) => {
+    try {
+      const collections = await storage.getSavedCollections(req.userId!);
+      res.json(collections);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   // Story Routes
   app.post("/api/stories", requireAuth, async (req: AuthRequest, res) => {
     try {

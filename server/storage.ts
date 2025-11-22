@@ -1,6 +1,6 @@
 import { db } from "./db";
 import * as schema from "@shared/schema";
-import { eq, and, desc, isNull, sql, or, ilike, inArray } from "drizzle-orm";
+import { eq, and, desc, asc, isNull, isNotNull, sql, or, ilike, inArray } from "drizzle-orm";
 
 export interface IStorage {
   // User operations
@@ -579,14 +579,6 @@ export class DatabaseStorage implements IStorage {
       .limit(20);
   }
 
-  async getTrendingHashtags(limit = 10) {
-    return db
-      .select()
-      .from(schema.hashtags)
-      .orderBy(desc(schema.hashtags.uses))
-      .limit(limit);
-  }
-
   async getNotifications(userId: string, limit = 50) {
     return db
       .select({
@@ -741,6 +733,258 @@ export class DatabaseStorage implements IStorage {
         updatedAt: new Date() 
       })
       .where(eq(schema.users.id, userId));
+  }
+
+  // Saved Posts (Bookmarks)
+  async savePost(userId: string, postId: string, collectionName?: string) {
+    const [saved] = await db
+      .insert(schema.savedPosts)
+      .values({ userId, postId, collectionName })
+      .returning();
+    
+    await db
+      .update(schema.posts)
+      .set({ saveCount: sql`${schema.posts.saveCount} + 1` })
+      .where(eq(schema.posts.id, postId));
+    
+    return saved;
+  }
+
+  async unsavePost(userId: string, postId: string) {
+    await db
+      .delete(schema.savedPosts)
+      .where(
+        and(
+          eq(schema.savedPosts.userId, userId),
+          eq(schema.savedPosts.postId, postId)
+        )
+      );
+    
+    await db
+      .update(schema.posts)
+      .set({ saveCount: sql`${schema.posts.saveCount} - 1` })
+      .where(eq(schema.posts.id, postId));
+  }
+
+  async getSavedPosts(userId: string, collectionName?: string) {
+    const conditions = [eq(schema.savedPosts.userId, userId)];
+    
+    if (collectionName) {
+      conditions.push(eq(schema.savedPosts.collectionName, collectionName));
+    }
+
+    return db
+      .select({
+        savedPost: schema.savedPosts,
+        post: schema.posts,
+        author: schema.users
+      })
+      .from(schema.savedPosts)
+      .innerJoin(schema.posts, eq(schema.savedPosts.postId, schema.posts.id))
+      .innerJoin(schema.users, eq(schema.posts.authorId, schema.users.id))
+      .where(and(...conditions))
+      .orderBy(desc(schema.savedPosts.savedAt));
+  }
+
+  async getSavedCollections(userId: string) {
+    const collections = await db
+      .selectDistinct({ collectionName: schema.savedPosts.collectionName })
+      .from(schema.savedPosts)
+      .where(
+        and(
+          eq(schema.savedPosts.userId, userId),
+          isNotNull(schema.savedPosts.collectionName)
+        )
+      );
+    
+    return collections.map(c => c.collectionName).filter(Boolean);
+  }
+
+  async isPostSaved(userId: string, postId: string) {
+    const [saved] = await db
+      .select()
+      .from(schema.savedPosts)
+      .where(
+        and(
+          eq(schema.savedPosts.userId, userId),
+          eq(schema.savedPosts.postId, postId)
+        )
+      )
+      .limit(1);
+    
+    return !!saved;
+  }
+
+  // Flash Sales
+  async createFlashSale(data: typeof schema.flashSales.$inferInsert) {
+    const [flashSale] = await db
+      .insert(schema.flashSales)
+      .values(data)
+      .returning();
+    return flashSale;
+  }
+
+  async getFlashSales(artistId?: string, activeOnly: boolean = true) {
+    const now = new Date();
+    const conditions = [];
+    
+    if (artistId) {
+      conditions.push(eq(schema.flashSales.artistId, artistId));
+    }
+    
+    if (activeOnly) {
+      conditions.push(
+        eq(schema.flashSales.isActive, true),
+        sql`${schema.flashSales.expiresAt} > ${now}`
+      );
+    }
+    
+    return db
+      .select({
+        flashSale: schema.flashSales,
+        artist: schema.users
+      })
+      .from(schema.flashSales)
+      .innerJoin(schema.users, eq(schema.flashSales.artistId, schema.users.id))
+      .where(conditions.length > 0 ? and(...conditions) : undefined)
+      .orderBy(asc(schema.flashSales.expiresAt));
+  }
+
+  async getFlashSale(id: string) {
+    const [result] = await db
+      .select({
+        flashSale: schema.flashSales,
+        artist: schema.users
+      })
+      .from(schema.flashSales)
+      .innerJoin(schema.users, eq(schema.flashSales.artistId, schema.users.id))
+      .where(eq(schema.flashSales.id, id))
+      .limit(1);
+    
+    return result;
+  }
+
+  async updateFlashSale(id: string, data: Partial<typeof schema.flashSales.$inferInsert>) {
+    const [updated] = await db
+      .update(schema.flashSales)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(schema.flashSales.id, id))
+      .returning();
+    
+    return updated;
+  }
+
+  // Bookings
+  async createBooking(data: typeof schema.bookings.$inferInsert) {
+    const [booking] = await db
+      .insert(schema.bookings)
+      .values(data)
+      .returning();
+    
+    // If it's a flash sale booking, increment booked slots
+    if (data.flashSaleId) {
+      await db
+        .update(schema.flashSales)
+        .set({ bookedSlots: sql`${schema.flashSales.bookedSlots} + 1` })
+        .where(eq(schema.flashSales.id, data.flashSaleId));
+    }
+    
+    return booking;
+  }
+
+  async getBookings(filters: { artistId?: string; clientId?: string; status?: string }) {
+    const conditions = [];
+    
+    if (filters.artistId) {
+      conditions.push(eq(schema.bookings.artistId, filters.artistId));
+    }
+    if (filters.clientId) {
+      conditions.push(eq(schema.bookings.clientId, filters.clientId));
+    }
+    if (filters.status) {
+      conditions.push(eq(schema.bookings.status, filters.status as any));
+    }
+    
+    return db
+      .select({
+        booking: schema.bookings,
+        artist: { alias: "artist", ...schema.users },
+        client: { alias: "client", ...schema.users }
+      })
+      .from(schema.bookings)
+      .innerJoin(schema.users, eq(schema.bookings.artistId, schema.users.id))
+      .innerJoin(schema.users, eq(schema.bookings.clientId, schema.users.id))
+      .where(conditions.length > 0 ? and(...conditions) : undefined)
+      .orderBy(desc(schema.bookings.scheduledAt));
+  }
+
+  async getBooking(id: string) {
+    const [result] = await db
+      .select({
+        booking: schema.bookings,
+        artist: schema.users,
+        client: schema.users
+      })
+      .from(schema.bookings)
+      .innerJoin(schema.users, eq(schema.bookings.artistId, schema.users.id))
+      .where(eq(schema.bookings.id, id))
+      .limit(1);
+    
+    return result;
+  }
+
+  async updateBooking(id: string, data: Partial<typeof schema.bookings.$inferInsert>) {
+    const [updated] = await db
+      .update(schema.bookings)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(schema.bookings.id, id))
+      .returning();
+    
+    return updated;
+  }
+
+  async deleteBooking(id: string) {
+    const [booking] = await db
+      .select()
+      .from(schema.bookings)
+      .where(eq(schema.bookings.id, id))
+      .limit(1);
+    
+    await db
+      .delete(schema.bookings)
+      .where(eq(schema.bookings.id, id));
+    
+    // If it was a flash sale booking, decrement booked slots
+    if (booking?.flashSaleId) {
+      await db
+        .update(schema.flashSales)
+        .set({ bookedSlots: sql`${schema.flashSales.bookedSlots} - 1` })
+        .where(eq(schema.flashSales.id, booking.flashSaleId));
+    }
+  }
+
+  // Trending Hashtags
+  async getTrendingHashtags(limit: number = 10) {
+    return db
+      .select()
+      .from(schema.hashtags)
+      .orderBy(desc(schema.hashtags.trendingScore), desc(schema.hashtags.uses))
+      .limit(limit);
+  }
+
+  async updateHashtagTrending() {
+    // Calculate trending score based on recent usage (last 7 days)
+    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    
+    await db.execute(sql`
+      UPDATE hashtags
+      SET trending_score = (
+        SELECT COUNT(*) 
+        FROM post_hashtags 
+        WHERE post_hashtags.hashtag_id = hashtags.id 
+        AND post_hashtags.created_at > ${sevenDaysAgo}
+      )
+    `);
   }
 }
 

@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 import { apiRequest } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
-import { Heart, MessageCircle, Send } from "lucide-react";
+import { Heart, MessageCircle, Send, Bookmark } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -14,9 +14,10 @@ interface PostCardProps {
   post: any;
   author: any;
   isLiked?: boolean;
+  isSaved?: boolean;
 }
 
-export default function PostCard({ post, author, isLiked = false }: PostCardProps) {
+export default function PostCard({ post, author, isLiked = false, isSaved = false }: PostCardProps) {
   const { token, user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -24,6 +25,7 @@ export default function PostCard({ post, author, isLiked = false }: PostCardProp
   const [showShareDialog, setShowShareDialog] = useState(false);
   const [commentText, setCommentText] = useState("");
   const [selectedUser, setSelectedUser] = useState<string | null>(null);
+  const [saved, setSaved] = useState(isSaved);
 
   const likeMutation = useMutation({
     mutationFn: async (shouldLike: boolean) => {
@@ -111,6 +113,27 @@ export default function PostCard({ post, author, isLiked = false }: PostCardProp
     },
   });
 
+  const saveMutation = useMutation({
+    mutationFn: async (shouldSave: boolean) => {
+      if (shouldSave) {
+        await apiRequest("POST", `/api/saved-posts`, { postId: post.id }, token!);
+      } else {
+        await apiRequest("DELETE", `/api/saved-posts/${post.id}`, undefined, token!);
+      }
+    },
+    onSuccess: (_, shouldSave) => {
+      setSaved(shouldSave);
+      toast({ 
+        title: shouldSave ? "Post saved" : "Post unsaved",
+        description: shouldSave ? "Added to your saved posts" : "Removed from your saved posts"
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/saved-posts"] });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    },
+  });
+
   return (
     <article className="bg-card border border-border rounded-lg overflow-hidden" data-testid={`post-${post.id}`}>
       {/* Post header with author info */}
@@ -143,28 +166,38 @@ export default function PostCard({ post, author, isLiked = false }: PostCardProp
 
       {/* Post actions and content */}
       <div className="p-4 space-y-3">
-        <div className="flex items-center gap-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => likeMutation.mutate(!isLiked)}
+              disabled={likeMutation.isPending}
+              className={`hover:text-primary transition-colors ${isLiked ? 'text-red-500' : ''}`}
+              data-testid={`button-like-${post.id}`}
+            >
+              <Heart className={`w-6 h-6 ${isLiked ? 'fill-current' : ''}`} />
+            </button>
+            <button 
+              onClick={() => setShowComments(true)}
+              className="hover:text-primary transition-colors" 
+              data-testid={`button-comment-${post.id}`}
+            >
+              <MessageCircle className="w-6 h-6" />
+            </button>
+            <button 
+              onClick={() => setShowShareDialog(true)}
+              className="hover:text-primary transition-colors" 
+              data-testid={`button-share-${post.id}`}
+            >
+              <Send className="w-6 h-6" />
+            </button>
+          </div>
           <button
-            onClick={() => likeMutation.mutate(!isLiked)}
-            disabled={likeMutation.isPending}
-            className={`hover:text-primary transition-colors ${isLiked ? 'text-red-500' : ''}`}
-            data-testid={`button-like-${post.id}`}
+            onClick={() => saveMutation.mutate(!saved)}
+            disabled={saveMutation.isPending}
+            className="hover:text-primary transition-colors"
+            data-testid={`button-save-${post.id}`}
           >
-            <Heart className={`w-6 h-6 ${isLiked ? 'fill-current' : ''}`} />
-          </button>
-          <button 
-            onClick={() => setShowComments(true)}
-            className="hover:text-primary transition-colors" 
-            data-testid={`button-comment-${post.id}`}
-          >
-            <MessageCircle className="w-6 h-6" />
-          </button>
-          <button 
-            onClick={() => setShowShareDialog(true)}
-            className="hover:text-primary transition-colors" 
-            data-testid={`button-share-${post.id}`}
-          >
-            <Send className="w-6 h-6" />
+            <Bookmark className={`w-6 h-6 ${saved ? 'fill-current' : ''}`} />
           </button>
         </div>
 
