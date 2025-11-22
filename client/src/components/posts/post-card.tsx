@@ -25,7 +25,13 @@ export default function PostCard({ post, author, isLiked = false, isSaved = fals
   const [showShareDialog, setShowShareDialog] = useState(false);
   const [commentText, setCommentText] = useState("");
   const [selectedUser, setSelectedUser] = useState<string | null>(null);
+  const [liked, setLiked] = useState(isLiked);
   const [saved, setSaved] = useState(isSaved);
+
+  // Sync liked state with isLiked prop from feed
+  useEffect(() => {
+    setLiked(isLiked);
+  }, [isLiked]);
 
   // Sync saved state with isSaved prop from feed
   useEffect(() => {
@@ -38,6 +44,9 @@ export default function PostCard({ post, author, isLiked = false, isSaved = fals
       await apiRequest(method, `/api/posts/${post.id}/like`, undefined, token!);
     },
     onMutate: async (shouldLike: boolean) => {
+      // Update local state immediately for instant UI feedback
+      setLiked(shouldLike);
+
       // Cancel outgoing refetches to avoid overwriting our optimistic update
       await queryClient.cancelQueries({ queryKey: ["/api/posts"] });
 
@@ -66,7 +75,8 @@ export default function PostCard({ post, author, isLiked = false, isSaved = fals
       return { previousPosts };
     },
     onError: (error: Error, variables, context: any) => {
-      // Rollback to previous value on error
+      // Rollback local state and cache on error
+      setLiked(!variables);
       if (context?.previousPosts) {
         queryClient.setQueryData(["/api/posts"], context.previousPosts);
       }
@@ -175,12 +185,12 @@ export default function PostCard({ post, author, isLiked = false, isSaved = fals
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
             <button
-              onClick={() => likeMutation.mutate(!isLiked)}
+              onClick={() => likeMutation.mutate(!liked)}
               disabled={likeMutation.isPending}
-              className={`hover:text-primary transition-colors ${isLiked ? 'text-red-500' : ''}`}
+              className={`hover:text-primary transition-colors ${liked ? 'text-red-500' : ''}`}
               data-testid={`button-like-${post.id}`}
             >
-              <Heart className={`w-6 h-6 ${isLiked ? 'fill-current' : ''}`} />
+              <Heart className={`w-6 h-6 ${liked ? 'fill-current' : ''}`} />
             </button>
             <button 
               onClick={() => setShowComments(true)}
