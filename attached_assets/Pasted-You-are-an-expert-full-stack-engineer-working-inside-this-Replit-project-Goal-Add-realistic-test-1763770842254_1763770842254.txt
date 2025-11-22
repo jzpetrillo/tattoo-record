@@ -1,0 +1,68 @@
+You are an expert full-stack engineer working inside this Replit project. 
+
+Goal: Add realistic test data for ALL user-related features in this app so we can do end-to-end testing. This command will be reused across multiple apps, so you MUST first detect what models and tables actually exist and then generate appropriate seed data for them.
+
+Please do the following:
+
+1. **Inspect the project and data layer**
+   - Identify how data is stored and modeled in this project (e.g., Prisma, Sequelize, TypeORM, Mongoose, raw SQL, Supabase, Firebase, etc.).
+   - Find the primary “user” model/table (e.g., `User`, `Users`, `Account`, `Profile`).
+   - Detect any related content / commerce / activity models, such as (names will vary by project):
+     - Posts: `Post`, `FeedPost`, `Article`, `BlogPost`, `Update`
+     - Reels / short videos: `Reel`, `Short`, `VideoPost`
+     - Items for sale / products: `Product`, `Listing`, `Item`, `ForSale`, `ShopItem`
+     - Services: `Service`, `Offering`, `Package`, `Gig`
+     - Orders / bookings / jobs: `Order`, `Booking`, `Job`, `Project`, `Campaign`
+     - Social interactions: `Comment`, `Like`, `Reaction`, `Follow`, `Message`, `Notification`
+     - Media assets: `Media`, `Image`, `Video`, `Asset`, `File`
+   - ONLY work with models/tables that actually exist in this codebase and that clearly relate to users in some way.
+
+2. **Create or update a centralized seed script**
+   - If a seed file already exists (commonly `prisma/seed.ts`, `seed.js`, `scripts/seed.ts`, `database/seed.js`, etc.), extend it.
+   - If no seed script exists, create one in a sensible location (e.g., `prisma/seed.ts` for Prisma, or `scripts/seed.ts` / `scripts/seed.js` for other ORMs).
+   - Make sure the seed script can be run with a single command like `npm run seed` or `node scripts/seed.js`. If a script doesn’t exist in `package.json`, add one.
+
+3. **Generate users and linked data**
+   - Create a **minimum of 10 users** with realistic fields (names, emails, usernames/handles, bios, avatars, etc. as supported by the schema).
+   - For **each user**, create **at least 10 items of test data for every content/feature model that exists** in this app. For example:
+     - If there is a post model, create ≥10 posts per user.
+     - If there is a reels/short video model, create ≥10 reels per user.
+     - If there is a product/listing model, create ≥10 items for sale per user (if the app supports users as sellers).
+     - If there is a service model, create ≥10 services per user (or per provider-type user).
+     - If there are orders/bookings/jobs, generate a realistic mix linking users as buyers/clients and other users as sellers/providers.
+     - If there are comments/likes/reactions/follows, create a natural network of interactions between users.
+   - Ensure all foreign keys and relations are valid:
+     - Use correct `userId` / `ownerId` / `authorId` fields.
+     - Respect any required fields and enum values.
+     - Avoid violating unique constraints (e.g., unique emails, unique usernames).
+
+4. **Respect app-specific roles and user types**
+   - If there are user roles (e.g., `admin`, `creator`, `customer`, `agent`, `seller`, `buyer`), create a healthy mix of each role type.
+   - For role-specific features (e.g., only creators can post reels, only sellers can list products, only customers can place orders), only seed those features for the correct user types.
+
+5. **Make data realistic and varied**
+   - Use varied, human-friendly text and numbers:
+     - Posts/reels with different titles, captions, tags, and timestamps.
+     - Products/services with different names, descriptions, prices, and availability.
+     - Randomized dates across a reasonable range to simulate historical usage.
+   - For media fields (images/videos/URLs), use realistic placeholder URLs where appropriate (e.g., `https://picsum.photos/...`, stock placeholder URLs, or app-specific defaults).
+
+6. **Ensure coverage across all features**
+   - For each detected feature/model, confirm that **every user** has:
+     - At least some associated records (not just a few users).
+     - Enough volume (≥10 records per user per relevant feature) to test pagination, filtering, search, and sorting.
+   - If some tables are “global” (e.g., categories, tags, settings), seed a reasonable variety of those as well and attach them to user content where relevant.
+
+7. **Idempotent and safe seeding**
+   - Make the seed script **idempotent** where possible:
+     - Either clear relevant tables before inserting test data (e.g., `deleteMany` or `truncate` in a test/dev environment).
+     - Or check whether data already exists and skip or update to avoid duplicates.
+   - Clearly label this as **development/test data only**, not for production.
+
+8. **Documentation and instructions**
+   - At the end, update `README.md` (or create one if needed) with a short section:
+     - How to run the seed command.
+     - Which data is created (high-level overview).
+   - If necessary, also add any environment-variable or configuration notes required for the seed to run.
+
+Finally, please show me the full seed script you create or modify, plus any `package.json` updates and README changes, so I can review and run this in Replit.

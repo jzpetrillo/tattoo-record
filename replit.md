@@ -196,3 +196,36 @@ Both implement heartbeat mechanisms for connection health monitoring.
 *Database Fields*:
 - `users.verificationStatus`: PENDING | APPROVED | REJECTED
 - `users.isVerified`: boolean (true when APPROVED)
+
+## Database Seeding
+
+A comprehensive seed script is available to populate the database with realistic test data for all features.
+
+**How to Seed**:
+```bash
+npx tsx scripts/seed.ts
+```
+
+**What Gets Created**:
+- **66 users**: 1 admin, 15 studios, 30 artists, 20 enthusiasts
+- **893 posts and reels**: 10-15 posts + 5-10 reels per content creator
+- **Portfolio items**: 10-20 items per artist (459 total)
+- **Job postings**: 3-10 jobs per studio (61 total)
+- **Job applications**: 2-10 applications per active job (273 total)
+- **Messages**: 30 conversations with 10-30 messages each (573 total)
+- **Social interactions**: 958 follow relationships, 23,196 likes, 8,090 comments
+- **Studio connections**: 46 artist-studio approval requests (PENDING/APPROVED/REJECTED mix)
+- **Live stream events**: 56 scheduled/active/ended events
+- **Notifications**: 10-30 notifications per user (616 total)
+- **Hashtags**: 19 tattoo-related hashtags with usage counts
+
+**Test Credentials**:
+All users have password: `Test1234!`
+- Admin: `admin@inktagram.com`
+- Studios: `studio1@inktagram.com` through `studio15@inktagram.com`
+- Artists: `artist1@inktagram.com` through `artist30@inktagram.com`
+- Enthusiasts: `enthusiast1@inktagram.com` through `enthusiast20@inktagram.com`
+
+**Seed Script Location**: `scripts/seed.ts`
+
+The seed script clears all existing data before seeding, so it's safe to run multiple times during development.
