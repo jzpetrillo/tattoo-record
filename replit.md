@@ -30,6 +30,26 @@ The platform features a clean, minimalist black-and-white aesthetic inspired by 
 *   **Booking System**: Comprehensive appointment scheduling connecting clients with artists. `bookings` table tracks status workflow (PENDING → APPROVED/REJECTED → COMPLETED/CANCELLED). Bookings page at `/bookings` with tab-based filtering and create booking dialog. Artists can approve/reject/complete bookings, clients can cancel. Query optimization uses hierarchical keys `["/api/bookings", { status }]` with custom queryFn. refetchQueries ensures immediate UI updates across tabs. Artist selection dropdown with staleTime: 0 for fresh data.
 *   **Feed Optimizations**: All feed queries (`getPersonalizedFeed`, `getPublicFeed`, `getFeaturedPosts`) include `isLiked` and `isSaved` flags via SQL EXISTS subqueries (e.g., `EXISTS(SELECT 1 FROM post_likes WHERE postId = posts.id AND userId = $userId)`). Single query returns posts + user interaction state, preventing N+1 problems. useEffect in PostCard syncs local state with feed prop changes. Cache invalidation: like/unlike invalidates `/api/posts`, save/unsave invalidates both `/api/posts` AND `/api/saved-posts`.
 
+## Seed Data
+The database is seeded with comprehensive test data for all engagement features:
+*   **Users**: 66 total (1 admin, 15 studios, 30 artists, 20 enthusiasts)
+*   **Posts**: 885 with likes (24K+) and comments (7.8K+)
+*   **Follows**: 966 relationships
+*   **Bookings**: 8 (various statuses: PENDING, APPROVED, COMPLETED)
+*   **Flash Sales**: 5 active (with pricing, countdown timers, available slots)
+*   **Stories**: 5 (with 24hr expiry)
+*   **Hashtags**: 19 trending tags with usage counts
+*   **Notifications**: 10 (types: FOLLOW, LIKE, COMMENT, APPROVAL)
+*   **Conversations**: 5 with 11 messages
+*   **Jobs**: 6 postings (5 active)
+*   **Portfolio Items**: 436 (10-20 per artist)
+
+**Test Credentials**: All users use password `Test1234!`
+- Admin: admin@inktagram.com
+- Artists: artist1-30@inktagram.com
+- Studios: studio1-15@inktagram.com
+- Enthusiasts: enthusiast1-20@inktagram.com
+
 ## External Dependencies
 *   **Cloudinary**: Media management for image and video uploads, storage, transformations, and CDN delivery.
 *   **OpenAI API**: Powers AI-driven tattoo design recommendations based on user preferences.
@@ -38,3 +58,9 @@ The platform features a clean, minimalist black-and-white aesthetic inspired by 
 *   **Vite**: Frontend development and build tool.
 *   **tsx**: TypeScript execution in development.
 *   **esbuild**: Server bundling for production.
+
+## Recent Changes
+*   **Bookings API Fix**: Fixed getBookings/getBooking functions to properly join users table using Drizzle aliases for artist/client. Response is flattened with nested artist/client objects.
+*   **Flash Sales API Fix**: Added response transformation to convert database column names (flashPriceCents → discountedPrice, expiresAt → endDate, etc.) for frontend compatibility.
+*   **Notifications API Fix**: Fixed UUID type casting in SQL join for actor lookup.
+*   **TypeScript Improvements**: Added proper interfaces for FlashSale and fixed null checks.

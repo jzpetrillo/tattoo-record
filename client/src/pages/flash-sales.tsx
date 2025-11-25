@@ -6,10 +6,29 @@ import { Link } from "wouter";
 import { Zap, Clock, DollarSign, MapPin } from "lucide-react";
 import { Card } from "@/components/ui/card";
 
+interface FlashSale {
+  id: string;
+  title: string;
+  description?: string;
+  discountedPrice: number | null;
+  originalPrice: number | null;
+  endDate: string;
+  spotsAvailable: number | null;
+  imageUrl: string | null;
+  artist?: {
+    id: string;
+    username: string;
+    location?: {
+      city?: string;
+      country?: string;
+    };
+  };
+}
+
 export default function FlashSalesPage() {
   const { token } = useAuth();
 
-  const { data: flashSales = [], isLoading } = useQuery({
+  const { data: flashSales = [], isLoading } = useQuery<FlashSale[]>({
     queryKey: ["/api/flash-sales?active=true"],
     enabled: !!token,
   });
@@ -91,7 +110,7 @@ export default function FlashSalesPage() {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {flashSales.map((sale: any) => (
+              {flashSales.map((sale) => (
                 <Link
                   key={sale.id}
                   href={`/u/${sale.artist?.username || ''}`}
@@ -142,9 +161,9 @@ export default function FlashSalesPage() {
                       <div className="flex items-center gap-3">
                         <div className="flex items-center gap-1">
                           <DollarSign className="w-4 h-4" />
-                          <span className="font-bold text-lg">${sale.discountedPrice}</span>
+                          <span className="font-bold text-lg">${sale.discountedPrice ?? 0}</span>
                         </div>
-                        {sale.originalPrice && sale.originalPrice > sale.discountedPrice && (
+                        {sale.originalPrice && sale.discountedPrice && sale.originalPrice > sale.discountedPrice && (
                           <div className="flex items-center gap-2">
                             <span className="text-sm text-muted-foreground line-through">
                               ${sale.originalPrice}

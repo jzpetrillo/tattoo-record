@@ -1,6 +1,7 @@
 import { db } from "./db";
 import * as schema from "@shared/schema";
 import { eq, and, desc, asc, isNull, isNotNull, sql, or, ilike, inArray } from "drizzle-orm";
+import { alias } from "drizzle-orm/pg-core";
 
 export interface IStorage {
   // User operations
@@ -588,7 +589,7 @@ export class DatabaseStorage implements IStorage {
       .from(schema.notifications)
       .leftJoin(
         schema.users,
-        sql`${schema.notifications.payload}->>'actorId' = ${schema.users.id}`
+        sql`${schema.notifications.payload}->>'actorId' = ${schema.users.id}::text`
       )
       .where(eq(schema.notifications.userId, userId))
       .orderBy(desc(schema.notifications.createdAt))
@@ -839,7 +840,7 @@ export class DatabaseStorage implements IStorage {
       );
     }
     
-    return db
+    const results = await db
       .select({
         flashSale: schema.flashSales,
         artist: schema.users
@@ -848,6 +849,16 @@ export class DatabaseStorage implements IStorage {
       .innerJoin(schema.users, eq(schema.flashSales.artistId, schema.users.id))
       .where(conditions.length > 0 ? and(...conditions) : undefined)
       .orderBy(asc(schema.flashSales.expiresAt));
+    
+    return results.map(r => ({
+      ...r.flashSale,
+      artist: r.artist,
+      discountedPrice: r.flashSale.flashPriceCents ? r.flashSale.flashPriceCents / 100 : null,
+      originalPrice: r.flashSale.originalPriceCents ? r.flashSale.originalPriceCents / 100 : null,
+      endDate: r.flashSale.expiresAt,
+      spotsAvailable: r.flashSale.availableSlots,
+      imageUrl: r.flashSale.media?.[0]?.url || null
+    }));
   }
 
   async getFlashSale(id: string) {
@@ -861,7 +872,17 @@ export class DatabaseStorage implements IStorage {
       .where(eq(schema.flashSales.id, id))
       .limit(1);
     
-    return result;
+    if (!result) return undefined;
+    
+    return {
+      ...result.flashSale,
+      artist: result.artist,
+      discountedPrice: result.flashSale.flashPriceCents ? result.flashSale.flashPriceCents / 100 : null,
+      originalPrice: result.flashSale.originalPriceCents ? result.flashSale.originalPriceCents / 100 : null,
+      endDate: result.flashSale.expiresAt,
+      spotsAvailable: result.flashSale.availableSlots,
+      imageUrl: result.flashSale.media?.[0]?.url || null
+    };
   }
 
   async updateFlashSale(id: string, data: Partial<typeof schema.flashSales.$inferInsert>) {
@@ -905,32 +926,51 @@ export class DatabaseStorage implements IStorage {
       conditions.push(eq(schema.bookings.status, filters.status as any));
     }
     
-    return db
+    const artistUser = alias(schema.users, "artist");
+    const clientUser = alias(schema.users, "client");
+    
+    const results = await db
       .select({
         booking: schema.bookings,
-        artist: { alias: "artist", ...schema.users },
-        client: { alias: "client", ...schema.users }
+        artist: artistUser,
+        client: clientUser
       })
       .from(schema.bookings)
-      .innerJoin(schema.users, eq(schema.bookings.artistId, schema.users.id))
-      .innerJoin(schema.users, eq(schema.bookings.clientId, schema.users.id))
+      .leftJoin(artistUser, eq(schema.bookings.artistId, artistUser.id))
+      .leftJoin(clientUser, eq(schema.bookings.clientId, clientUser.id))
       .where(conditions.length > 0 ? and(...conditions) : undefined)
       .orderBy(desc(schema.bookings.scheduledAt));
+    
+    return results.map(r => ({
+      ...r.booking,
+      artist: r.artist,
+      client: r.client
+    }));
   }
 
   async getBooking(id: string) {
+    const artistUser = alias(schema.users, "artist");
+    const clientUser = alias(schema.users, "client");
+    
     const [result] = await db
       .select({
         booking: schema.bookings,
-        artist: schema.users,
-        client: schema.users
+        artist: artistUser,
+        client: clientUser
       })
       .from(schema.bookings)
-      .innerJoin(schema.users, eq(schema.bookings.artistId, schema.users.id))
+      .leftJoin(artistUser, eq(schema.bookings.artistId, artistUser.id))
+      .leftJoin(clientUser, eq(schema.bookings.clientId, clientUser.id))
       .where(eq(schema.bookings.id, id))
       .limit(1);
     
-    return result;
+    if (!result) return undefined;
+    
+    return {
+      ...result.booking,
+      artist: result.artist,
+      client: result.client
+    };
   }
 
   async updateBooking(id: string, data: Partial<typeof schema.bookings.$inferInsert>) {
