@@ -20,7 +20,7 @@ The platform features a clean, minimalist black-and-white aesthetic inspired by 
 ### Feature Specifications
 *   **Caption-Only Posts**: Supports posts without media, requiring only text.
 *   **Artist-Studio Connection System**: Allows artists to request affiliation with studios, managed through a formal approval workflow.
-*   **Profile Page Design**: Instagram-inspired layout with gradient-bordered avatars, dynamic stats, content tabs (Posts, Reels, Stories), and role-specific information (e.g., studio address for studios, studio connection for artists). Includes verified badges and optional banner images.
+*   **Profile Page Design**: Instagram-inspired layout with gradient-bordered avatars, dynamic stats, and three content tabs: Posts, Videos, and Portfolio (labeled "Tattoos" for enthusiasts). Features role-specific information (studio address for studios, studio connection for artists), verified badges, and optional banner images. Portfolio section displays large 4:3 aspect ratio images with titles, descriptions, and category tags.
 *   **Admin Verification System**: Requires admin approval for `ARTIST` and `STUDIO` roles, managed via an Admin Dashboard.
 *   **Save/Bookmark System**: Users can save posts to personalized collections. Implemented with `saved_posts` table, POST/DELETE `/api/saved-posts/:postId` endpoints, and isSaved flags in feed queries via SQL EXISTS. SavedPosts page at `/saved` displays bookmarked content. Cache invalidation updates both `/api/posts` and `/api/saved-posts` on mutations.
 *   **Trending Hashtags**: Real-time hashtag analytics on Explore page showing top trending tattoo styles. GET `/api/hashtags/trending` endpoint aggregates `hashtag_usage` table. Horizontal scrollable chips display usage counts. Composite indexes on (hashtagId, postId) optimize queries.
@@ -42,13 +42,13 @@ The database is seeded with comprehensive test data for all engagement features:
 *   **Notifications**: 10 (types: FOLLOW, LIKE, COMMENT, APPROVAL)
 *   **Conversations**: 5 with 11 messages
 *   **Jobs**: 6 postings (5 active)
-*   **Portfolio Items**: 436 (10-20 per artist)
+*   **Portfolio Items**: 874+ (10-20 per artist, 15-25 per studio, 3-8 per enthusiast)
 
-**Test Credentials**: All users use password `Test1234!`
-- Admin: admin@inktagram.com
-- Artists: artist1-30@inktagram.com
-- Studios: studio1-15@inktagram.com
-- Enthusiasts: enthusiast1-20@inktagram.com
+**Test Credentials**: All users use password `Test1234!` and predictable usernames
+- Admin: admin@inktagram.com (username: admin_inktagram)
+- Artists: artist1@inktagram.com (username: artist1), artist2@inktagram.com (username: artist2), etc.
+- Studios: studio1@inktagram.com (username: studio1), studio2@inktagram.com (username: studio2), etc.
+- Enthusiasts: enthusiast1@inktagram.com (username: enthusiast1), enthusiast2@inktagram.com (username: enthusiast2), etc.
 
 ## External Dependencies
 *   **Cloudinary**: Media management for image and video uploads, storage, transformations, and CDN delivery.
@@ -60,7 +60,9 @@ The database is seeded with comprehensive test data for all engagement features:
 *   **esbuild**: Server bundling for production.
 
 ## Recent Changes
-*   **Bookings API Fix**: Fixed getBookings/getBooking functions to properly join users table using Drizzle aliases for artist/client. Response is flattened with nested artist/client objects.
-*   **Flash Sales API Fix**: Added response transformation to convert database column names (flashPriceCents → discountedPrice, expiresAt → endDate, etc.) for frontend compatibility.
+*   **Profile Page Redesign**: Added three-tab layout (Posts, Videos, Portfolio/Tattoos) with proper content switching and portfolio grid display featuring large images with metadata.
+*   **Explore Page Update**: Redesigned with clean grid layout using actual user avatars, role badges, and minimal editorial styling.
+*   **Seed Data Enhancement**: Updated to generate portfolio items for ALL user types (artists, studios, enthusiasts) and use predictable usernames for easier testing.
+*   **Bookings API Fix**: Fixed getBookings/getBooking functions to properly join users table using Drizzle aliases for artist/client.
+*   **Flash Sales API Fix**: Added response transformation to convert database column names for frontend compatibility.
 *   **Notifications API Fix**: Fixed UUID type casting in SQL join for actor lookup.
-*   **TypeScript Improvements**: Added proper interfaces for FlashSale and fixed null checks.
