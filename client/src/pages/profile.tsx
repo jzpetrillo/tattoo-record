@@ -2,7 +2,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import SidebarNav from "@/components/layout/sidebar-nav";
 import MobileNav from "@/components/layout/mobile-nav";
 import { useAuth } from "@/hooks/use-auth";
-import { Building2, Check, X, MapPin, Globe, Star, Film, Image as ImageIcon, MessageCircle } from "lucide-react";
+import { Building2, Check, X, MapPin, Globe, Star, Film, Image as ImageIcon, MessageCircle, Heart } from "lucide-react";
 import { StudioConnectionDialog } from "@/components/studio-connection-dialog";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
@@ -331,22 +331,37 @@ export default function Profile() {
           </div>
         </div>
 
-        {/* Posts Grid */}
-        <div className="grid grid-cols-3 gap-1 mt-1">
+        {/* Posts Grid - Large, bold image presentation */}
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-0.5 mt-1">
           {userPosts?.map((item: any) => (
-            <div key={item.post.id} className="aspect-square bg-secondary group cursor-pointer relative" data-testid={`post-${item.post.id}`}>
-              {item.post.media?.[0]?.url && (
+            <div key={item.post.id} className="aspect-[4/5] bg-black group cursor-pointer relative overflow-hidden" data-testid={`post-${item.post.id}`}>
+              {item.post.media?.[0]?.url ? (
                 <img
                   src={item.post.media[0].url}
                   alt={activeTab}
-                  className="w-full h-full object-cover group-hover:opacity-90 transition-opacity"
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                 />
-              )}
-              {activeTab === "REELS" && (
-                <div className="absolute top-2 right-2">
-                  <Film className="w-5 h-5 text-white drop-shadow-lg" />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center bg-secondary">
+                  <ImageIcon className="w-8 h-8 text-muted-foreground" />
                 </div>
               )}
+              {activeTab === "REELS" && (
+                <div className="absolute top-3 right-3">
+                  <Film className="w-6 h-6 text-white drop-shadow-lg" />
+                </div>
+              )}
+              {/* Hover overlay with like/comment counts */}
+              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-6">
+                <div className="flex items-center gap-1 text-white">
+                  <Heart className="w-5 h-5 fill-white" />
+                  <span className="font-semibold">{item.post.likeCount || 0}</span>
+                </div>
+                <div className="flex items-center gap-1 text-white">
+                  <MessageCircle className="w-5 h-5 fill-white" />
+                  <span className="font-semibold">{item.post.commentCount || 0}</span>
+                </div>
+              </div>
             </div>
           ))}
         </div>

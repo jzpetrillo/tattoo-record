@@ -169,9 +169,9 @@ export default function PostCard({ post, author, isLiked = false, isSaved = fals
         </Link>
       </div>
 
-      {/* Post image */}
+      {/* Post image - Large, full-width, premium display */}
       {post.media?.[0] && (
-        <div className="relative w-full aspect-square bg-secondary">
+        <div className="relative w-full aspect-[4/5] bg-black">
           <img
             src={post.media[0].url}
             alt="Post"
