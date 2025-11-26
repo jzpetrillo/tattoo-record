@@ -111,19 +111,19 @@ async function seedUsers() {
   // Create 15 studios
   for (let i = 1; i <= 15; i++) {
     const location = faker.helpers.arrayElement(CITIES);
-    const studioName = `${faker.company.catchPhraseAdjective()} ${faker.helpers.arrayElement(["Ink", "Tattoo", "Studio", "Art"])}`;
+    const studioDisplayName = `${faker.company.catchPhraseAdjective()} ${faker.helpers.arrayElement(["Ink", "Tattoo", "Studio", "Art"])}`;
     
     users.push({
       email: `studio${i}@inktagram.com`,
-      username: `${studioName.toLowerCase().replace(/\s+/g, "_")}_${i}`,
+      username: `studio${i}`,
       hashedPassword,
       role: "STUDIO" as const,
-      firstName: studioName,
+      firstName: studioDisplayName,
       lastName: "Studio",
       bio: `Professional tattoo studio in ${location.city}. ${faker.company.catchPhrase()}`,
       isVerified: i <= 10,
       verificationStatus: i <= 10 ? "APPROVED" as const : "PENDING" as const,
-      avatarUrl: `https://api.dicebear.com/7.x/initials/svg?seed=${studioName}`,
+      avatarUrl: `https://api.dicebear.com/7.x/initials/svg?seed=${studioDisplayName}`,
       location,
       website: faker.internet.url(),
       instagram: faker.internet.username().toLowerCase(),
@@ -138,7 +138,7 @@ async function seedUsers() {
     
     users.push({
       email: `artist${i}@inktagram.com`,
-      username: `${firstName.toLowerCase()}_ink_${i}`,
+      username: `artist${i}`,
       hashedPassword,
       role: "ARTIST" as const,
       firstName,
@@ -161,7 +161,7 @@ async function seedUsers() {
     
     users.push({
       email: `enthusiast${i}@inktagram.com`,
-      username: `${firstName.toLowerCase()}_${faker.number.int({ min: 100, max: 999 })}`,
+      username: `enthusiast${i}`,
       hashedPassword,
       role: "ENTHUSIAST" as const,
       firstName,
