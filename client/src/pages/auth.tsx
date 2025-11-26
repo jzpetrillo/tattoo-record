@@ -9,9 +9,18 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Separator } from "@/components/ui/separator";
 import { useAuth } from "@/hooks/use-auth";
 import { apiRequest } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
+import { Palette, Building2, Heart, Shield } from "lucide-react";
+
+const DEMO_ACCOUNTS = {
+  ARTIST: { email: "artist1@inktagram.com", password: "Test1234!" },
+  STUDIO: { email: "studio1@inktagram.com", password: "Test1234!" },
+  ENTHUSIAST: { email: "enthusiast1@inktagram.com", password: "Test1234!" },
+  ADMIN: { email: "admin@inktagram.com", password: "Test1234!" },
+} as const;
 
 const loginSchema = z.object({
   email: z.string().email("Invalid email address"),
@@ -77,6 +86,35 @@ export default function Auth() {
       toast({ title: "Registration failed", description: error.message, variant: "destructive" });
     },
   });
+
+  const [quickLoginPending, setQuickLoginPending] = useState<string | null>(null);
+
+  const handleQuickLogin = async (role: keyof typeof DEMO_ACCOUNTS) => {
+    setQuickLoginPending(role);
+    try {
+      const credentials = DEMO_ACCOUNTS[role];
+      const res = await apiRequest("POST", "/api/auth/login", credentials);
+      if (!res.ok) {
+        const error = await res.json().catch(() => ({ message: "Login failed" }));
+        throw new Error(error.message || "Login failed");
+      }
+      const data = await res.json();
+      setAuth(data.user, data.token);
+      setLocation("/");
+      toast({ title: `Welcome, ${data.user.username}!`, description: `Logged in as ${data.user.role}` });
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "An error occurred";
+      toast({ 
+        title: "Quick login failed", 
+        description: message === "Login failed" 
+          ? "Demo account not available. Please register or check seed data."
+          : message,
+        variant: "destructive" 
+      });
+    } finally {
+      setQuickLoginPending(null);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
@@ -214,6 +252,64 @@ export default function Auth() {
             </Form>
           )}
 
+          {isLogin && (
+            <>
+              <div className="relative my-6">
+                <Separator />
+                <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-card px-2 text-xs text-muted-foreground uppercase tracking-wider">
+                  Quick Demo Login
+                </span>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleQuickLogin("ARTIST")}
+                  disabled={quickLoginPending !== null}
+                  className="flex items-center gap-2"
+                  data-testid="quick-login-artist"
+                >
+                  <Palette className="w-4 h-4" />
+                  {quickLoginPending === "ARTIST" ? "..." : "Artist"}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleQuickLogin("STUDIO")}
+                  disabled={quickLoginPending !== null}
+                  className="flex items-center gap-2"
+                  data-testid="quick-login-studio"
+                >
+                  <Building2 className="w-4 h-4" />
+                  {quickLoginPending === "STUDIO" ? "..." : "Studio"}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleQuickLogin("ENTHUSIAST")}
+                  disabled={quickLoginPending !== null}
+                  className="flex items-center gap-2"
+                  data-testid="quick-login-enthusiast"
+                >
+                  <Heart className="w-4 h-4" />
+                  {quickLoginPending === "ENTHUSIAST" ? "..." : "Enthusiast"}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleQuickLogin("ADMIN")}
+                  disabled={quickLoginPending !== null}
+                  className="flex items-center gap-2"
+                  data-testid="quick-login-admin"
+                >
+                  <Shield className="w-4 h-4" />
+                  {quickLoginPending === "ADMIN" ? "..." : "Admin"}
+                </Button>
+              </div>
+            </>
+          )}
+
           <div className="mt-4 text-center space-y-2">
             <button
               onClick={() => {
@@ -231,7 +327,7 @@ export default function Auth() {
               className="text-xs text-muted-foreground hover:text-foreground transition-colors"
               data-testid="button-admin-link"
             >
-              Admin Access →
+              Admin Access
             </button>
           </div>
         </CardContent>

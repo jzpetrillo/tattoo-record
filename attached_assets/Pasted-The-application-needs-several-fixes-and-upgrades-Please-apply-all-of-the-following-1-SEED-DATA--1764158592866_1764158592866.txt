@@ -1,0 +1,31 @@
+The application needs several fixes and upgrades. Please apply all of the following:
+
+1. SEED DATA + TEST USERS
+- I do not see any seed data when logging in. Ensure ALL test users have complete seed data in every relevant area of the app, including: posts, stories, messages, notifications, projects/campaigns, saved items, portfolios/galleries, and any other feature that exists in this application.
+- Create multiple demo users (talent, agent, brand, admin, etc. if applicable) and populate each one with enough sample data so that ALL parts of the app display correctly during testing.
+- After seeding, confirm that logging in as any test user shows full data everywhere it should.
+
+2. LOGIN PAGE FIX
+- Re-add the quick login/demo buttons on the login page (e.g., “Login as Demo Talent”, “Login as Demo Agent”, etc., or whatever roles exist).
+- Make sure the login page design matches the rest of the app styling.
+
+3. STORIES (INSTAGRAM-STYLE)
+- Stories should NOT be a profile tab.
+- Update stories to function like Instagram:
+  * Display stories as tappable/clickable circles or tiles in a global/top location.
+  * When tapped, open stories in a full-screen or modal viewer.
+  * Allow navigation through multiple story items with a progress/timer bar if possible.
+  * Stories should feel visual and ephemeral, not a static profile section.
+
+4. IMAGE-FIRST DESIGN (BIG + BOLD)
+- Update all pages that show images (feed, search results, profile, projects, galleries, etc.) so images appear LARGE, bold, and full-width or near full-width.
+- Remove or restyle any small-grid or thumbnail layouts.
+- Make the entire experience more visual and premium, consistent across all pages.
+
+5. OVERALL VERIFICATION
+- Do not remove or change any functionality or data models.
+- Apply all UI/UX updates consistently across the entire application.
+- Ensure everything is fully responsive on desktop and mobile.
+- Confirm all test users, quick login buttons, stories, and image layouts work correctly after updates.
+
+Make all of these changes now and confirm completion when finished.

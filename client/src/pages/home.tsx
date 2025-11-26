@@ -14,18 +14,14 @@ import { Card } from "@/components/ui/card";
 
 /**
  * Demo accounts for quick login feature.
- * These accounts are pre-created in the database for demonstration purposes.
- * In production, these should be managed through environment variables or removed entirely.
- * 
- * To create demo accounts, run:
- * - Artist: POST /api/auth/register with {username: "demo_artist", email: "demoartist@inktag.com", password: "Demo1234!", role: "ARTIST"}
- * - Studio: POST /api/auth/register with {username: "demo_studio", email: "demostudio@inktag.com", password: "Demo1234!", role: "STUDIO"}
- * - Enthusiast: POST /api/auth/register with {username: "demo_enthusiast", email: "demoenthusiast@inktag.com", password: "Demo1234!", role: "ENTHUSIAST"}
+ * These accounts are pre-created in the database from seed data.
+ * Password for all test accounts: Test1234!
  */
 const DEMO_ACCOUNTS = {
-  ARTIST: { email: "demoartist@inktag.com", password: "Demo1234!" },
-  STUDIO: { email: "demostudio@inktag.com", password: "Demo1234!" },
-  ENTHUSIAST: { email: "demoenthusiast@inktag.com", password: "Demo1234!" },
+  ARTIST: { email: "artist1@inktagram.com", password: "Test1234!" },
+  STUDIO: { email: "studio1@inktagram.com", password: "Test1234!" },
+  ENTHUSIAST: { email: "enthusiast1@inktagram.com", password: "Test1234!" },
+  ADMIN: { email: "admin@inktagram.com", password: "Test1234!" },
 } as const;
 
 export default function Home() {
@@ -80,6 +76,7 @@ export default function Home() {
   const artistMutation = createQuickLoginMutation();
   const studioMutation = createQuickLoginMutation();
   const enthusiastMutation = createQuickLoginMutation();
+  const adminMutation = createQuickLoginMutation();
 
   const handleQuickLogin = (role: keyof typeof DEMO_ACCOUNTS, mutation: ReturnType<typeof createQuickLoginMutation>) => {
     const credentials = DEMO_ACCOUNTS[role];
@@ -98,7 +95,7 @@ export default function Home() {
           </p>
           
           <div className="mb-12">
-            <p className="text-xs uppercase tracking-wider opacity-40 mb-4">Quick Login</p>
+            <p className="text-xs uppercase tracking-wider opacity-40 mb-4">Quick Demo Login</p>
             <div className="flex gap-4 justify-center flex-wrap">
               <button
                 onClick={() => handleQuickLogin("ARTIST", artistMutation)}
@@ -106,7 +103,7 @@ export default function Home() {
                 className="px-6 py-2 border border-foreground/40 hover:border-foreground hover:bg-foreground hover:text-background transition-all uppercase text-xs tracking-wider disabled:opacity-50"
                 data-testid="quick-login-artist"
               >
-                {artistMutation.isPending ? "..." : "Artist"}
+                {artistMutation.isPending ? "..." : "Demo Artist"}
               </button>
               <button
                 onClick={() => handleQuickLogin("STUDIO", studioMutation)}
@@ -114,7 +111,7 @@ export default function Home() {
                 className="px-6 py-2 border border-foreground/40 hover:border-foreground hover:bg-foreground hover:text-background transition-all uppercase text-xs tracking-wider disabled:opacity-50"
                 data-testid="quick-login-studio"
               >
-                {studioMutation.isPending ? "..." : "Studio"}
+                {studioMutation.isPending ? "..." : "Demo Studio"}
               </button>
               <button
                 onClick={() => handleQuickLogin("ENTHUSIAST", enthusiastMutation)}
@@ -122,7 +119,15 @@ export default function Home() {
                 className="px-6 py-2 border border-foreground/40 hover:border-foreground hover:bg-foreground hover:text-background transition-all uppercase text-xs tracking-wider disabled:opacity-50"
                 data-testid="quick-login-enthusiast"
               >
-                {enthusiastMutation.isPending ? "..." : "Enthusiast"}
+                {enthusiastMutation.isPending ? "..." : "Demo Enthusiast"}
+              </button>
+              <button
+                onClick={() => handleQuickLogin("ADMIN", adminMutation)}
+                disabled={adminMutation.isPending}
+                className="px-6 py-2 border border-foreground/40 hover:border-foreground hover:bg-foreground hover:text-background transition-all uppercase text-xs tracking-wider disabled:opacity-50"
+                data-testid="quick-login-admin"
+              >
+                {adminMutation.isPending ? "..." : "Demo Admin"}
               </button>
             </div>
           </div>
