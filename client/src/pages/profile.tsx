@@ -2,7 +2,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import SidebarNav from "@/components/layout/sidebar-nav";
 import MobileNav from "@/components/layout/mobile-nav";
 import { useAuth } from "@/hooks/use-auth";
-import { Building2, Check, X, MapPin, Globe, Star, Film, Image as ImageIcon, MessageCircle, Heart } from "lucide-react";
+import { Building2, Check, X, MapPin, Globe, Star, Film, Image as ImageIcon, MessageCircle, Heart, Briefcase, Palette } from "lucide-react";
 import { StudioConnectionDialog } from "@/components/studio-connection-dialog";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
@@ -10,12 +10,14 @@ import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useParams, useLocation } from "wouter";
 import { useState } from "react";
 
+type TabType = "POSTS" | "VIDEOS" | "PORTFOLIO";
+
 export default function Profile() {
   const { user: currentUser, token } = useAuth();
   const { toast } = useToast();
   const params = useParams();
   const username = params.username;
-  const [activeTab, setActiveTab] = useState<"POSTS" | "REELS">("POSTS");
+  const [activeTab, setActiveTab] = useState<TabType>("POSTS");
   const [, navigate] = useLocation();
 
   // Fetch profile user data if viewing another user's profile
@@ -33,10 +35,17 @@ export default function Profile() {
     enabled: !!token && !!user,
   });
 
+  // Fetch posts/videos based on active tab
   const postType = activeTab === "POSTS" ? "POST" : "REEL";
   const { data: userPosts } = useQuery({
     queryKey: [`/api/posts?authorId=${user?.id}&type=${postType}`],
-    enabled: !!token && !!user,
+    enabled: !!token && !!user && activeTab !== "PORTFOLIO",
+  });
+
+  // Fetch portfolio items
+  const { data: portfolioItems } = useQuery({
+    queryKey: [`/api/portfolio/${user?.id}`],
+    enabled: !!token && !!user && activeTab === "PORTFOLIO",
   });
 
   const { data: studioConnection } = useQuery({
@@ -79,6 +88,12 @@ export default function Profile() {
     },
   });
 
+  // Get tab label based on user role
+  const getPortfolioTabLabel = () => {
+    if (user?.role === "ENTHUSIAST") return "Tattoos";
+    return "Portfolio";
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <SidebarNav />
@@ -102,8 +117,12 @@ export default function Profile() {
           <div className="flex-shrink-0">
             <div className="w-20 h-20 md:w-36 md:h-36 rounded-full bg-gradient-to-tr from-yellow-400 via-pink-500 to-purple-500 p-0.5">
               <div className="w-full h-full rounded-full bg-background p-1">
-                <div className="w-full h-full rounded-full bg-secondary flex items-center justify-center">
-                  <span className="text-2xl md:text-5xl font-bold">{user?.username?.[0]?.toUpperCase()}</span>
+                <div className="w-full h-full rounded-full bg-secondary flex items-center justify-center overflow-hidden">
+                  {user?.avatarUrl ? (
+                    <img src={user.avatarUrl} alt={user.username} className="w-full h-full object-cover" />
+                  ) : (
+                    <span className="text-2xl md:text-5xl font-bold">{user?.username?.[0]?.toUpperCase()}</span>
+                  )}
                 </div>
               </div>
             </div>
@@ -125,140 +144,121 @@ export default function Profile() {
                 <Button 
                   variant="outline" 
                   size="sm"
-                  onClick={() => navigate(`/messages?withUserId=${user?.id}`)}
-                  data-testid="button-message-user"
+                  onClick={() => navigate(`/messages?user=${user?.id}`)}
+                  data-testid="button-message"
                 >
-                  <MessageCircle className="w-4 h-4 mr-2" />
                   Message
                 </Button>
               )}
-              {isOwnProfile && user?.role === "ARTIST" && !studioConnection?.studio && (
-                <StudioConnectionDialog />
-              )}
-            </div>
-
-            {/* Stats */}
-            <div className="flex gap-8 mb-5">
-              <div className="flex gap-1">
-                <span className="font-semibold">{userPosts?.length || 0}</span>
-                <span className="text-muted-foreground">{activeTab.toLowerCase()}</span>
-              </div>
-              <button className="flex gap-1 hover:opacity-70 transition-opacity" data-testid="button-followers">
-                <span className="font-semibold">{userStats?.followersCount || 0}</span>
-                <span className="text-muted-foreground">followers</span>
-              </button>
-              <button className="flex gap-1 hover:opacity-70 transition-opacity" data-testid="button-following">
-                <span className="font-semibold">{userStats?.followingCount || 0}</span>
-                <span className="text-muted-foreground">following</span>
-              </button>
-            </div>
-
-            {/* Bio and Details */}
-            <div className="space-y-1">
-              <div className="font-semibold text-sm">{user?.email}</div>
-              
-              {user?.bio && (
-                <p className="text-sm whitespace-pre-wrap">{user.bio}</p>
-              )}
-
-              {/* Studio Connection (for Artists) */}
-              {user?.role === "ARTIST" && studioConnection?.studio && (
-                <div className="flex items-center gap-1.5 text-sm" data-testid="studio-connection">
-                  <Building2 className="w-4 h-4" />
-                  <span className="font-medium">{studioConnection.studio.username}</span>
-                </div>
-              )}
-
-              {/* Studio Address */}
-              {user?.role === "STUDIO" && user?.location && (
-                <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                  <MapPin className="w-4 h-4" />
-                  <span>{user.location.city}{user.location.country && `, ${user.location.country}`}</span>
-                </div>
-              )}
-
-              {/* Studio Website */}
-              {user?.role === "STUDIO" && user?.links?.website && (
-                <a 
-                  href={user.links.website} 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-1.5 text-sm text-blue-600 dark:text-blue-400 hover:underline"
-                  data-testid="link-studio-website"
+              {isOwnProfile && (
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => navigate("/settings")}
+                  data-testid="button-edit-profile"
                 >
-                  <Globe className="w-4 h-4" />
-                  <span>{user.links.website}</span>
-                </a>
+                  Edit Profile
+                </Button>
+              )}
+            </div>
+
+            {/* Stats Row */}
+            <div className="flex items-center gap-8 mb-5">
+              <div className="text-center" data-testid="stat-posts">
+                <span className="font-semibold">{userStats?.postsCount || 0}</span>
+                <span className="text-muted-foreground ml-1">posts</span>
+              </div>
+              <div className="text-center" data-testid="stat-followers">
+                <span className="font-semibold">{userStats?.followersCount || 0}</span>
+                <span className="text-muted-foreground ml-1">followers</span>
+              </div>
+              <div className="text-center" data-testid="stat-following">
+                <span className="font-semibold">{userStats?.followingCount || 0}</span>
+                <span className="text-muted-foreground ml-1">following</span>
+              </div>
+            </div>
+
+            {/* Bio & Details */}
+            <div className="space-y-2">
+              {(user?.firstName || user?.lastName) && (
+                <p className="font-semibold">{user?.firstName} {user?.lastName}</p>
+              )}
+              {user?.bio && (
+                <p className="text-sm text-muted-foreground whitespace-pre-wrap">{user?.bio}</p>
+              )}
+              
+              {/* Role Badge */}
+              <div className="flex items-center gap-2 mt-2">
+                <span className={`px-2 py-0.5 rounded text-xs font-medium ${
+                  user?.role === "STUDIO" ? "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200" :
+                  user?.role === "ARTIST" ? "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200" :
+                  "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
+                }`}>
+                  {user?.role}
+                </span>
+              </div>
+
+              {/* Location */}
+              {user?.location?.city && (
+                <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                  <MapPin className="w-3 h-3" />
+                  <span>{user.location.city}, {user.location.country}</span>
+                </div>
               )}
 
-              {/* Artist Website & Social Links */}
-              {user?.role === "ARTIST" && (user?.website || user?.instagram || user?.tiktok || user?.twitter) && (
-                <div className="flex flex-wrap items-center gap-3 text-sm mt-2">
-                  {user.website && (
-                    <a 
-                      href={user.website} 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="text-blue-600 dark:text-blue-400 hover:underline"
-                      data-testid="link-artist-website"
-                    >
-                      {user.website.replace(/^https?:\/\//, '')}
-                    </a>
-                  )}
-                  {user.instagram && (
-                    <a 
-                      href={`https://instagram.com/${user.instagram.replace('@', '')}`}
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="text-muted-foreground hover:text-foreground"
-                      data-testid="link-instagram"
-                    >
-                      Instagram
-                    </a>
-                  )}
-                  {user.tiktok && (
-                    <a 
-                      href={`https://tiktok.com/@${user.tiktok.replace('@', '')}`}
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="text-muted-foreground hover:text-foreground"
-                      data-testid="link-tiktok"
-                    >
-                      TikTok
-                    </a>
-                  )}
-                  {user.twitter && (
-                    <a 
-                      href={`https://twitter.com/${user.twitter.replace('@', '')}`}
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="text-muted-foreground hover:text-foreground"
-                      data-testid="link-twitter"
-                    >
-                      Twitter
-                    </a>
-                  )}
+              {/* Website */}
+              {user?.website && (
+                <div className="flex items-center gap-1 text-sm">
+                  <Globe className="w-3 h-3" />
+                  <a href={user.website} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                    {user.website.replace(/^https?:\/\//, '')}
+                  </a>
                 </div>
               )}
             </div>
-          </div>
           </div>
         </div>
 
-        {/* Pending Connection Requests (for Studios) */}
-        {isOwnProfile && user?.role === "STUDIO" && pendingRequests && pendingRequests.length > 0 && (
-          <div className="mb-8 pb-8 border-b border-border">
-            <h2 className="text-sm font-semibold mb-4 uppercase tracking-wider text-muted-foreground">Pending Requests</h2>
+        {/* Artist's Studio Connection */}
+        {user?.role === "ARTIST" && studioConnection && (
+          <div className="mb-6 p-4 border border-border rounded-lg bg-card">
+            <div className="flex items-center gap-3">
+              <Building2 className="w-5 h-5 text-muted-foreground" />
+              <div>
+                <p className="text-sm font-medium">Connected to</p>
+                <p className="text-lg font-semibold">{studioConnection.studio?.username}</p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Studio Connection Dialog for Artists viewing their own profile */}
+        {isOwnProfile && user?.role === "ARTIST" && !studioConnection && (
+          <div className="mb-6">
+            <StudioConnectionDialog />
+          </div>
+        )}
+
+        {/* Pending Requests (for Studios) */}
+        {user?.role === "STUDIO" && isOwnProfile && pendingRequests && pendingRequests.length > 0 && (
+          <div className="mb-6 p-4 border border-border rounded-lg bg-card">
+            <h3 className="font-semibold mb-4 flex items-center gap-2">
+              <Building2 className="w-5 h-5" />
+              Pending Artist Requests ({pendingRequests.length})
+            </h3>
             <div className="space-y-3">
               {pendingRequests.map((item: any) => (
-                <div key={item.request.id} className="flex items-center justify-between p-4 bg-secondary/50 rounded-lg" data-testid={`pending-request-${item.request.id}`}>
-                  <div className="flex-1">
-                    <div className="font-medium">{item.artist.username}</div>
-                    {item.request.note && (
-                      <p className="text-sm text-muted-foreground mt-1">{item.request.note}</p>
-                    )}
+                <div key={item.request.id} className="flex items-center justify-between p-3 bg-secondary rounded-lg" data-testid={`pending-request-${item.request.id}`}>
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-background flex items-center justify-center">
+                      <span className="font-semibold">{item.artist.username[0].toUpperCase()}</span>
+                    </div>
+                    <div>
+                      <p className="font-medium">{item.artist.username}</p>
+                      <p className="text-xs text-muted-foreground">{item.artist.firstName} {item.artist.lastName}</p>
+                    </div>
                   </div>
-                  <div className="flex gap-2 ml-4">
+                  <div className="flex gap-2">
                     <Button
                       size="sm"
                       onClick={() => approveMutation.mutate(item.request.id)}
@@ -305,72 +305,182 @@ export default function Profile() {
           </div>
         )}
 
-        {/* Tabs */}
+        {/* Tabs - Posts, Videos, Portfolio */}
         <div className="border-t border-border">
-          <div className="flex items-center justify-center gap-12">
+          <div className="flex items-center justify-center gap-8 md:gap-12">
             <button 
               onClick={() => setActiveTab("POSTS")}
               className={`flex items-center gap-2 py-3 border-t-2 -mt-px transition-colors ${
-                activeTab === "POSTS" ? "border-foreground" : "border-transparent text-muted-foreground"
+                activeTab === "POSTS" ? "border-foreground font-semibold" : "border-transparent text-muted-foreground hover:text-foreground"
               }`}
               data-testid="tab-posts"
             >
-              <ImageIcon className="w-3 h-3" />
-              <span className="text-xs font-semibold uppercase tracking-widest">Posts</span>
+              <ImageIcon className="w-4 h-4" />
+              <span className="text-xs uppercase tracking-widest">Posts</span>
             </button>
             <button 
-              onClick={() => setActiveTab("REELS")}
+              onClick={() => setActiveTab("VIDEOS")}
               className={`flex items-center gap-2 py-3 border-t-2 -mt-px transition-colors ${
-                activeTab === "REELS" ? "border-foreground" : "border-transparent text-muted-foreground"
+                activeTab === "VIDEOS" ? "border-foreground font-semibold" : "border-transparent text-muted-foreground hover:text-foreground"
               }`}
-              data-testid="tab-reels"
+              data-testid="tab-videos"
             >
-              <Film className="w-3 h-3" />
-              <span className="text-xs font-semibold uppercase tracking-widest">Reels</span>
+              <Film className="w-4 h-4" />
+              <span className="text-xs uppercase tracking-widest">Videos</span>
+            </button>
+            <button 
+              onClick={() => setActiveTab("PORTFOLIO")}
+              className={`flex items-center gap-2 py-3 border-t-2 -mt-px transition-colors ${
+                activeTab === "PORTFOLIO" ? "border-foreground font-semibold" : "border-transparent text-muted-foreground hover:text-foreground"
+              }`}
+              data-testid="tab-portfolio"
+            >
+              {user?.role === "ENTHUSIAST" ? (
+                <Palette className="w-4 h-4" />
+              ) : (
+                <Briefcase className="w-4 h-4" />
+              )}
+              <span className="text-xs uppercase tracking-widest">{getPortfolioTabLabel()}</span>
             </button>
           </div>
         </div>
 
-        {/* Posts Grid - Large, bold image presentation */}
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-0.5 mt-1">
-          {userPosts?.map((item: any) => (
-            <div key={item.post.id} className="aspect-[4/5] bg-black group cursor-pointer relative overflow-hidden" data-testid={`post-${item.post.id}`}>
-              {item.post.media?.[0]?.url ? (
-                <img
-                  src={item.post.media[0].url}
-                  alt={activeTab}
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center bg-secondary">
-                  <ImageIcon className="w-8 h-8 text-muted-foreground" />
+        {/* Posts/Videos Grid */}
+        {activeTab !== "PORTFOLIO" && (
+          <>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-0.5 mt-1">
+              {userPosts?.map((item: any) => (
+                <div key={item.post.id} className="aspect-[4/5] bg-black group cursor-pointer relative overflow-hidden" data-testid={`post-${item.post.id}`}>
+                  {item.post.media?.[0]?.url ? (
+                    <img
+                      src={item.post.media[0].url}
+                      alt={activeTab}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center bg-secondary">
+                      <ImageIcon className="w-8 h-8 text-muted-foreground" />
+                    </div>
+                  )}
+                  {activeTab === "VIDEOS" && (
+                    <div className="absolute top-3 right-3">
+                      <Film className="w-6 h-6 text-white drop-shadow-lg" />
+                    </div>
+                  )}
+                  {/* Hover overlay with like/comment counts */}
+                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-6">
+                    <div className="flex items-center gap-1 text-white">
+                      <Heart className="w-5 h-5 fill-white" />
+                      <span className="font-semibold">{item.post.likeCount || 0}</span>
+                    </div>
+                    <div className="flex items-center gap-1 text-white">
+                      <MessageCircle className="w-5 h-5 fill-white" />
+                      <span className="font-semibold">{item.post.commentCount || 0}</span>
+                    </div>
+                  </div>
                 </div>
-              )}
-              {activeTab === "REELS" && (
-                <div className="absolute top-3 right-3">
-                  <Film className="w-6 h-6 text-white drop-shadow-lg" />
-                </div>
-              )}
-              {/* Hover overlay with like/comment counts */}
-              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-6">
-                <div className="flex items-center gap-1 text-white">
-                  <Heart className="w-5 h-5 fill-white" />
-                  <span className="font-semibold">{item.post.likeCount || 0}</span>
-                </div>
-                <div className="flex items-center gap-1 text-white">
-                  <MessageCircle className="w-5 h-5 fill-white" />
-                  <span className="font-semibold">{item.post.commentCount || 0}</span>
-                </div>
-              </div>
+              ))}
             </div>
-          ))}
-        </div>
 
-        {userPosts?.length === 0 && (
-          <div className="text-center py-12 text-muted-foreground">
-            <p className="text-2xl font-light">No {activeTab.toLowerCase()} yet</p>
-          </div>
+            {userPosts?.length === 0 && (
+              <div className="text-center py-16 text-muted-foreground">
+                <div className="mb-4">
+                  {activeTab === "POSTS" ? (
+                    <ImageIcon className="w-16 h-16 mx-auto opacity-50" />
+                  ) : (
+                    <Film className="w-16 h-16 mx-auto opacity-50" />
+                  )}
+                </div>
+                <p className="text-xl font-light">No {activeTab.toLowerCase()} yet</p>
+                <p className="text-sm mt-2">
+                  {isOwnProfile ? "Share your first content to get started" : "No content to display"}
+                </p>
+              </div>
+            )}
+          </>
         )}
+
+        {/* Portfolio/Tattoos Grid */}
+        {activeTab === "PORTFOLIO" && (
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4 px-2">
+              {portfolioItems?.map((item: any) => (
+                <div 
+                  key={item.id} 
+                  className="bg-card border border-border rounded-lg overflow-hidden group cursor-pointer hover:shadow-xl transition-all"
+                  data-testid={`portfolio-${item.id}`}
+                >
+                  {/* Large Featured Image */}
+                  <div className="aspect-[4/3] bg-black relative overflow-hidden">
+                    {item.media?.[0]?.url ? (
+                      <img
+                        src={item.media[0].url}
+                        alt={item.title}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center bg-secondary">
+                        <Palette className="w-12 h-12 text-muted-foreground" />
+                      </div>
+                    )}
+                    
+                    {/* Multiple images indicator */}
+                    {item.media?.length > 1 && (
+                      <div className="absolute top-3 right-3 bg-black/60 text-white px-2 py-1 rounded text-xs font-medium">
+                        +{item.media.length - 1} more
+                      </div>
+                    )}
+                  </div>
+                  
+                  {/* Content */}
+                  <div className="p-4">
+                    <h3 className="font-semibold text-lg mb-1 line-clamp-1">{item.title}</h3>
+                    {item.description && (
+                      <p className="text-sm text-muted-foreground line-clamp-2 mb-3">{item.description}</p>
+                    )}
+                    
+                    {/* Categories/Tags */}
+                    {item.categories?.length > 0 && (
+                      <div className="flex flex-wrap gap-1">
+                        {item.categories.slice(0, 3).map((cat: string, idx: number) => (
+                          <span key={idx} className="px-2 py-0.5 bg-secondary text-xs rounded-full">
+                            {cat}
+                          </span>
+                        ))}
+                        {item.categories.length > 3 && (
+                          <span className="px-2 py-0.5 text-xs text-muted-foreground">
+                            +{item.categories.length - 3}
+                          </span>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {(!portfolioItems || portfolioItems.length === 0) && (
+              <div className="text-center py-16 text-muted-foreground">
+                <div className="mb-4">
+                  {user?.role === "ENTHUSIAST" ? (
+                    <Palette className="w-16 h-16 mx-auto opacity-50" />
+                  ) : (
+                    <Briefcase className="w-16 h-16 mx-auto opacity-50" />
+                  )}
+                </div>
+                <p className="text-xl font-light">
+                  No {user?.role === "ENTHUSIAST" ? "tattoos" : "portfolio items"} yet
+                </p>
+                <p className="text-sm mt-2">
+                  {isOwnProfile 
+                    ? `Add your ${user?.role === "ENTHUSIAST" ? "tattoo collection" : "best work"} to showcase`
+                    : "No work to display"}
+                </p>
+              </div>
+            )}
+          </>
+        )}
+        </div>
       </main>
       <MobileNav />
     </div>

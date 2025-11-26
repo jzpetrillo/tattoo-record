@@ -1,0 +1,36 @@
+Please update the application’s profile and explore page UI/UX with the following requirements:
+
+1. PROFILE LAYOUT + TABS
+- All user profile pages should follow the same layout and look more like a modern creator / artist profile with large imagery and clear sections.
+- Each profile should have tabs for:
+  • "Posts" – for standard content posts
+  • "Videos" – for short-form or long-form video content
+  • "Portfolio" – for artists/creators to upload and showcase their best work
+- For non-artist / enthusiast users, the "Portfolio" tab should still exist but be labeled "Tattoos" instead of "Portfolio" while using the same underlying functionality.
+- Make sure the active tab is visually clear, and that switching tabs does not break layout or lose data.
+
+2. PORTFOLIO / TATTOOS FUNCTIONALITY
+- Ensure that every user has an associated portfolio (or "Tattoos" tab for enthusiasts) with seed data so that the UI can be fully tested.
+- The portfolio/tattoos section should support multiple images and basic metadata (e.g., title, description, tags, date, etc.) and render as large, bold images that highlight the artwork.
+- Confirm that upload and display flows work for these sections, and that they are wired to the correct data models.
+
+3. SEED DATA
+- Create or update seed data so that:
+  • All users have at least a few "Posts"
+  • All users have at least a few "Videos"
+  • All users have a populated "Portfolio" (or "Tattoos" for enthusiasts) with multiple example items
+- Ensure this seed data is realistic for a tattoo / art community (tattoo images, body shots, designs, etc., using placeholders where needed) so the UI can be evaluated visually.
+- Confirm that the seed data loads correctly in development and that all tabs show populated content for test users.
+
+4. EXPLORE PAGE
+- Redesign the Explore page to be highly visual and image-driven.
+- Each profile card on the Explore page should use BIG images, based primarily on the user’s profile image (or a featured portfolio/tattoo image if that makes more sense for the design).
+- The Explore grid should feel bold and immersive, with large tiles/cards that make the images the main focus.
+- Clicking a profile from the Explore page should navigate to the updated profile layout with the tabs described above.
+
+5. CONSISTENCY + CLEANUP
+- Ensure design consistency (fonts, spacing, card styles, hover states, etc.) between profile pages and the Explore page.
+- Remove or refactor any old/unused profile layouts or tabs so the experience is unified across all user types.
+- After making changes, verify that all user types (artists, enthusiasts, etc.) have working profiles, tabs, and seed data.
+
+Please implement these changes directly in the codebase, update any relevant React components / routes / database models / seed scripts, and then summarize what you changed and where.
