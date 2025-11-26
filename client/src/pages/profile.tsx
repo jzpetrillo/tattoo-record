@@ -2,7 +2,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import SidebarNav from "@/components/layout/sidebar-nav";
 import MobileNav from "@/components/layout/mobile-nav";
 import { useAuth } from "@/hooks/use-auth";
-import { Building2, Check, X, MapPin, Globe, Grid3x3, Bookmark, Star, Film, Image as ImageIcon, MessageCircle } from "lucide-react";
+import { Building2, Check, X, MapPin, Globe, Star, Film, Image as ImageIcon, MessageCircle } from "lucide-react";
 import { StudioConnectionDialog } from "@/components/studio-connection-dialog";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
@@ -15,7 +15,7 @@ export default function Profile() {
   const { toast } = useToast();
   const params = useParams();
   const username = params.username;
-  const [activeTab, setActiveTab] = useState<"POSTS" | "REELS" | "STORIES">("POSTS");
+  const [activeTab, setActiveTab] = useState<"POSTS" | "REELS">("POSTS");
   const [, navigate] = useLocation();
 
   // Fetch profile user data if viewing another user's profile
@@ -33,7 +33,7 @@ export default function Profile() {
     enabled: !!token && !!user,
   });
 
-  const postType = activeTab === "POSTS" ? "POST" : activeTab === "REELS" ? "REEL" : "STORY";
+  const postType = activeTab === "POSTS" ? "POST" : "REEL";
   const { data: userPosts } = useQuery({
     queryKey: [`/api/posts?authorId=${user?.id}&type=${postType}`],
     enabled: !!token && !!user,
@@ -327,16 +327,6 @@ export default function Profile() {
             >
               <Film className="w-3 h-3" />
               <span className="text-xs font-semibold uppercase tracking-widest">Reels</span>
-            </button>
-            <button 
-              onClick={() => setActiveTab("STORIES")}
-              className={`flex items-center gap-2 py-3 border-t-2 -mt-px transition-colors ${
-                activeTab === "STORIES" ? "border-foreground" : "border-transparent text-muted-foreground"
-              }`}
-              data-testid="tab-stories"
-            >
-              <Grid3x3 className="w-3 h-3" />
-              <span className="text-xs font-semibold uppercase tracking-widest">Stories</span>
             </button>
           </div>
         </div>
