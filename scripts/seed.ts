@@ -377,18 +377,24 @@ async function seedSocialInteractions(users: typeof schema.users.$inferSelect[],
 }
 
 async function seedPortfolio(users: typeof schema.users.$inferSelect[]) {
-  console.log("🎨 Creating portfolio items for artists...");
+  console.log("🎨 Creating portfolio items for all users...");
   
-  const artists = users.filter(u => u.role === "ARTIST");
   const portfolioItems: typeof schema.portfolioItems.$inferInsert[] = [];
   
+  // Portfolio titles based on role
+  const artistTitles = ["Sleeve", "Piece", "Design", "Work", "Art", "Commission"];
+  const studioTitles = ["Featured Work", "Client Piece", "Studio Specialty", "Collaboration"];
+  const enthusiastTitles = ["My Tattoo", "First Ink", "Favorite Piece", "Collection", "Memorial Tattoo", "Tribute Piece"];
+  
+  // Create portfolio items for ARTISTS (10-20 items each)
+  const artists = users.filter(u => u.role === "ARTIST");
   for (const artist of artists) {
     const numItems = faker.number.int({ min: 10, max: 20 });
     
     for (let i = 0; i < numItems; i++) {
       portfolioItems.push({
         artistId: artist.id,
-        title: `${faker.helpers.arrayElement(TATTOO_STYLES)} ${faker.helpers.arrayElement(["Sleeve", "Piece", "Design", "Work", "Art"])}`,
+        title: `${faker.helpers.arrayElement(TATTOO_STYLES)} ${faker.helpers.arrayElement(artistTitles)}`,
         description: faker.lorem.paragraph(),
         media: Array.from({ length: faker.number.int({ min: 1, max: 4 }) }, () => ({
           publicId: faker.string.uuid(),
@@ -403,8 +409,61 @@ async function seedPortfolio(users: typeof schema.users.$inferSelect[]) {
     }
   }
   
+  // Create portfolio items for STUDIOS (15-25 items each - showcasing their artists' work)
+  const studios = users.filter(u => u.role === "STUDIO");
+  for (const studio of studios) {
+    const numItems = faker.number.int({ min: 15, max: 25 });
+    
+    for (let i = 0; i < numItems; i++) {
+      portfolioItems.push({
+        artistId: studio.id,
+        title: `${faker.helpers.arrayElement(TATTOO_STYLES)} ${faker.helpers.arrayElement(studioTitles)}`,
+        description: faker.lorem.paragraph(),
+        media: Array.from({ length: faker.number.int({ min: 1, max: 5 }) }, () => ({
+          publicId: faker.string.uuid(),
+          url: `https://picsum.photos/seed/${faker.string.uuid()}/800/600`,
+          type: "image",
+          width: 800,
+          height: 600,
+        })),
+        categories: faker.helpers.arrayElements(TATTOO_STYLES, faker.number.int({ min: 2, max: 4 })),
+        sortOrder: i,
+      });
+    }
+  }
+  
+  // Create portfolio items for ENTHUSIASTS (3-8 items each - their personal tattoo collection)
+  const enthusiasts = users.filter(u => u.role === "ENTHUSIAST");
+  for (const enthusiast of enthusiasts) {
+    const numItems = faker.number.int({ min: 3, max: 8 });
+    
+    for (let i = 0; i < numItems; i++) {
+      portfolioItems.push({
+        artistId: enthusiast.id,
+        title: faker.helpers.arrayElement(enthusiastTitles),
+        description: faker.helpers.arrayElement([
+          "Got this done at an amazing studio downtown!",
+          "Took 6 hours but totally worth it.",
+          "My first tattoo - still love it!",
+          "Dedicated to my family.",
+          "This piece has a special meaning to me.",
+          faker.lorem.sentence(),
+        ]),
+        media: Array.from({ length: faker.number.int({ min: 1, max: 3 }) }, () => ({
+          publicId: faker.string.uuid(),
+          url: `https://picsum.photos/seed/${faker.string.uuid()}/800/600`,
+          type: "image",
+          width: 800,
+          height: 600,
+        })),
+        categories: faker.helpers.arrayElements(TATTOO_STYLES, faker.number.int({ min: 1, max: 2 })),
+        sortOrder: i,
+      });
+    }
+  }
+  
   await db.insert(schema.portfolioItems).values(portfolioItems);
-  console.log(`✅ Created ${portfolioItems.length} portfolio items`);
+  console.log(`✅ Created ${portfolioItems.length} portfolio items (Artists: ${artists.length * 15}, Studios: ${studios.length * 20}, Enthusiasts: ${enthusiasts.length * 5})`);
 }
 
 async function seedJobsAndApplications(users: typeof schema.users.$inferSelect[]) {
