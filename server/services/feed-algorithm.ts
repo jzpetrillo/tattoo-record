@@ -17,8 +17,13 @@ export async function getPersonalizedFeed(
   const followedUserIds = followedUsers.map((f) => f.followingId);
   console.log(`[FEED] User ${userId} follows ${followedUserIds.length} users:`, followedUserIds);
   
+  // If user doesn't follow anyone, show them the public feed (discovery mode)
+  if (followedUserIds.length === 0) {
+    console.log(`[FEED] User follows no one, returning public feed for discovery`);
+    return getPublicFeed(limit, offset, userId);
+  }
+  
   // Include user's own posts in their feed
-  // Even if they don't follow anyone, they should see their own posts
   const userIdsToShow = [...followedUserIds, userId];
   console.log(`[FEED] userIdsToShow (${userIdsToShow.length}):`, userIdsToShow);
 
@@ -73,16 +78,16 @@ export async function getPublicFeed(limit: number = 20, offset: number = 0, user
         SELECT 1 FROM ${postLikes} 
         WHERE ${postLikes.postId} = ${posts.id} 
         AND ${postLikes.userId} = ${userId}
-      )`.as("is_liked") : sql<boolean>`false`.as("is_liked"),
+      )`.as("isLiked") : sql<boolean>`false`.as("isLiked"),
       isSaved: userId ? sql<boolean>`EXISTS(
         SELECT 1 FROM ${savedPosts} 
         WHERE ${savedPosts.postId} = ${posts.id} 
         AND ${savedPosts.userId} = ${userId}
-      )`.as("is_saved") : sql<boolean>`false`.as("is_saved"),
+      )`.as("isSaved") : sql<boolean>`false`.as("isSaved"),
       engagementScore: sql<number>`
         (${posts.likeCount} * 2 + ${posts.commentCount} * 3) / 
         EXTRACT(EPOCH FROM (NOW() - ${posts.createdAt})) * 3600
-      `.as("engagement_score")
+      `.as("engagementScore")
     })
     .from(posts)
     .innerJoin(users, eq(posts.authorId, users.id))
@@ -92,7 +97,7 @@ export async function getPublicFeed(limit: number = 20, offset: number = 0, user
         eq(posts.visibility, "PUBLIC")
       )
     )
-    .orderBy(desc(sql`engagement_score`))
+    .orderBy(desc(sql`"engagementScore"`))
     .limit(limit)
     .offset(offset);
 
@@ -131,12 +136,12 @@ export async function getFeaturedPosts(limit: number = 20, userId?: string) {
         SELECT 1 FROM ${postLikes} 
         WHERE ${postLikes.postId} = ${posts.id} 
         AND ${postLikes.userId} = ${userId}
-      )`.as("is_liked") : sql<boolean>`false`.as("is_liked"),
+      )`.as("isLiked") : sql<boolean>`false`.as("isLiked"),
       isSaved: userId ? sql<boolean>`EXISTS(
         SELECT 1 FROM ${savedPosts} 
         WHERE ${savedPosts.postId} = ${posts.id} 
         AND ${savedPosts.userId} = ${userId}
-      )`.as("is_saved") : sql<boolean>`false`.as("is_saved"),
+      )`.as("isSaved") : sql<boolean>`false`.as("isSaved"),
     })
     .from(posts)
     .innerJoin(users, eq(posts.authorId, users.id))
