@@ -1,7 +1,21 @@
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
 
+function clearAuthAndRedirect() {
+  try {
+    localStorage.removeItem("auth-storage");
+    if (window.location.pathname !== "/auth") {
+      window.location.href = "/auth";
+    }
+  } catch (e) {
+    console.error("Failed to clear auth:", e);
+  }
+}
+
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
+    if (res.status === 401) {
+      clearAuthAndRedirect();
+    }
     const text = (await res.text()) || res.statusText;
     throw new Error(`${res.status}: ${text}`);
   }
@@ -60,8 +74,12 @@ export const getQueryFn: <T>(options: {
       credentials: "include",
     });
 
-    if (unauthorizedBehavior === "returnNull" && res.status === 401) {
-      return null;
+    if (res.status === 401) {
+      if (unauthorizedBehavior === "returnNull") {
+        return null;
+      }
+      clearAuthAndRedirect();
+      throw new Error("Session expired");
     }
 
     await throwIfResNotOk(res);
