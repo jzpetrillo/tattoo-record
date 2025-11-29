@@ -11,6 +11,7 @@ import { apiRequest } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import { Star, ChevronLeft, ChevronRight } from "lucide-react";
 import { Card } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 
 /**
  * Demo accounts for quick login feature.
@@ -159,6 +160,25 @@ export default function Home() {
           <div className="border border-border rounded-lg mb-4 bg-background mt-4 lg:mt-0">
             <StoriesBar />
           </div>
+
+          {/* Featured Content Loading */}
+          {featuredLoading && (
+            <Card className="mb-4 p-4 border-border">
+              <div className="flex items-center gap-2 mb-3">
+                <Skeleton className="w-5 h-5 rounded" />
+                <Skeleton className="h-4 w-24" />
+              </div>
+              <div className="flex gap-3 overflow-hidden">
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="flex-shrink-0 w-48">
+                    <Skeleton className="aspect-square rounded mb-2" />
+                    <Skeleton className="h-4 w-24 mb-1" />
+                    <Skeleton className="h-3 w-32" />
+                  </div>
+                ))}
+              </div>
+            </Card>
+          )}
 
           {/* Featured Content */}
           {!featuredLoading && featuredPosts.length > 0 && (

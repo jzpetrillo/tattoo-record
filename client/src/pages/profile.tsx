@@ -2,13 +2,14 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import SidebarNav from "@/components/layout/sidebar-nav";
 import MobileNav from "@/components/layout/mobile-nav";
 import { useAuth } from "@/hooks/use-auth";
-import { Building2, Check, X, MapPin, Globe, Star, Film, Image as ImageIcon, MessageCircle, Heart, Briefcase, Palette } from "lucide-react";
+import { Building2, Check, X, MapPin, Globe, Star, Film, Image as ImageIcon, MessageCircle, Heart, Briefcase, Palette, UserPlus, UserMinus, Calendar, Loader2 } from "lucide-react";
 import { StudioConnectionDialog } from "@/components/studio-connection-dialog";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useParams, useLocation } from "wouter";
 import { useState } from "react";
+import { Skeleton } from "@/components/ui/skeleton";
 
 type TabType = "POSTS" | "VIDEOS" | "PORTFOLIO";
 
@@ -63,11 +64,43 @@ export default function Profile() {
     enabled: !!token && !!user && user?.role === "STUDIO" && isOwnProfile,
   });
 
+  // Check if current user follows this profile
+  const { data: followStatus } = useQuery<{ isFollowing: boolean }>({
+    queryKey: [`/api/users/${user?.id}/is-following`],
+    enabled: !!token && !!user && !isOwnProfile,
+  });
+
+  const followMutation = useMutation({
+    mutationFn: async () => {
+      return apiRequest("POST", `/api/users/${user?.id}/follow`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/users/${user?.id}/is-following`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/users/${user?.id}/stats`] });
+      toast({ description: `You are now following ${user?.username}` });
+    },
+    onError: () => {
+      toast({ description: "Failed to follow user", variant: "destructive" });
+    },
+  });
+
+  const unfollowMutation = useMutation({
+    mutationFn: async () => {
+      return apiRequest("POST", `/api/users/${user?.id}/unfollow`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/users/${user?.id}/is-following`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/users/${user?.id}/stats`] });
+      toast({ description: `Unfollowed ${user?.username}` });
+    },
+    onError: () => {
+      toast({ description: "Failed to unfollow user", variant: "destructive" });
+    },
+  });
+
   const approveMutation = useMutation({
     mutationFn: async (requestId: string) => {
-      return apiRequest(`/api/studio-approvals/${requestId}/approve`, {
-        method: "PUT",
-      });
+      return apiRequest("PUT", `/api/studio-approvals/${requestId}/approve`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/studio-approvals"] });
@@ -78,9 +111,7 @@ export default function Profile() {
 
   const rejectMutation = useMutation({
     mutationFn: async (requestId: string) => {
-      return apiRequest(`/api/studio-approvals/${requestId}/reject`, {
-        method: "PUT",
-      });
+      return apiRequest("PUT", `/api/studio-approvals/${requestId}/reject`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/studio-approvals"] });
@@ -93,6 +124,47 @@ export default function Profile() {
     if (user?.role === "ENTHUSIAST") return "Tattoos";
     return "Portfolio";
   };
+
+  // Profile skeleton component
+  const ProfileSkeleton = () => (
+    <div className="max-w-4xl mx-auto px-4 pt-8">
+      <div className="flex gap-8 md:gap-16 mb-11">
+        <Skeleton className="w-20 h-20 md:w-36 md:h-36 rounded-full flex-shrink-0" />
+        <div className="flex-1 space-y-4">
+          <Skeleton className="h-6 w-32" />
+          <div className="flex gap-2">
+            <Skeleton className="h-9 w-24" />
+            <Skeleton className="h-9 w-24" />
+          </div>
+          <div className="flex gap-8">
+            <Skeleton className="h-5 w-20" />
+            <Skeleton className="h-5 w-24" />
+            <Skeleton className="h-5 w-24" />
+          </div>
+          <Skeleton className="h-4 w-48" />
+          <Skeleton className="h-4 w-64" />
+        </div>
+      </div>
+      <Skeleton className="h-12 w-full mb-4" />
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-0.5">
+        {[1, 2, 3, 4, 5, 6].map(i => (
+          <Skeleton key={i} className="aspect-[4/5]" />
+        ))}
+      </div>
+    </div>
+  );
+
+  if (isLoadingProfile && username) {
+    return (
+      <div className="min-h-screen bg-background">
+        <SidebarNav />
+        <main className="lg:ml-64 pb-20 lg:pb-8">
+          <ProfileSkeleton />
+        </main>
+        <MobileNav />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -140,17 +212,11 @@ export default function Profile() {
                   <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" data-testid="icon-verified" />
                 )}
               </div>
-              {!isOwnProfile && (
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={() => navigate(`/messages?user=${user?.id}`)}
-                  data-testid="button-message"
-                >
-                  Message
-                </Button>
-              )}
-              {isOwnProfile && (
+            </div>
+            
+            {/* Action Buttons */}
+            <div className="flex flex-wrap items-center gap-2 mb-5">
+              {isOwnProfile ? (
                 <Button 
                   variant="outline" 
                   size="sm"
@@ -159,6 +225,82 @@ export default function Profile() {
                 >
                   Edit Profile
                 </Button>
+              ) : (
+                <>
+                  {/* Follow/Unfollow Button */}
+                  {followStatus?.isFollowing ? (
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => unfollowMutation.mutate()}
+                      disabled={unfollowMutation.isPending}
+                      data-testid="button-unfollow"
+                      className="min-w-[100px]"
+                    >
+                      {unfollowMutation.isPending ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <>
+                          <UserMinus className="w-4 h-4 mr-1" />
+                          Following
+                        </>
+                      )}
+                    </Button>
+                  ) : (
+                    <Button 
+                      size="sm"
+                      onClick={() => followMutation.mutate()}
+                      disabled={followMutation.isPending}
+                      data-testid="button-follow"
+                      className="min-w-[100px] bg-black text-white hover:bg-black/90 dark:bg-white dark:text-black dark:hover:bg-white/90"
+                    >
+                      {followMutation.isPending ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <>
+                          <UserPlus className="w-4 h-4 mr-1" />
+                          Follow
+                        </>
+                      )}
+                    </Button>
+                  )}
+
+                  {/* Message Button */}
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => navigate(`/messages?user=${user?.id}`)}
+                    data-testid="button-message"
+                  >
+                    <MessageCircle className="w-4 h-4 mr-1" />
+                    Message
+                  </Button>
+
+                  {/* Role-specific CTAs */}
+                  {user?.role === "ARTIST" && (
+                    <Button 
+                      size="sm"
+                      onClick={() => navigate(`/bookings?artist=${user?.id}`)}
+                      data-testid="button-book-artist"
+                      className="bg-black text-white hover:bg-black/90 dark:bg-white dark:text-black dark:hover:bg-white/90"
+                    >
+                      <Calendar className="w-4 h-4 mr-1" />
+                      Book Now
+                    </Button>
+                  )}
+
+                  {user?.role === "STUDIO" && (
+                    <Button 
+                      variant="outline"
+                      size="sm"
+                      onClick={() => navigate(`/jobs?studio=${user?.id}`)}
+                      data-testid="button-view-jobs"
+                    >
+                      <Briefcase className="w-4 h-4 mr-1" />
+                      View Jobs
+                    </Button>
+                  )}
+                </>
               )}
             </div>
 

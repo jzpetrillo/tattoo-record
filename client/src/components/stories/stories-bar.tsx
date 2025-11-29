@@ -3,17 +3,17 @@ import { useAuth } from "@/hooks/use-auth";
 import { useState } from "react";
 import { Plus } from "lucide-react";
 import StoryViewer from "./story-viewer";
+import { StorySkeleton } from "@/components/ui/skeletons";
 
 export default function StoriesBar() {
   const { token, user } = useAuth();
   const [viewingStory, setViewingStory] = useState<string | null>(null);
 
-  const { data: stories } = useQuery<any[]>({
+  const { data: stories, isLoading } = useQuery<any[]>({
     queryKey: ["/api/stories"],
     enabled: !!token,
   });
 
-  // Get unique users with active stories
   const storyUsers = stories?.reduce((acc: any[], item: any) => {
     if (!acc.find((u: any) => u.id === item.user.id)) {
       acc.push(item.user);
@@ -38,8 +38,17 @@ export default function StoriesBar() {
             <span className="text-xs">Your story</span>
           </div>
 
+          {/* Loading skeletons */}
+          {isLoading && (
+            <>
+              {[1, 2, 3, 4].map((i) => (
+                <StorySkeleton key={i} />
+              ))}
+            </>
+          )}
+
           {/* Other users' stories */}
-          {storyUsers.slice(0, 10).map((author: any) => (
+          {!isLoading && storyUsers.slice(0, 10).map((author: any) => (
             <div 
               key={author.id} 
               className="flex flex-col items-center gap-1 cursor-pointer flex-shrink-0" 

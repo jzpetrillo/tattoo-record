@@ -1,6 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 import PostCard from "./post-card";
+import { FeedSkeleton } from "@/components/ui/skeletons";
+import { ImageIcon } from "lucide-react";
 
 export default function PostFeed() {
   const { token } = useAuth();
@@ -13,9 +15,7 @@ export default function PostFeed() {
   return (
     <div className="w-full">
       {isLoading ? (
-        <div className="text-center py-12 text-muted-foreground">
-          Loading...
-        </div>
+        <FeedSkeleton count={3} />
       ) : posts?.length === 0 ? (
         <div className="text-center py-12">
           <p className="text-muted-foreground mb-2">

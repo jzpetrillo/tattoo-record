@@ -4,10 +4,11 @@ import { apiRequest } from "@/lib/api";
 import SidebarNav from "@/components/layout/sidebar-nav";
 import MobileNav from "@/components/layout/mobile-nav";
 import { useAuth } from "@/hooks/use-auth";
-import { Heart, MessageCircle, UserPlus, CheckCircle, Bell } from "lucide-react";
-import { formatDistanceToNow } from "date-fns";
+import { Heart, MessageCircle, UserPlus, CheckCircle, Bell, UserCheck, Eye } from "lucide-react";
+import { formatDistanceToNow, isToday, isYesterday, isThisWeek, format } from "date-fns";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
+import { NotificationSkeleton } from "@/components/ui/skeletons";
 
 interface Notification {
   notification: {
@@ -30,8 +31,13 @@ interface Notification {
   };
 }
 
+type GroupedNotifications = {
+  label: string;
+  notifications: Notification[];
+}[];
+
 export default function Notifications() {
-  const { user } = useAuth();
+  const { user, token } = useAuth();
   const [, setLocation] = useLocation();
 
   const { data: notifications = [], isLoading } = useQuery<Notification[]>({
@@ -41,7 +47,7 @@ export default function Notifications() {
 
   const markAsReadMutation = useMutation({
     mutationFn: async (notificationId: string) => {
-      return apiRequest("POST", `/api/notifications/${notificationId}/read`, {});
+      return apiRequest("POST", `/api/notifications/${notificationId}/read`, {}, token!);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/notifications"] });
@@ -50,7 +56,16 @@ export default function Notifications() {
 
   const markAllAsReadMutation = useMutation({
     mutationFn: async () => {
-      return apiRequest("POST", "/api/notifications/read-all", {});
+      return apiRequest("POST", "/api/notifications/read-all", {}, token!);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/notifications"] });
+    },
+  });
+
+  const followBackMutation = useMutation({
+    mutationFn: async (userId: string) => {
+      return apiRequest("POST", `/api/users/${userId}/follow`, {}, token!);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/notifications"] });
@@ -62,11 +77,11 @@ export default function Notifications() {
       case "FOLLOW":
         return <UserPlus className="w-5 h-5" />;
       case "LIKE":
-        return <Heart className="w-5 h-5" />;
+        return <Heart className="w-5 h-5 fill-red-500 text-red-500" />;
       case "COMMENT":
         return <MessageCircle className="w-5 h-5" />;
       case "APPROVAL":
-        return <CheckCircle className="w-5 h-5" />;
+        return <CheckCircle className="w-5 h-5 text-green-500" />;
       default:
         return <Bell className="w-5 h-5" />;
     }
@@ -78,13 +93,13 @@ export default function Notifications() {
 
     switch (type) {
       case "FOLLOW":
-        return `${actorName} started following you`;
+        return <><span className="font-semibold">{actorName}</span> started following you</>;
       case "LIKE":
-        return `${actorName} liked your post`;
+        return <><span className="font-semibold">{actorName}</span> liked your post</>;
       case "COMMENT":
-        return `${actorName} commented on your post`;
+        return <><span className="font-semibold">{actorName}</span> commented on your post</>;
       case "APPROVAL":
-        return payload.message || `${actorName} approved your request`;
+        return payload.message || <><span className="font-semibold">{actorName}</span> approved your request</>;
       case "SYSTEM":
         return payload.message || "System notification";
       default:
@@ -100,15 +115,58 @@ export default function Notifications() {
     const { type, payload } = notification.notification;
     
     if (type === "FOLLOW" && notification.actor) {
-      setLocation(`/profile/${notification.actor.username}`);
+      setLocation(`/u/${notification.actor.username}`);
     } else if ((type === "LIKE" || type === "COMMENT") && payload.postId) {
       setLocation(`/`);
     } else if (notification.actor) {
-      setLocation(`/profile/${notification.actor.username}`);
+      setLocation(`/u/${notification.actor.username}`);
     }
   };
 
+  const getDateLabel = (dateString: string): string => {
+    const date = new Date(dateString);
+    if (isToday(date)) return "Today";
+    if (isYesterday(date)) return "Yesterday";
+    if (isThisWeek(date)) return format(date, "EEEE");
+    return format(date, "MMMM d, yyyy");
+  };
+
+  const groupNotificationsByDate = (notifications: Notification[]): GroupedNotifications => {
+    const groups: { [key: string]: Notification[] } = {};
+    
+    notifications.forEach(notification => {
+      const label = getDateLabel(notification.notification.createdAt);
+      if (!groups[label]) {
+        groups[label] = [];
+      }
+      groups[label].push(notification);
+    });
+
+    const orderedLabels = ["Today", "Yesterday"];
+    const result: GroupedNotifications = [];
+    
+    orderedLabels.forEach(label => {
+      if (groups[label]) {
+        result.push({ label, notifications: groups[label] });
+        delete groups[label];
+      }
+    });
+    
+    Object.entries(groups)
+      .sort((a, b) => {
+        const dateA = new Date(a[1][0].notification.createdAt);
+        const dateB = new Date(b[1][0].notification.createdAt);
+        return dateB.getTime() - dateA.getTime();
+      })
+      .forEach(([label, notifs]) => {
+        result.push({ label, notifications: notifs });
+      });
+
+    return result;
+  };
+
   const unreadCount = notifications.filter(n => !n.notification.isRead).length;
+  const groupedNotifications = groupNotificationsByDate(notifications);
 
   return (
     <div className="flex min-h-screen bg-background">
@@ -117,10 +175,17 @@ export default function Notifications() {
       <main className="flex-1 lg:ml-64">
         <div className="max-w-2xl mx-auto px-4 py-6">
           <div className="flex items-center justify-between mb-6">
-            <h1 className="text-2xl font-semibold tracking-tight">Notifications</h1>
+            <div>
+              <h1 className="text-2xl font-semibold tracking-tight">Notifications</h1>
+              {unreadCount > 0 && (
+                <p className="text-sm text-muted-foreground mt-1">
+                  {unreadCount} unread notification{unreadCount > 1 ? "s" : ""}
+                </p>
+              )}
+            </div>
             {unreadCount > 0 && (
               <Button
-                variant="ghost"
+                variant="outline"
                 size="sm"
                 onClick={() => markAllAsReadMutation.mutate()}
                 disabled={markAllAsReadMutation.isPending}
@@ -133,68 +198,109 @@ export default function Notifications() {
           </div>
 
           {isLoading ? (
-            <div className="space-y-4">
+            <div className="space-y-2">
               {[...Array(5)].map((_, i) => (
-                <div
-                  key={i}
-                  className="flex items-center gap-4 p-4 border border-border rounded-sm animate-pulse"
-                >
-                  <div className="w-10 h-10 bg-muted rounded-full" />
-                  <div className="flex-1 space-y-2">
-                    <div className="h-4 bg-muted rounded w-3/4" />
-                    <div className="h-3 bg-muted rounded w-1/2" />
-                  </div>
-                </div>
+                <NotificationSkeleton key={i} />
               ))}
             </div>
           ) : notifications.length === 0 ? (
             <div className="text-center py-12" data-testid="text-no-notifications">
               <Bell className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
               <p className="text-muted-foreground">No notifications yet</p>
+              <p className="text-sm text-muted-foreground mt-1">
+                When someone follows you or likes your posts, you'll see it here
+              </p>
             </div>
           ) : (
-            <div className="space-y-2">
-              {notifications.map((notification) => (
-                <button
-                  key={notification.notification.id}
-                  onClick={() => handleNotificationClick(notification)}
-                  className={`w-full flex items-center gap-4 p-4 border border-border rounded-sm text-left transition-colors hover:bg-muted/50 ${
-                    !notification.notification.isRead ? "bg-muted/30" : ""
-                  }`}
-                  data-testid={`notification-${notification.notification.id}`}
-                >
-                  <div className="flex-shrink-0">
-                    {notification.actor?.avatarUrl ? (
-                      <img
-                        src={notification.actor.avatarUrl}
-                        alt={notification.actor.username}
-                        className="w-10 h-10 rounded-full object-cover"
-                        data-testid={`img-avatar-${notification.notification.id}`}
-                      />
-                    ) : (
-                      <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center">
-                        {getNotificationIcon(notification.notification.type)}
+            <div className="space-y-6">
+              {groupedNotifications.map((group) => (
+                <div key={group.label}>
+                  <h2 className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground mb-3 px-1">
+                    {group.label}
+                  </h2>
+                  <div className="space-y-2">
+                    {group.notifications.map((notification) => (
+                      <div
+                        key={notification.notification.id}
+                        className={`flex items-center gap-4 p-4 border border-border text-left transition-colors hover:bg-muted/50 ${
+                          !notification.notification.isRead ? "bg-muted/30 border-l-2 border-l-primary" : ""
+                        }`}
+                        data-testid={`notification-${notification.notification.id}`}
+                      >
+                        <button
+                          onClick={() => handleNotificationClick(notification)}
+                          className="flex-shrink-0"
+                        >
+                          {notification.actor?.avatarUrl ? (
+                            <img
+                              src={notification.actor.avatarUrl}
+                              alt={notification.actor.username}
+                              className="w-12 h-12 rounded-full object-cover"
+                              data-testid={`img-avatar-${notification.notification.id}`}
+                            />
+                          ) : (
+                            <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center">
+                              {getNotificationIcon(notification.notification.type)}
+                            </div>
+                          )}
+                        </button>
+
+                        <button
+                          onClick={() => handleNotificationClick(notification)}
+                          className="flex-1 min-w-0 text-left"
+                        >
+                          <p className="text-sm">
+                            {getNotificationMessage(notification)}
+                          </p>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            {formatDistanceToNow(new Date(notification.notification.createdAt), {
+                              addSuffix: true,
+                            })}
+                          </p>
+                        </button>
+
+                        <div className="flex items-center gap-2 flex-shrink-0">
+                          {notification.notification.type === "FOLLOW" && notification.actor && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                followBackMutation.mutate(notification.actor!.id);
+                              }}
+                              disabled={followBackMutation.isPending}
+                              data-testid={`button-follow-back-${notification.notification.id}`}
+                              className="text-xs"
+                            >
+                              <UserCheck className="w-3 h-3 mr-1" />
+                              Follow back
+                            </Button>
+                          )}
+
+                          {(notification.notification.type === "LIKE" || notification.notification.type === "COMMENT") && notification.notification.payload.postId && (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleNotificationClick(notification);
+                              }}
+                              data-testid={`button-view-post-${notification.notification.id}`}
+                              className="text-xs"
+                            >
+                              <Eye className="w-3 h-3 mr-1" />
+                              View
+                            </Button>
+                          )}
+
+                          {!notification.notification.isRead && (
+                            <div className="w-2 h-2 bg-primary rounded-full" />
+                          )}
+                        </div>
                       </div>
-                    )}
+                    ))}
                   </div>
-
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium">
-                      {getNotificationMessage(notification)}
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {formatDistanceToNow(new Date(notification.notification.createdAt), {
-                        addSuffix: true,
-                      })}
-                    </p>
-                  </div>
-
-                  {!notification.notification.isRead && (
-                    <div className="flex-shrink-0">
-                      <div className="w-2 h-2 bg-primary rounded-full" />
-                    </div>
-                  )}
-                </button>
+                </div>
               ))}
             </div>
           )}

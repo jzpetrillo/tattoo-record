@@ -162,6 +162,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get("/api/users/:id/is-following", requireAuth, async (req: AuthRequest, res) => {
+    try {
+      const isFollowing = await storage.isFollowing(req.userId!, req.params.id);
+      res.json({ isFollowing });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   app.get("/api/users/:id/stats", async (req, res) => {
     try {
       const param = req.params.id;
