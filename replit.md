@@ -60,6 +60,12 @@ The database is seeded with comprehensive test data for all engagement features:
 *   **esbuild**: Server bundling for production.
 
 ## Recent Changes
+*   **Phase 1 UX Improvements (Nov 2025)**:
+    - **Profile CTAs**: Added Follow/Unfollow buttons with loading states, Message button, and role-specific CTAs (Book Now for artists linking to booking flow, View Jobs for studios).
+    - **Skeleton Loaders**: Created comprehensive reusable skeleton component library in `client/src/components/ui/skeletons.tsx` including PostCardSkeleton, UserCardSkeleton, NotificationSkeleton, FeedSkeleton, StorySkeleton, ExploreGridSkeleton, PortfolioGridSkeleton, and more.
+    - **Notification Grouping**: Redesigned notifications page with day-based grouping (Today, Yesterday, This Week, Earlier) and inline action buttons (Follow back, View post).
+    - **URL Filter Persistence**: Explore page now persists filters in URL query parameters (?type=ARTIST&style=Japanese&location=NYC) for shareable/bookmarkable filtered views.
+    - **New API Endpoint**: Added GET `/api/users/:id/is-following` to check follow status between users.
 *   **Profile Page Redesign**: Added three-tab layout (Posts, Videos, Portfolio/Tattoos) with proper content switching and portfolio grid display featuring large images with metadata.
 *   **Explore Page Update**: Redesigned with clean grid layout using actual user avatars, role badges, and minimal editorial styling.
 *   **Seed Data Enhancement**: Updated to generate portfolio items for ALL user types (artists, studios, enthusiasts) and use predictable usernames for easier testing.
