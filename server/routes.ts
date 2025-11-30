@@ -9,7 +9,7 @@ import { generateTattooRecommendations } from "./services/openai";
 import { setupMessageWebSocket } from "./services/websocket";
 import { setupLiveWebSocket } from "./services/websocket-live";
 import { startStoryCleanupScheduler } from "./services/story-cleanup";
-import { getPersonalizedFeed, getTrendingPosts, getFeaturedPosts } from "./services/feed-algorithm";
+import { getPersonalizedFeed, getTrendingPosts, getFeaturedPosts, getForYouRecommendations } from "./services/feed-algorithm";
 import * as validation from "./utils/validation";
 
 const upload = multer({ storage: multer.memoryStorage() });
@@ -269,6 +269,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       await storage.deletePost(req.params.id);
       res.json({ message: "Post deleted" });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // For You Recommendations
+  app.get("/api/for-you", requireAuth, async (req: AuthRequest, res) => {
+    try {
+      const limit = parseInt(req.query.limit as string) || 10;
+      const recommendations = await getForYouRecommendations(req.userId!, limit);
+      res.json(recommendations);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }

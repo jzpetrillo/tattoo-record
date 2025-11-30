@@ -4,6 +4,7 @@ import MobileNav from "@/components/layout/mobile-nav";
 import StoriesBar from "@/components/stories/stories-bar";
 import SuggestedUsers from "@/components/layout/suggested-users";
 import PostFeed from "@/components/posts/post-feed";
+import ForYouRail from "@/components/for-you/for-you-rail";
 import { useAuth } from "@/hooks/use-auth";
 import { Link, useLocation } from "wouter";
 import { useMutation, useQuery } from "@tanstack/react-query";
@@ -31,7 +32,7 @@ export default function Home() {
   const { toast } = useToast();
   const [featuredScrollPosition, setFeaturedScrollPosition] = useState(0);
 
-  const { data: featuredPosts = [], isLoading: featuredLoading } = useQuery({
+  const { data: featuredPosts = [], isLoading: featuredLoading } = useQuery<any[]>({
     queryKey: ["/api/posts?featured=true"],
     enabled: !!user,
   });
@@ -243,6 +244,9 @@ export default function Home() {
               </div>
             </Card>
           )}
+
+          {/* For You Recommendations */}
+          <ForYouRail />
 
           {/* Feed */}
           <PostFeed />
