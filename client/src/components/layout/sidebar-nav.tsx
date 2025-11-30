@@ -15,7 +15,8 @@ import {
   Settings,
   Bookmark,
   Calendar,
-  LogOut
+  LogOut,
+  Sparkles
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -83,6 +84,23 @@ export default function SidebarNav() {
           </button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start" className="w-56">
+          <DropdownMenuItem 
+            className="cursor-pointer"
+            onClick={() => setLocation("/ai-recommendations")}
+            data-testid="menu-ai-recommendations"
+          >
+            <Sparkles className="w-4 h-4 mr-2" />
+            AI Recommendations
+          </DropdownMenuItem>
+          <DropdownMenuItem 
+            className="cursor-pointer"
+            onClick={() => setLocation("/saved")}
+            data-testid="menu-saved"
+          >
+            <Bookmark className="w-4 h-4 mr-2" />
+            Saved
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
           <DropdownMenuItem 
             className="cursor-pointer text-destructive focus:text-destructive"
             onClick={async () => {

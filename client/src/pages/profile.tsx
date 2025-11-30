@@ -2,7 +2,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import SidebarNav from "@/components/layout/sidebar-nav";
 import MobileNav from "@/components/layout/mobile-nav";
 import { useAuth } from "@/hooks/use-auth";
-import { Building2, Check, X, MapPin, Globe, Star, Film, Image as ImageIcon, MessageCircle, Heart, Briefcase, Palette, UserPlus, UserMinus, Calendar, Loader2 } from "lucide-react";
+import { Building2, Check, X, MapPin, Globe, Star, Film, Image as ImageIcon, MessageCircle, Heart, Briefcase, Palette, UserPlus, UserMinus, Calendar, Loader2, Plus, Edit, Trash2 } from "lucide-react";
 import { StudioConnectionDialog } from "@/components/studio-connection-dialog";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
@@ -10,8 +10,48 @@ import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useParams, useLocation } from "wouter";
 import { useState } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { apiRequest as apiRequestLib, uploadFile } from "@/lib/api";
 
 type TabType = "POSTS" | "VIDEOS" | "PORTFOLIO";
+
+interface UserProfile {
+  id: string;
+  username: string;
+  email: string;
+  role: "ARTIST" | "STUDIO" | "ENTHUSIAST" | "ADMIN";
+  firstName?: string;
+  lastName?: string;
+  bio?: string;
+  avatarUrl?: string;
+  bannerImageUrl?: string;
+  website?: string;
+  isVerified: boolean;
+  location?: { city?: string; country?: string };
+}
+
+interface UserStats {
+  postsCount: number;
+  followersCount: number;
+  followingCount: number;
+}
+
+interface PortfolioItem {
+  id: string;
+  title: string;
+  description?: string;
+  category?: string;
+  imageUrl: string;
+  createdAt: string;
+}
+
+const TATTOO_STYLES = [
+  "Traditional", "Neo-Traditional", "Japanese", "Realism", "Watercolor",
+  "Geometric", "Minimalist", "Blackwork", "Dotwork", "Tribal", "New School"
+];
 
 export default function Profile() {
   const { user: currentUser, token } = useAuth();
@@ -20,46 +60,54 @@ export default function Profile() {
   const username = params.username;
   const [activeTab, setActiveTab] = useState<TabType>("POSTS");
   const [, navigate] = useLocation();
+  const [showAddPortfolio, setShowAddPortfolio] = useState(false);
+  const [editingPortfolio, setEditingPortfolio] = useState<PortfolioItem | null>(null);
+  const [portfolioForm, setPortfolioForm] = useState({
+    title: "",
+    description: "",
+    category: "",
+    imageFile: null as File | null,
+  });
 
   // Fetch profile user data if viewing another user's profile
-  const { data: profileUserData, isLoading: isLoadingProfile } = useQuery({
+  const { data: profileUserData, isLoading: isLoadingProfile } = useQuery<UserProfile>({
     queryKey: [`/api/users/${username}`],
     enabled: !!username && !!token,
   });
 
   // Use profile user if viewing another user, otherwise use logged-in user
-  const user = username && profileUserData ? profileUserData : currentUser;
+  const user: UserProfile | null = username && profileUserData ? profileUserData : currentUser as UserProfile | null;
   const isOwnProfile = !username || username === currentUser?.username;
 
-  const { data: userStats } = useQuery({
+  const { data: userStats } = useQuery<UserStats>({
     queryKey: [`/api/users/${user?.id}/stats`],
     enabled: !!token && !!user,
   });
 
   // Fetch posts/videos based on active tab
   const postType = activeTab === "POSTS" ? "POST" : "REEL";
-  const { data: userPosts } = useQuery({
+  const { data: userPosts } = useQuery<any[]>({
     queryKey: [`/api/posts?authorId=${user?.id}&type=${postType}`],
     enabled: !!token && !!user && activeTab !== "PORTFOLIO",
   });
 
   // Fetch portfolio items
-  const { data: portfolioItems } = useQuery({
+  const { data: portfolioItems } = useQuery<PortfolioItem[]>({
     queryKey: [`/api/portfolio/${user?.id}`],
     enabled: !!token && !!user && activeTab === "PORTFOLIO",
   });
 
-  const { data: studioConnection } = useQuery({
+  const { data: studioConnection } = useQuery<{ studio?: UserProfile }>({
     queryKey: [`/api/artists/${user?.id}/studio`],
     enabled: !!token && !!user && user?.role === "ARTIST",
   });
 
-  const { data: connectedArtists } = useQuery({
+  const { data: connectedArtists } = useQuery<any[]>({
     queryKey: [`/api/studios/${user?.id}/artists`],
     enabled: !!token && !!user && user?.role === "STUDIO",
   });
 
-  const { data: pendingRequests } = useQuery({
+  const { data: pendingRequests } = useQuery<any[]>({
     queryKey: ["/api/studio-approvals", { studioId: user?.id, status: "PENDING" }],
     enabled: !!token && !!user && user?.role === "STUDIO" && isOwnProfile,
   });
@@ -118,6 +166,77 @@ export default function Profile() {
       toast({ description: "Request rejected" });
     },
   });
+
+  // Portfolio mutations
+  const createPortfolioMutation = useMutation({
+    mutationFn: async () => {
+      if (!portfolioForm.imageFile) throw new Error("Image is required");
+      const uploadedImage = await uploadFile(portfolioForm.imageFile, "portfolio", token!);
+      await apiRequestLib("POST", "/api/portfolio", {
+        title: portfolioForm.title,
+        description: portfolioForm.description,
+        categories: portfolioForm.category ? [portfolioForm.category] : [],
+        media: [{ url: uploadedImage.secure_url || uploadedImage.url, type: "IMAGE" }],
+      }, token!);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/portfolio/${user?.id}`] });
+      toast({ description: "Portfolio item added!" });
+      setShowAddPortfolio(false);
+      setPortfolioForm({ title: "", description: "", category: "", imageFile: null });
+    },
+    onError: (error: Error) => {
+      toast({ description: error.message, variant: "destructive" });
+    },
+  });
+
+  const updatePortfolioMutation = useMutation({
+    mutationFn: async (item: any) => {
+      let media = item.media || [];
+      if (portfolioForm.imageFile) {
+        const uploadedImage = await uploadFile(portfolioForm.imageFile, "portfolio", token!);
+        media = [{ url: uploadedImage.secure_url || uploadedImage.url, type: "IMAGE" }];
+      }
+      await apiRequestLib("PUT", `/api/portfolio/${item.id}`, {
+        title: portfolioForm.title,
+        description: portfolioForm.description,
+        categories: portfolioForm.category ? [portfolioForm.category] : [],
+        media,
+      }, token!);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/portfolio/${user?.id}`] });
+      toast({ description: "Portfolio item updated!" });
+      setEditingPortfolio(null);
+      setPortfolioForm({ title: "", description: "", category: "", imageFile: null });
+    },
+    onError: (error: Error) => {
+      toast({ description: error.message, variant: "destructive" });
+    },
+  });
+
+  const deletePortfolioMutation = useMutation({
+    mutationFn: async (id: string) => {
+      await apiRequestLib("DELETE", `/api/portfolio/${id}`, undefined, token!);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/portfolio/${user?.id}`] });
+      toast({ description: "Portfolio item deleted" });
+    },
+    onError: (error: Error) => {
+      toast({ description: error.message, variant: "destructive" });
+    },
+  });
+
+  const openEditPortfolio = (item: any) => {
+    setEditingPortfolio(item);
+    setPortfolioForm({
+      title: item.title,
+      description: item.description || "",
+      category: item.categories?.[0] || "",
+      imageFile: null,
+    });
+  };
 
   // Get tab label based on user role
   const getPortfolioTabLabel = () => {
@@ -545,13 +664,47 @@ export default function Profile() {
         {/* Portfolio/Tattoos Grid */}
         {activeTab === "PORTFOLIO" && (
           <>
+            {/* Add Portfolio Button for Artists */}
+            {isOwnProfile && (user?.role === "ARTIST" || user?.role === "STUDIO") && (
+              <div className="flex justify-end px-2 mt-4">
+                <Button onClick={() => setShowAddPortfolio(true)} className="gap-2" data-testid="button-add-portfolio">
+                  <Plus className="w-4 h-4" />
+                  Add Work
+                </Button>
+              </div>
+            )}
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4 px-2">
               {portfolioItems?.map((item: any) => (
                 <div 
                   key={item.id} 
-                  className="bg-card border border-border rounded-lg overflow-hidden group cursor-pointer hover:shadow-xl transition-all"
+                  className="bg-card border border-border rounded-lg overflow-hidden group cursor-pointer hover:shadow-xl transition-all relative"
                   data-testid={`portfolio-${item.id}`}
                 >
+                  {/* Edit/Delete buttons for own profile */}
+                  {isOwnProfile && (user?.role === "ARTIST" || user?.role === "STUDIO") && (
+                    <div className="absolute top-3 left-3 z-10 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <Button 
+                        size="sm" 
+                        variant="secondary" 
+                        className="h-8 w-8 p-0"
+                        onClick={(e) => { e.stopPropagation(); openEditPortfolio(item); }}
+                        data-testid={`button-edit-portfolio-${item.id}`}
+                      >
+                        <Edit className="w-4 h-4" />
+                      </Button>
+                      <Button 
+                        size="sm" 
+                        variant="destructive" 
+                        className="h-8 w-8 p-0"
+                        onClick={(e) => { e.stopPropagation(); deletePortfolioMutation.mutate(item.id); }}
+                        data-testid={`button-delete-portfolio-${item.id}`}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  )}
+
                   {/* Large Featured Image */}
                   <div className="aspect-[4/3] bg-black relative overflow-hidden">
                     {item.media?.[0]?.url ? (
@@ -618,6 +771,12 @@ export default function Profile() {
                     ? `Add your ${user?.role === "ENTHUSIAST" ? "tattoo collection" : "best work"} to showcase`
                     : "No work to display"}
                 </p>
+                {isOwnProfile && (user?.role === "ARTIST" || user?.role === "STUDIO") && (
+                  <Button onClick={() => setShowAddPortfolio(true)} className="mt-4 gap-2" data-testid="button-add-portfolio-empty">
+                    <Plus className="w-4 h-4" />
+                    Add Your First Work
+                  </Button>
+                )}
               </div>
             )}
           </>
@@ -625,6 +784,110 @@ export default function Profile() {
         </div>
       </main>
       <MobileNav />
+
+      {/* Add/Edit Portfolio Dialog */}
+      <Dialog open={showAddPortfolio || !!editingPortfolio} onOpenChange={(open) => {
+        if (!open) {
+          setShowAddPortfolio(false);
+          setEditingPortfolio(null);
+          setPortfolioForm({ title: "", description: "", category: "", imageFile: null });
+        }
+      }}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>{editingPortfolio ? "Edit Portfolio Item" : "Add Portfolio Item"}</DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4 mt-4">
+            <div>
+              <label className="text-sm font-medium mb-2 block">Title *</label>
+              <Input
+                value={portfolioForm.title}
+                onChange={(e) => setPortfolioForm({ ...portfolioForm, title: e.target.value })}
+                placeholder="e.g., Japanese Sleeve"
+                data-testid="input-portfolio-title"
+              />
+            </div>
+
+            <div>
+              <label className="text-sm font-medium mb-2 block">Description</label>
+              <Textarea
+                value={portfolioForm.description}
+                onChange={(e) => setPortfolioForm({ ...portfolioForm, description: e.target.value })}
+                placeholder="Describe this piece..."
+                rows={3}
+                data-testid="input-portfolio-description"
+              />
+            </div>
+
+            <div>
+              <label className="text-sm font-medium mb-2 block">Style/Category</label>
+              <Select 
+                value={portfolioForm.category} 
+                onValueChange={(value) => setPortfolioForm({ ...portfolioForm, category: value })}
+              >
+                <SelectTrigger data-testid="select-portfolio-category">
+                  <SelectValue placeholder="Select style" />
+                </SelectTrigger>
+                <SelectContent>
+                  {TATTOO_STYLES.map((style) => (
+                    <SelectItem key={style} value={style}>{style}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <label className="text-sm font-medium mb-2 block">
+                Image {!editingPortfolio && "*"}
+              </label>
+              <Input
+                type="file"
+                accept="image/*"
+                onChange={(e) => setPortfolioForm({ ...portfolioForm, imageFile: e.target.files?.[0] || null })}
+                data-testid="input-portfolio-image"
+              />
+              {editingPortfolio && !portfolioForm.imageFile && (
+                <p className="text-xs text-muted-foreground mt-1">Leave empty to keep current image</p>
+              )}
+            </div>
+
+            <div className="flex gap-2 justify-end pt-4">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowAddPortfolio(false);
+                  setEditingPortfolio(null);
+                  setPortfolioForm({ title: "", description: "", category: "", imageFile: null });
+                }}
+                data-testid="button-cancel-portfolio"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={() => {
+                  if (editingPortfolio) {
+                    updatePortfolioMutation.mutate(editingPortfolio);
+                  } else {
+                    createPortfolioMutation.mutate();
+                  }
+                }}
+                disabled={
+                  !portfolioForm.title || 
+                  (!editingPortfolio && !portfolioForm.imageFile) ||
+                  createPortfolioMutation.isPending ||
+                  updatePortfolioMutation.isPending
+                }
+                data-testid="button-save-portfolio"
+              >
+                {createPortfolioMutation.isPending || updatePortfolioMutation.isPending 
+                  ? "Saving..." 
+                  : editingPortfolio ? "Update" : "Add"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

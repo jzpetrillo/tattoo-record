@@ -20,6 +20,7 @@ import AdminDashboard from "@/pages/admin";
 import SavedPosts from "@/pages/saved-posts";
 import FlashSales from "@/pages/flash-sales";
 import Bookings from "@/pages/bookings";
+import AIRecommendations from "@/pages/ai-recommendations";
 
 function Router() {
   return (
@@ -41,6 +42,7 @@ function Router() {
       <Route path="/saved" component={SavedPosts} />
       <Route path="/flash-sales" component={FlashSales} />
       <Route path="/bookings" component={Bookings} />
+      <Route path="/ai-recommendations" component={AIRecommendations} />
       <Route path="/auth" component={Auth} />
       <Route path="/admin" component={AdminDashboard} />
       <Route component={NotFound} />

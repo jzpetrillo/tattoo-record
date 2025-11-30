@@ -26,7 +26,7 @@ export default function LiveEvents() {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
 
-  const { data: liveEvents } = useQuery({
+  const { data: liveEvents } = useQuery<any[]>({
     queryKey: ["/api/livestream-events?status=LIVE"],
   });
 
