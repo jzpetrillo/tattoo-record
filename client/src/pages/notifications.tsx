@@ -4,7 +4,7 @@ import { apiRequest } from "@/lib/api";
 import SidebarNav from "@/components/layout/sidebar-nav";
 import MobileNav from "@/components/layout/mobile-nav";
 import { useAuth } from "@/hooks/use-auth";
-import { Heart, MessageCircle, UserPlus, CheckCircle, Bell, UserCheck, Eye } from "lucide-react";
+import { Heart, MessageCircle, UserPlus, CheckCircle, Bell, UserCheck, Eye, Calendar } from "lucide-react";
 import { formatDistanceToNow, isToday, isYesterday, isThisWeek, format } from "date-fns";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
@@ -20,6 +20,10 @@ interface Notification {
       postId?: string;
       commentId?: string;
       message?: string;
+      type?: string;
+      bookingId?: string;
+      artistName?: string;
+      scheduledAt?: string;
     };
     isRead: boolean;
     createdAt: string;
@@ -72,7 +76,10 @@ export default function Notifications() {
     },
   });
 
-  const getNotificationIcon = (type: string) => {
+  const getNotificationIcon = (type: string, payload?: { type?: string }) => {
+    if (type === "SYSTEM" && payload?.type === "BOOKING_REMINDER") {
+      return <Calendar className="w-5 h-5 text-blue-500" />;
+    }
     switch (type) {
       case "FOLLOW":
         return <UserPlus className="w-5 h-5" />;
@@ -113,6 +120,12 @@ export default function Notifications() {
     }
 
     const { type, payload } = notification.notification;
+    
+    // Handle booking reminder - navigate to bookings page
+    if (type === "SYSTEM" && payload.type === "BOOKING_REMINDER") {
+      setLocation("/bookings");
+      return;
+    }
     
     if (type === "FOLLOW" && notification.actor) {
       setLocation(`/u/${notification.actor.username}`);
@@ -240,7 +253,7 @@ export default function Notifications() {
                             />
                           ) : (
                             <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center">
-                              {getNotificationIcon(notification.notification.type)}
+                              {getNotificationIcon(notification.notification.type, notification.notification.payload)}
                             </div>
                           )}
                         </button>
@@ -290,6 +303,22 @@ export default function Notifications() {
                             >
                               <Eye className="w-3 h-3 mr-1" />
                               View
+                            </Button>
+                          )}
+
+                          {notification.notification.type === "SYSTEM" && notification.notification.payload.type === "BOOKING_REMINDER" && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setLocation("/bookings");
+                              }}
+                              data-testid={`button-view-booking-${notification.notification.id}`}
+                              className="text-xs"
+                            >
+                              <Calendar className="w-3 h-3 mr-1" />
+                              View Booking
                             </Button>
                           )}
 

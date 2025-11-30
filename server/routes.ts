@@ -726,6 +726,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Process booking reminders (can be called by cron or manually)
+  app.post("/api/bookings/process-reminders", async (req, res) => {
+    try {
+      const bookings = await storage.getBookingsNeedingReminders();
+      const remindersCreated: string[] = [];
+      
+      for (const booking of bookings) {
+        // Create notification for the client
+        if (booking.clientId) {
+          const timeUntil = booking.scheduledAt 
+            ? Math.ceil((new Date(booking.scheduledAt).getTime() - Date.now()) / (1000 * 60 * 60))
+            : 0;
+          
+          let timeMessage = "";
+          if (timeUntil <= 24) {
+            timeMessage = timeUntil <= 1 ? "in 1 hour" : `in ${timeUntil} hours`;
+          } else {
+            const days = Math.ceil(timeUntil / 24);
+            timeMessage = days === 1 ? "tomorrow" : `in ${days} days`;
+          }
+          
+          await storage.createNotification({
+            userId: booking.clientId,
+            type: "SYSTEM",
+            payload: {
+              type: "BOOKING_REMINDER",
+              bookingId: booking.id,
+              title: booking.title || "Upcoming Appointment",
+              artistName: booking.artist?.displayName || booking.artist?.username || "your artist",
+              scheduledAt: booking.scheduledAt,
+              message: `Your appointment "${booking.title || "tattoo session"}" with ${booking.artist?.displayName || "your artist"} is ${timeMessage}!`
+            }
+          });
+          
+          await storage.markReminderSent(booking.id);
+          remindersCreated.push(booking.id);
+        }
+      }
+      
+      res.json({ 
+        message: `Processed ${bookings.length} bookings, sent ${remindersCreated.length} reminders`,
+        remindersCreated 
+      });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   // Livestream Routes
   app.get("/api/livestream-events", async (req, res) => {
     try {

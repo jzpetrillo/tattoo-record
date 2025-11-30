@@ -1,6 +1,6 @@
 import { db } from "./db";
 import * as schema from "@shared/schema";
-import { eq, and, desc, asc, isNull, isNotNull, sql, or, ilike, inArray } from "drizzle-orm";
+import { eq, and, desc, asc, isNull, isNotNull, sql, or, ilike, inArray, lte, gte } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 
 export interface IStorage {
@@ -1025,6 +1025,69 @@ export class DatabaseStorage implements IStorage {
         AND post_hashtags.created_at > ${sevenDaysAgo}
       )
     `);
+  }
+
+  // Booking reminders
+  async getBookingsNeedingReminders() {
+    const now = new Date();
+    const oneDayFromNow = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+    const oneWeekFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+    
+    const artistUser = alias(schema.users, "artist");
+    const clientUser = alias(schema.users, "client");
+    
+    // Get approved bookings within reminder windows that haven't been reminded yet
+    const results = await db
+      .select({
+        booking: schema.bookings,
+        artist: artistUser,
+        client: clientUser
+      })
+      .from(schema.bookings)
+      .leftJoin(artistUser, eq(schema.bookings.artistId, artistUser.id))
+      .leftJoin(clientUser, eq(schema.bookings.clientId, clientUser.id))
+      .where(
+        and(
+          eq(schema.bookings.status, "APPROVED"),
+          isNull(schema.bookings.reminderSentAt),
+          or(
+            // Day before reminders
+            and(
+              or(
+                eq(schema.bookings.reminderPreference, "DAY_BEFORE"),
+                eq(schema.bookings.reminderPreference, "BOTH")
+              ),
+              lte(schema.bookings.scheduledAt, oneDayFromNow),
+              gte(schema.bookings.scheduledAt, now)
+            ),
+            // Week before reminders
+            and(
+              or(
+                eq(schema.bookings.reminderPreference, "WEEK_BEFORE"),
+                eq(schema.bookings.reminderPreference, "BOTH")
+              ),
+              lte(schema.bookings.scheduledAt, oneWeekFromNow),
+              gte(schema.bookings.scheduledAt, now)
+            )
+          )
+        )
+      );
+    
+    return results.map(r => ({
+      ...r.booking,
+      artist: r.artist,
+      client: r.client
+    }));
+  }
+
+  async markReminderSent(bookingId: string) {
+    const [updated] = await db
+      .update(schema.bookings)
+      .set({ reminderSentAt: new Date() })
+      .where(eq(schema.bookings.id, bookingId))
+      .returning();
+    
+    return updated;
   }
 }
 
