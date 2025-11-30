@@ -654,8 +654,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/bookings", requireAuth, async (req: AuthRequest, res) => {
     try {
+      const { scheduledAt, ...rest } = req.body;
       const booking = await storage.createBooking({
-        ...req.body,
+        ...rest,
+        scheduledAt: new Date(scheduledAt),
         clientId: req.userId!
       });
       res.json(booking);
@@ -667,6 +669,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put("/api/bookings/:id", requireAuth, async (req: AuthRequest, res) => {
     try {
       const updated = await storage.updateBooking(req.params.id, req.body);
+      res.json(updated);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Mark deposit as paid
+  app.post("/api/bookings/:id/mark-deposit-paid", requireAuth, async (req: AuthRequest, res) => {
+    try {
+      const booking = await storage.getBooking(req.params.id);
+      if (!booking) {
+        return res.status(404).json({ message: "Booking not found" });
+      }
+      // Only the artist can mark deposit as paid
+      if (booking.artistId !== req.userId) {
+        return res.status(403).json({ message: "Only the artist can mark deposit as paid" });
+      }
+      const updated = await storage.updateBooking(req.params.id, {
+        paymentStatus: "DEPOSIT_PAID",
+        depositPaidAt: new Date()
+      });
+      res.json(updated);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Mark as fully paid
+  app.post("/api/bookings/:id/mark-fully-paid", requireAuth, async (req: AuthRequest, res) => {
+    try {
+      const booking = await storage.getBooking(req.params.id);
+      if (!booking) {
+        return res.status(404).json({ message: "Booking not found" });
+      }
+      // Only the artist can mark as fully paid
+      if (booking.artistId !== req.userId) {
+        return res.status(403).json({ message: "Only the artist can mark as fully paid" });
+      }
+      const updated = await storage.updateBooking(req.params.id, {
+        paymentStatus: "FULLY_PAID",
+        fullPaymentAt: new Date()
+      });
       res.json(updated);
     } catch (error: any) {
       res.status(500).json({ message: error.message });

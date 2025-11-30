@@ -12,7 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, Clock, Plus, CheckCircle, XCircle, DollarSign, Image as ImageIcon } from "lucide-react";
+import { Calendar, Clock, Plus, CheckCircle, XCircle, DollarSign, Image as ImageIcon, CreditCard, Bell } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -28,12 +28,14 @@ const bookingSchema = z.object({
   durationMinutes: z.coerce.number().min(30).default(120),
   depositCents: z.coerce.number().optional(),
   totalPriceCents: z.coerce.number().optional(),
+  reminderPreference: z.enum(["NONE", "DAY_BEFORE", "WEEK_BEFORE", "BOTH"]).default("DAY_BEFORE"),
   notes: z.string().optional(),
 });
 
 type BookingFormData = z.infer<typeof bookingSchema>;
 
 type BookingStatus = "PENDING" | "APPROVED" | "REJECTED" | "COMPLETED" | "CANCELLED";
+type PaymentStatus = "UNPAID" | "DEPOSIT_PAID" | "FULLY_PAID" | "REFUNDED";
 
 export default function BookingsPage() {
   const { user, token } = useAuth();
@@ -85,6 +87,7 @@ export default function BookingsPage() {
       durationMinutes: 120,
       depositCents: 0,
       totalPriceCents: 0,
+      reminderPreference: "DAY_BEFORE",
       notes: "",
     },
   });
@@ -133,6 +136,32 @@ export default function BookingsPage() {
     },
   });
 
+  const markDepositPaidMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return apiRequest("POST", `/api/bookings/${id}/mark-deposit-paid`);
+    },
+    onSuccess: () => {
+      queryClient.refetchQueries({ queryKey: ["/api/bookings"] });
+      toast({ title: "Deposit marked as paid" });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const markFullyPaidMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return apiRequest("POST", `/api/bookings/${id}/mark-fully-paid`);
+    },
+    onSuccess: () => {
+      queryClient.refetchQueries({ queryKey: ["/api/bookings"] });
+      toast({ title: "Marked as fully paid" });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    },
+  });
+
   // Server handles filtering via status query parameter
 
   const getStatusColor = (status: string) => {
@@ -143,6 +172,26 @@ export default function BookingsPage() {
       case "COMPLETED": return "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200";
       case "CANCELLED": return "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200";
       default: return "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200";
+    }
+  };
+
+  const getPaymentStatusColor = (status: PaymentStatus) => {
+    switch (status) {
+      case "UNPAID": return "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200";
+      case "DEPOSIT_PAID": return "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200";
+      case "FULLY_PAID": return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200";
+      case "REFUNDED": return "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200";
+      default: return "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200";
+    }
+  };
+
+  const getPaymentStatusLabel = (status: PaymentStatus) => {
+    switch (status) {
+      case "UNPAID": return "Unpaid";
+      case "DEPOSIT_PAID": return "Deposit Paid";
+      case "FULLY_PAID": return "Fully Paid";
+      case "REFUNDED": return "Refunded";
+      default: return status;
     }
   };
 
@@ -361,6 +410,36 @@ export default function BookingsPage() {
 
                       <FormField
                         control={form.control}
+                        name="reminderPreference"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="text-black dark:text-white">
+                              <Bell className="w-4 h-4 inline mr-2" />
+                              Reminder
+                            </FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value}>
+                              <FormControl>
+                                <SelectTrigger 
+                                  className="bg-white dark:bg-black border-black dark:border-white text-black dark:text-white"
+                                  data-testid="select-reminder"
+                                >
+                                  <SelectValue placeholder="When to remind you" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent className="bg-white dark:bg-black border-black dark:border-white">
+                                <SelectItem value="NONE">No reminder</SelectItem>
+                                <SelectItem value="DAY_BEFORE">1 day before</SelectItem>
+                                <SelectItem value="WEEK_BEFORE">1 week before</SelectItem>
+                                <SelectItem value="BOTH">Both (1 week and 1 day)</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
                         name="notes"
                         render={({ field }) => (
                           <FormItem>
@@ -441,13 +520,19 @@ export default function BookingsPage() {
                   <Card key={booking.id} className="bg-white dark:bg-black border-black dark:border-white p-6" data-testid={`card-booking-${booking.id}`}>
                     <div className="flex items-start justify-between mb-4">
                       <div className="flex-1">
-                        <div className="flex items-center gap-3 mb-2">
+                        <div className="flex items-center gap-3 mb-2 flex-wrap">
                           <h3 className="text-xl font-bold text-black dark:text-white uppercase tracking-tight" data-testid={`text-booking-title-${booking.id}`}>
                             {booking.title}
                           </h3>
                           <Badge className={getStatusColor(booking.status)} data-testid={`badge-status-${booking.id}`}>
                             {booking.status}
                           </Badge>
+                          {(booking.depositCents || booking.totalPriceCents) && (
+                            <Badge className={getPaymentStatusColor(booking.paymentStatus || "UNPAID")} data-testid={`badge-payment-${booking.id}`}>
+                              <CreditCard className="w-3 h-3 mr-1" />
+                              {getPaymentStatusLabel(booking.paymentStatus || "UNPAID")}
+                            </Badge>
+                          )}
                         </div>
                         
                         {booking.description && (
@@ -534,6 +619,36 @@ export default function BookingsPage() {
                         >
                           <CheckCircle className="w-4 h-4 mr-1" />
                           Mark Complete
+                        </Button>
+                      )}
+
+                      {/* Payment status buttons for artists */}
+                      {isArtist && booking.status === "APPROVED" && booking.depositCents > 0 && booking.paymentStatus === "UNPAID" && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="border-orange-500 text-orange-600 hover:bg-orange-50 dark:hover:bg-orange-950"
+                          onClick={() => markDepositPaidMutation.mutate(booking.id)}
+                          disabled={markDepositPaidMutation.isPending}
+                          data-testid={`button-mark-deposit-paid-${booking.id}`}
+                        >
+                          <CreditCard className="w-4 h-4 mr-1" />
+                          Mark Deposit Paid
+                        </Button>
+                      )}
+
+                      {isArtist && booking.status === "APPROVED" && booking.totalPriceCents > 0 && 
+                       (booking.paymentStatus === "UNPAID" || booking.paymentStatus === "DEPOSIT_PAID") && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="border-green-500 text-green-600 hover:bg-green-50 dark:hover:bg-green-950"
+                          onClick={() => markFullyPaidMutation.mutate(booking.id)}
+                          disabled={markFullyPaidMutation.isPending}
+                          data-testid={`button-mark-fully-paid-${booking.id}`}
+                        >
+                          <CreditCard className="w-4 h-4 mr-1" />
+                          Mark Fully Paid
                         </Button>
                       )}
 

@@ -56,6 +56,18 @@ export const consultationStatusEnum = pgEnum("consultation_status", [
 ]);
 export const platformEnum = pgEnum("platform", ["INSTAGRAM", "TIKTOK", "OTHER"]);
 export const postTypeEnum = pgEnum("post_type", ["POST", "REEL", "STORY"]);
+export const paymentStatusEnum = pgEnum("payment_status", [
+  "UNPAID",
+  "DEPOSIT_PAID",
+  "FULLY_PAID",
+  "REFUNDED"
+]);
+export const reminderPreferenceEnum = pgEnum("reminder_preference", [
+  "NONE",
+  "DAY_BEFORE",
+  "WEEK_BEFORE",
+  "BOTH"
+]);
 
 // Core Tables
 export const users = pgTable("users", {
@@ -485,13 +497,19 @@ export const bookings = pgTable("bookings", {
   depositCents: integer("deposit_cents"),
   totalPriceCents: integer("total_price_cents"),
   status: approvalStatusEnum("status").notNull().default("PENDING"),
+  paymentStatus: paymentStatusEnum("payment_status").notNull().default("UNPAID"),
+  depositPaidAt: timestamp("deposit_paid_at"),
+  fullPaymentAt: timestamp("full_payment_at"),
+  reminderPreference: reminderPreferenceEnum("reminder_preference").notNull().default("DAY_BEFORE"),
+  reminderSentAt: timestamp("reminder_sent_at"),
   notes: text("notes"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow()
 }, (table) => ({
   artistIdx: index("bookings_artist_idx").on(table.artistId),
   clientIdx: index("bookings_client_idx").on(table.clientId),
-  scheduledAtIdx: index("bookings_scheduled_at_idx").on(table.scheduledAt)
+  scheduledAtIdx: index("bookings_scheduled_at_idx").on(table.scheduledAt),
+  paymentStatusIdx: index("bookings_payment_status_idx").on(table.paymentStatus)
 }));
 
 // Relations
