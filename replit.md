@@ -72,3 +72,13 @@ The database is seeded with comprehensive test data for all engagement features:
 *   **Bookings API Fix**: Fixed getBookings/getBooking functions to properly join users table using Drizzle aliases for artist/client.
 *   **Flash Sales API Fix**: Added response transformation to convert database column names for frontend compatibility.
 *   **Notifications API Fix**: Fixed UUID type casting in SQL join for actor lookup.
+*   **Pre-Launch QA Audit (Jan 2026)**:
+    - Created comprehensive QA documentation in `/docs/` folder
+    - `QA_APP_MAP.md`: Complete route and API endpoint documentation
+    - `QA_INTENDED_USE_AND_FEATURES.md`: Feature specifications by user role
+    - `QA_REPORT.md`: Full test results and verification status
+    - `LAUNCH_CHECKLIST.md`: Production deployment guide
+    - All E2E tests passing for authentication, feeds, profiles, admin dashboard
+    - Fixed TypeScript errors in routes.ts for notification payloads
+    - OpenAI service updated to support Replit AI Integrations
+*   **Portfolio Management CRUD**: Added full create/edit/delete functionality for portfolio items on profile page with image upload, title, description, and category selection.

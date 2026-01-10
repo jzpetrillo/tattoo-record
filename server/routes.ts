@@ -437,13 +437,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/conversations/:id/messages", requireAuth, async (req: AuthRequest, res) => {
     try {
-      const message = await storage.createMessage({
+      const messageData: any = {
         conversationId: req.params.id,
         senderId: req.userId!,
         body: req.body.body || null,
         media: req.body.media || null,
         replyToId: req.body.replyToId || null
-      });
+      };
+      const message = await storage.createMessage(messageData);
       res.json(message);
     } catch (error: any) {
       res.status(400).json({ message: error.message });
@@ -484,7 +485,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/portfolio", requireAuth, requireRole(["ARTIST"]), async (req: AuthRequest, res) => {
+  app.post("/api/portfolio", requireAuth, requireRole(["ARTIST", "STUDIO"]), async (req: AuthRequest, res) => {
     try {
       const item = await storage.createPortfolioItem({
         ...req.body,
@@ -496,8 +497,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/portfolio/:id", requireAuth, requireRole(["ARTIST"]), async (req: AuthRequest, res) => {
+  app.put("/api/portfolio/:id", requireAuth, requireRole(["ARTIST", "STUDIO"]), async (req: AuthRequest, res) => {
     try {
+      const item = await storage.getPortfolioItem(req.params.id);
+      if (!item) {
+        return res.status(404).json({ message: "Portfolio item not found" });
+      }
+      if (item.artistId !== req.userId) {
+        return res.status(403).json({ message: "Not authorized to edit this portfolio item" });
+      }
       await storage.updatePortfolioItem(req.params.id, req.body);
       res.json({ message: "Portfolio item updated" });
     } catch (error: any) {
@@ -505,8 +513,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/portfolio/:id", requireAuth, requireRole(["ARTIST"]), async (req: AuthRequest, res) => {
+  app.delete("/api/portfolio/:id", requireAuth, requireRole(["ARTIST", "STUDIO"]), async (req: AuthRequest, res) => {
     try {
+      const item = await storage.getPortfolioItem(req.params.id);
+      if (!item) {
+        return res.status(404).json({ message: "Portfolio item not found" });
+      }
+      if (item.artistId !== req.userId) {
+        return res.status(403).json({ message: "Not authorized to delete this portfolio item" });
+      }
       await storage.deletePortfolioItem(req.params.id);
       res.json({ message: "Portfolio item deleted" });
     } catch (error: any) {
@@ -758,6 +773,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
             timeMessage = days === 1 ? "tomorrow" : `in ${days} days`;
           }
           
+          const artistName = booking.artist?.firstName 
+            ? `${booking.artist.firstName} ${booking.artist.lastName || ''}`.trim()
+            : booking.artist?.username || "your artist";
+          
           await storage.createNotification({
             userId: booking.clientId,
             type: "SYSTEM",
@@ -765,10 +784,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
               type: "BOOKING_REMINDER",
               bookingId: booking.id,
               title: booking.title || "Upcoming Appointment",
-              artistName: booking.artist?.displayName || booking.artist?.username || "your artist",
-              scheduledAt: booking.scheduledAt,
-              message: `Your appointment "${booking.title || "tattoo session"}" with ${booking.artist?.displayName || "your artist"} is ${timeMessage}!`
-            }
+              artistName,
+              scheduledAt: booking.scheduledAt?.toISOString() || "",
+              message: `Your appointment "${booking.title || "tattoo session"}" with ${artistName} is ${timeMessage}!`
+            } as Record<string, any>
           });
           
           await storage.markReminderSent(booking.id);

@@ -47,6 +47,7 @@ export interface IStorage {
   
   // Portfolio operations
   getPortfolio(artistId: string): Promise<schema.PortfolioItem[]>;
+  getPortfolioItem(id: string): Promise<schema.PortfolioItem | undefined>;
   createPortfolioItem(item: schema.InsertPortfolioItem): Promise<schema.PortfolioItem>;
   updatePortfolioItem(id: string, updates: Partial<schema.PortfolioItem>): Promise<void>;
   deletePortfolioItem(id: string): Promise<void>;
@@ -438,6 +439,15 @@ export class DatabaseStorage implements IStorage {
       .from(schema.portfolioItems)
       .where(eq(schema.portfolioItems.artistId, artistId))
       .orderBy(schema.portfolioItems.sortOrder);
+  }
+
+  async getPortfolioItem(id: string) {
+    const [item] = await db
+      .select()
+      .from(schema.portfolioItems)
+      .where(eq(schema.portfolioItems.id, id))
+      .limit(1);
+    return item;
   }
 
   async createPortfolioItem(item: schema.InsertPortfolioItem) {
