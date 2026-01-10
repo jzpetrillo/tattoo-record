@@ -3,7 +3,13 @@ import OpenAI from "openai";
 // the newest OpenAI model is "gpt-5" which was released August 7, 2025. do not change this unless explicitly requested by the user
 let openai: OpenAI | null = null;
 
-if (process.env.OPENAI_API_KEY) {
+// Check for Replit AI Integrations first, then fall back to user API key
+if (process.env.AI_INTEGRATIONS_OPENAI_BASE_URL && process.env.AI_INTEGRATIONS_OPENAI_API_KEY) {
+  openai = new OpenAI({
+    baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
+    apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY
+  });
+} else if (process.env.OPENAI_API_KEY) {
   openai = new OpenAI({ 
     apiKey: process.env.OPENAI_API_KEY 
   });

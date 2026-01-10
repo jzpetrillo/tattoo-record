@@ -1,0 +1,168 @@
+You are Replit Ghostwriter acting as a senior full-stack engineer + QA lead. Your job is to perform a COMPLETE pre-launch audit and hardening pass to ensure the app is production-ready.
+
+CONTEXT
+- Tech: Detect stack automatically (frameworks, backend, DB/ORM, auth, storage, payments, email/SMS, webhooks, queues).
+- Intended use: Use the repo’s product intent from any in-repo docs (README, /docs, /spec, /PRD, comments) and infer missing intent from routes, navigation, data models, and UI copy. Build a normalized “Intended Use + Feature List” and then validate the app against it end-to-end.
+
+NON-NEGOTIABLE GOALS
+1) Full pre-launch review of EVERYTHING: features, pages, navigation, links, buttons, forms, images/assets, integrations, data model integrity, permissions, error handling, and performance basics.
+2) Verify ALL user types/roles can complete their workflows start-to-finish (and cannot access what they shouldn’t).
+3) Verify design is clean, consistent, responsive, accessible, and usable across the entire app.
+4) Fix bugs, broken links, missing states, and risky code. Remove dead code. Refactor where needed for stability.
+5) Add automated checks so regressions are prevented. App must be ready to launch.
+
+EXECUTION PLAN (DO THIS IN ORDER)
+
+PHASE A — DISCOVERY, INTENT, AND FULL INVENTORY (NO CODE CHANGES YET)
+A1) Auto-detect:
+  - Framework(s), package manager, runtime versions, build scripts
+  - App structure (routing, layouts, components, state management)
+  - Auth model and roles/permissions (infer all roles from code)
+  - DB schema + ORM models + migrations
+  - External integrations: email, SMS, storage, payments, analytics, webhooks
+  - Background jobs/queues/cron (if present)
+A2) Generate an “App Map” in /docs/QA_APP_MAP.md:
+  - Every route/page with purpose, required auth/role, and main UI actions
+  - Every API endpoint (method, auth, payload, responses)
+  - Major UI components + shared layouts + theming system
+  - DB tables/models + relationships + constraints
+  - Integrations + where they’re used (files, functions, routes)
+A3) Build “Intended Use + Feature List” in /docs/QA_INTENDED_USE_AND_FEATURES.md:
+  - Extract any explicit product intent/spec from repo docs
+  - If missing/partial, infer and describe intended workflows per role
+  - Normalize into a feature list with acceptance criteria per feature
+  - Create a “Derived Roles List” (Admin + any others detected) and the intended capabilities per role
+A4) Create a “Pre-Launch Checklist” baseline in /docs/QA_PRELAUNCH_CHECKLIST_BASELINE.md:
+  - This will be updated as items are verified/fixed in later phases.
+
+PHASE B — QUALITY GATES & AUTOMATION (ADD TOOLING + CONFIG)
+B1) Add/verify these quality tools (choose what fits the detected stack):
+  - Linting: ESLint (and/or Biome) + Prettier formatting
+  - Type checking: TypeScript strict where applicable
+  - Unit tests: Vitest/Jest
+  - E2E tests: Playwright (preferred) or Cypress
+  - API tests: Supertest (Express) / Next route tests / equivalent
+  - Accessibility checks: axe (Playwright integration) on key pages
+  - Optional: dependency auditing (npm audit baseline) and lockfile consistency
+B2) Add scripts to package.json:
+  - lint, format, format:check, typecheck, test, test:e2e, test:e2e:ui, build, start, qa
+  - “qa” must run: format:check → lint → typecheck → unit tests → e2e tests (headless)
+B3) Add /docs/QA_RUNBOOK.md:
+  - Exact commands to run in Replit for install, env setup, DB setup, seed, QA pipeline, build/start
+B4) Add env validation at startup (fail fast with clear errors):
+  - Create a single source of truth for env vars (e.g., zod schema)
+  - Document each env var in /docs/ENV_VARS.md (purpose + where referenced)
+
+PHASE C — FULL FUNCTIONAL REVIEW (EVERY PAGE, LINK, BUTTON, FORM, IMAGE)
+C1) Create a “UI + Navigation Audit” in /docs/QA_UI_NAV_AUDIT.md:
+  - Inventory all nav items, sidebar links, header links, footer links
+  - Verify every link resolves to a valid route (no 404s)
+  - Verify deep links work (open detail pages directly)
+  - Verify all buttons/CTAs do what they claim and have correct disabled/loading states
+C2) Create an “Assets Audit” in /docs/QA_ASSETS_AUDIT.md:
+  - Verify all images load (local/static/remote) with correct sizing and fallbacks
+  - Ensure no broken asset URLs; fix pathing; ensure Next/Image usage is correct if applicable
+  - Ensure alt text and avoid layout shift
+C3) Create a “Forms & Validation Audit” in /docs/QA_FORMS_AUDIT.md:
+  - For every form: required fields, validation (client + server), error display, success handling
+  - Confirm no silent failures; add toasts/messages; ensure loading state prevents double-submit
+C4) Create a “States Audit” in /docs/QA_STATES_AUDIT.md:
+  - Empty states, loading states, error states for every list/detail view
+  - Confirm user sees helpful guidance and recovery actions
+
+PHASE D — ROLE-BASED WORKFLOW TESTING (ALL USERS, END-TO-END)
+D1) Identify all roles/user types from code (not guesses). For each role, document:
+  - Intended workflow(s)
+  - Permissions
+  - Key screens and actions
+D2) Build a “Workflow Test Matrix” in /docs/QA_WORKFLOW_MATRIX.md:
+  - Rows = each workflow per role (start → finish)
+  - Columns = happy path, validation, auth, permission boundaries, edge cases
+D3) Implement Playwright E2E tests for all critical workflows per role:
+  - Auth flows: sign up/login/logout/password reset (if present)
+  - Onboarding flows (if present)
+  - Core create → edit → save → list → detail → search/filter/sort → export/share (as applicable)
+  - Admin flows: manage users/roles/settings/data (as applicable)
+  - Transaction flows: invoicing/approvals/payouts or equivalent (if present)
+  - File flows: upload/view/replace/delete (if present)
+  - Webhook flows (if present): simulate and validate results safely
+D4) Add repeatable seeded data:
+  - Implement seed + reset scripts
+  - Create at least one user per detected role
+  - Create realistic data for each major object so every page can be exercised
+  - Ensure tests run reliably in a fresh environment
+
+PHASE E — DESIGN CONSISTENCY & UX POLISH (SYSTEMATIC + MEASURABLE)
+E1) Establish a simple design system baseline:
+  - Standardize Button, Input, Select, Modal, Toast, Card, Table, Badge, Tabs
+  - Standardize spacing scale, typography, radii, shadows, and colors
+  - Remove duplicate component variants and inconsistent styling
+E2) Responsive review:
+  - Validate mobile/tablet/desktop layout for every page
+  - Fix overflow, sticky header/sidebar issues, broken grids, unreadable tables
+E3) Accessibility baseline:
+  - Ensure labels, focus states, keyboard nav, aria where needed
+  - Run axe checks for core pages and fix critical issues
+E4) Copy/UX alignment:
+  - Ensure labels/buttons match intended actions
+  - Add confirmations for destructive actions
+  - Improve empty-state guidance and error messages
+
+PHASE F — BACKEND/API HARDENING + DATA INTEGRITY
+F1) API correctness:
+  - Ensure every mutating endpoint validates input server-side
+  - Ensure consistent response shapes and error handling
+  - Ensure auth/role enforcement happens server-side for every protected operation
+F2) Security basics:
+  - Lock down sensitive routes
+  - Prevent common issues (XSS via unsafe rendering, insecure file uploads, open redirects)
+  - Add basic rate limits on auth/sensitive endpoints if feasible for the stack
+F3) Data integrity:
+  - Add DB constraints and indexes where appropriate
+  - Wrap multi-step writes in transactions
+  - Ensure idempotency where needed (webhooks/payments)
+F4) Performance basics:
+  - Add pagination on large lists
+  - Eliminate obvious N+1 queries and heavy re-renders
+  - Avoid excessive client fetching; use server rendering/data loaders where appropriate
+
+PHASE G — CODE CLEANUP, RELIABILITY, AND LAUNCH READINESS
+G1) Fix all issues found (bugs, broken flows, layout issues, missing states, broken links/assets).
+G2) Remove dead code, unused routes/components, unused dependencies, commented blocks.
+G3) Refactor duplicated logic into utilities/services/hooks; keep code readable and consistent.
+G4) Ensure builds are deterministic:
+  - Clean install (remove node_modules, reinstall) works
+  - Fresh DB setup works (migrate + seed)
+  - “npm run qa” passes
+  - “npm run build && npm run start” succeeds without warnings/errors
+
+PHASE H — FINAL DELIVERABLES (DOCUMENTATION + VERIFIED STATUS)
+H1) Produce /docs/QA_REPORT.md containing:
+  - Verified vs Intended Use: feature-by-feature status (pass/fail) with notes
+  - Role workflows: each role’s workflows tested (manual + automated) with results
+  - Bugs found and fixed (with file references)
+  - Remaining known issues (if any) with severity, impact, and mitigation
+H2) Update /docs/QA_PRELAUNCH_CHECKLIST_BASELINE.md into /docs/LAUNCH_CHECKLIST.md:
+  - Env vars required and where to configure in Replit
+  - Build/start commands
+  - DB migration/seed steps
+  - Admin bootstrap steps
+  - Storage/email/SMS/payment setup validation steps
+  - Backup/rollback notes
+H3) Ensure there is a single “How to verify” section:
+  - Exact commands to run to reproduce your verification (qa pipeline + e2e)
+  - Where to see test artifacts/screenshots if tests fail
+
+OUTPUT/BEHAVIOR REQUIREMENTS
+- Do NOT ask me questions unless you cannot proceed due to missing secrets or missing required env vars.
+  - If missing, list exactly which env vars are missing, where referenced, and provide safe defaults/mocks for QA where possible.
+- Make changes directly in code and keep changes organized and minimal.
+- Every significant bug fix should be backed by a unit or E2E test when reasonable.
+- Any DB changes must include migrations and seed updates.
+- Prioritize correctness and stability over new features. Do not add new features unless required to match intended use.
+- Keep the UI clean, consistent, and production-ready.
+
+START NOW
+1) Begin Phase A and generate the /docs files.
+2) Then implement Phases B–H until the app passes “npm run qa” and build/start succeeds.
+3) When done, print a concise summary: what was checked, what was fixed, how to run QA, and the final launch checklist location.
