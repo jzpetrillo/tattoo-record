@@ -1088,5 +1088,168 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Admin Stats Dashboard
+  app.get("/api/admin/stats", requireAuth, requireRole(["ADMIN"]), async (req: AuthRequest, res) => {
+    try {
+      const stats = await storage.getAdminStats();
+      res.json(stats);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Admin - Get ALL users (including enthusiasts)
+  app.get("/api/admin/all-users", requireAuth, requireRole(["ADMIN"]), async (req: AuthRequest, res) => {
+    try {
+      const { role, search, limit = "50", offset = "0" } = req.query;
+      const users = await storage.getAllUsersAdmin({
+        role: role as string | undefined,
+        search: search as string | undefined,
+        limit: parseInt(limit as string),
+        offset: parseInt(offset as string)
+      });
+      res.json(users);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Admin - Delete user
+  app.delete("/api/admin/users/:id", requireAuth, requireRole(["ADMIN"]), async (req: AuthRequest, res) => {
+    try {
+      await storage.deleteUser(req.params.id);
+      res.json({ message: "User deleted successfully" });
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+
+  // Admin - Ban/Unban user
+  app.put("/api/admin/users/:id/ban", requireAuth, requireRole(["ADMIN"]), async (req: AuthRequest, res) => {
+    try {
+      await storage.banUser(req.params.id);
+      res.json({ message: "User banned successfully" });
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+
+  app.put("/api/admin/users/:id/unban", requireAuth, requireRole(["ADMIN"]), async (req: AuthRequest, res) => {
+    try {
+      await storage.unbanUser(req.params.id);
+      res.json({ message: "User unbanned successfully" });
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+
+  // Admin - Posts Management
+  app.get("/api/admin/posts", requireAuth, requireRole(["ADMIN"]), async (req: AuthRequest, res) => {
+    try {
+      const { limit = "50", offset = "0", featured } = req.query;
+      const posts = await storage.getAdminPosts({
+        limit: parseInt(limit as string),
+        offset: parseInt(offset as string),
+        featured: featured === "true" ? true : featured === "false" ? false : undefined
+      });
+      res.json(posts);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.delete("/api/admin/posts/:id", requireAuth, requireRole(["ADMIN"]), async (req: AuthRequest, res) => {
+    try {
+      await storage.deletePost(req.params.id);
+      res.json({ message: "Post deleted successfully" });
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+
+  app.put("/api/admin/posts/:id/feature", requireAuth, requireRole(["ADMIN"]), async (req: AuthRequest, res) => {
+    try {
+      await storage.featurePost(req.params.id);
+      res.json({ message: "Post featured successfully" });
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+
+  app.put("/api/admin/posts/:id/unfeature", requireAuth, requireRole(["ADMIN"]), async (req: AuthRequest, res) => {
+    try {
+      await storage.unfeaturePost(req.params.id);
+      res.json({ message: "Post unfeatured successfully" });
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+
+  // Admin - Jobs Management
+  app.get("/api/admin/jobs", requireAuth, requireRole(["ADMIN"]), async (req: AuthRequest, res) => {
+    try {
+      const jobs = await storage.getAllJobsAdmin();
+      res.json(jobs);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.delete("/api/admin/jobs/:id", requireAuth, requireRole(["ADMIN"]), async (req: AuthRequest, res) => {
+    try {
+      await storage.deleteJob(req.params.id);
+      res.json({ message: "Job deleted successfully" });
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+
+  app.put("/api/admin/jobs/:id/activate", requireAuth, requireRole(["ADMIN"]), async (req: AuthRequest, res) => {
+    try {
+      await storage.activateJob(req.params.id);
+      res.json({ message: "Job activated successfully" });
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+
+  app.put("/api/admin/jobs/:id/deactivate", requireAuth, requireRole(["ADMIN"]), async (req: AuthRequest, res) => {
+    try {
+      await storage.deactivateJob(req.params.id);
+      res.json({ message: "Job deactivated successfully" });
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+
+  // Admin - Flash Sales Management
+  app.get("/api/admin/flash-sales", requireAuth, requireRole(["ADMIN"]), async (req: AuthRequest, res) => {
+    try {
+      const sales = await storage.getAllFlashSalesAdmin();
+      res.json(sales);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.delete("/api/admin/flash-sales/:id", requireAuth, requireRole(["ADMIN"]), async (req: AuthRequest, res) => {
+    try {
+      await storage.deleteFlashSale(req.params.id);
+      res.json({ message: "Flash sale deleted successfully" });
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+
+  // Admin - Bookings Overview
+  app.get("/api/admin/bookings", requireAuth, requireRole(["ADMIN"]), async (req: AuthRequest, res) => {
+    try {
+      const bookings = await storage.getAllBookingsAdmin();
+      res.json(bookings);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   return httpServer;
 }

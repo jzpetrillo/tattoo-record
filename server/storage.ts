@@ -88,6 +88,27 @@ export interface IStorage {
   getPendingUsers(): Promise<any[]>;
   approveUser(userId: string): Promise<void>;
   rejectUser(userId: string): Promise<void>;
+  getAdminStats(): Promise<{
+    totalUsers: number;
+    usersByRole: Record<string, number>;
+    totalPosts: number;
+    totalBookings: number;
+    totalJobs: number;
+    pendingVerifications: number;
+  }>;
+  getAllUsersAdmin(options: { role?: string; search?: string; limit: number; offset: number }): Promise<any[]>;
+  deleteUser(userId: string): Promise<void>;
+  banUser(userId: string): Promise<void>;
+  unbanUser(userId: string): Promise<void>;
+  getAdminPosts(options: { limit: number; offset: number; featured?: boolean }): Promise<any[]>;
+  featurePost(postId: string): Promise<void>;
+  unfeaturePost(postId: string): Promise<void>;
+  getAllJobsAdmin(): Promise<any[]>;
+  activateJob(jobId: string): Promise<void>;
+  deactivateJob(jobId: string): Promise<void>;
+  getAllFlashSalesAdmin(): Promise<any[]>;
+  deleteFlashSale(saleId: string): Promise<void>;
+  getAllBookingsAdmin(): Promise<any[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1098,6 +1119,235 @@ export class DatabaseStorage implements IStorage {
       .returning();
     
     return updated;
+  }
+
+  // Admin Stats
+  async getAdminStats() {
+    const allUsers = await db.select().from(schema.users);
+    const allPosts = await db.select().from(schema.posts);
+    const allBookings = await db.select().from(schema.bookings);
+    const allJobs = await db.select().from(schema.jobPostings);
+    
+    const usersByRole: Record<string, number> = {};
+    let pendingVerifications = 0;
+    
+    allUsers.forEach(user => {
+      usersByRole[user.role] = (usersByRole[user.role] || 0) + 1;
+      if (user.verificationStatus === "PENDING") {
+        pendingVerifications++;
+      }
+    });
+    
+    return {
+      totalUsers: allUsers.length,
+      usersByRole,
+      totalPosts: allPosts.length,
+      totalBookings: allBookings.length,
+      totalJobs: allJobs.length,
+      pendingVerifications
+    };
+  }
+
+  async getAllUsersAdmin(options: { role?: string; search?: string; limit: number; offset: number }) {
+    let query = db.select({
+      id: schema.users.id,
+      email: schema.users.email,
+      username: schema.users.username,
+      role: schema.users.role,
+      firstName: schema.users.firstName,
+      lastName: schema.users.lastName,
+      bio: schema.users.bio,
+      avatarUrl: schema.users.avatarUrl,
+      isVerified: schema.users.isVerified,
+      verificationStatus: schema.users.verificationStatus,
+      location: schema.users.location,
+      createdAt: schema.users.createdAt,
+      deletedAt: schema.users.deletedAt
+    }).from(schema.users);
+    
+    const conditions: any[] = [];
+    
+    if (options.role) {
+      conditions.push(eq(schema.users.role, options.role as any));
+    }
+    
+    if (options.search) {
+      conditions.push(
+        or(
+          sql`${schema.users.username} ILIKE ${'%' + options.search + '%'}`,
+          sql`${schema.users.email} ILIKE ${'%' + options.search + '%'}`
+        )
+      );
+    }
+    
+    if (conditions.length > 0) {
+      query = query.where(and(...conditions)) as any;
+    }
+    
+    return query
+      .orderBy(desc(schema.users.createdAt))
+      .limit(options.limit)
+      .offset(options.offset);
+  }
+
+  async deleteUser(userId: string) {
+    await db.update(schema.users)
+      .set({ deletedAt: new Date() })
+      .where(eq(schema.users.id, userId));
+  }
+
+  async banUser(userId: string) {
+    await db.update(schema.users)
+      .set({ verificationStatus: "REJECTED" as any })
+      .where(eq(schema.users.id, userId));
+  }
+
+  async unbanUser(userId: string) {
+    await db.update(schema.users)
+      .set({ verificationStatus: "APPROVED" as any })
+      .where(eq(schema.users.id, userId));
+  }
+
+  async getAdminPosts(options: { limit: number; offset: number; featured?: boolean }) {
+    let query = db
+      .select({
+        post: schema.posts,
+        author: {
+          id: schema.users.id,
+          username: schema.users.username,
+          email: schema.users.email,
+          role: schema.users.role,
+          avatarUrl: schema.users.avatarUrl,
+          isVerified: schema.users.isVerified
+        }
+      })
+      .from(schema.posts)
+      .leftJoin(schema.users, eq(schema.posts.authorId, schema.users.id));
+    
+    if (options.featured !== undefined) {
+      query = query.where(eq(schema.posts.isFeatured, options.featured)) as any;
+    }
+    
+    const results = await query
+      .orderBy(desc(schema.posts.createdAt))
+      .limit(options.limit)
+      .offset(options.offset);
+    
+    return results.map(r => ({
+      ...r.post,
+      author: r.author
+    }));
+  }
+
+  async featurePost(postId: string) {
+    await db.update(schema.posts)
+      .set({ isFeatured: true })
+      .where(eq(schema.posts.id, postId));
+  }
+
+  async unfeaturePost(postId: string) {
+    await db.update(schema.posts)
+      .set({ isFeatured: false })
+      .where(eq(schema.posts.id, postId));
+  }
+
+  async getAllJobsAdmin() {
+    const results = await db
+      .select({
+        job: schema.jobPostings,
+        studio: {
+          id: schema.users.id,
+          username: schema.users.username,
+          email: schema.users.email,
+          role: schema.users.role,
+          avatarUrl: schema.users.avatarUrl,
+          isVerified: schema.users.isVerified
+        }
+      })
+      .from(schema.jobPostings)
+      .leftJoin(schema.users, eq(schema.jobPostings.studioId, schema.users.id))
+      .orderBy(desc(schema.jobPostings.createdAt));
+    
+    return results.map(r => ({
+      ...r.job,
+      studio: r.studio
+    }));
+  }
+
+  async activateJob(jobId: string) {
+    await db.update(schema.jobPostings)
+      .set({ isActive: true })
+      .where(eq(schema.jobPostings.id, jobId));
+  }
+
+  async deactivateJob(jobId: string) {
+    await db.update(schema.jobPostings)
+      .set({ isActive: false })
+      .where(eq(schema.jobPostings.id, jobId));
+  }
+
+  async getAllFlashSalesAdmin() {
+    const results = await db
+      .select({
+        sale: schema.flashSales,
+        artist: {
+          id: schema.users.id,
+          username: schema.users.username,
+          email: schema.users.email,
+          role: schema.users.role,
+          avatarUrl: schema.users.avatarUrl,
+          isVerified: schema.users.isVerified
+        }
+      })
+      .from(schema.flashSales)
+      .leftJoin(schema.users, eq(schema.flashSales.artistId, schema.users.id))
+      .orderBy(desc(schema.flashSales.createdAt));
+    
+    return results.map(r => ({
+      ...r.sale,
+      artist: r.artist
+    }));
+  }
+
+  async deleteFlashSale(saleId: string) {
+    await db.delete(schema.flashSales)
+      .where(eq(schema.flashSales.id, saleId));
+  }
+
+  async getAllBookingsAdmin() {
+    const artistUser = alias(schema.users, "artist");
+    const clientUser = alias(schema.users, "client");
+    
+    const results = await db
+      .select({
+        booking: schema.bookings,
+        artist: {
+          id: artistUser.id,
+          username: artistUser.username,
+          email: artistUser.email,
+          role: artistUser.role,
+          avatarUrl: artistUser.avatarUrl,
+          isVerified: artistUser.isVerified
+        },
+        client: {
+          id: clientUser.id,
+          username: clientUser.username,
+          email: clientUser.email,
+          role: clientUser.role,
+          avatarUrl: clientUser.avatarUrl,
+          isVerified: clientUser.isVerified
+        }
+      })
+      .from(schema.bookings)
+      .leftJoin(artistUser, eq(schema.bookings.artistId, artistUser.id))
+      .leftJoin(clientUser, eq(schema.bookings.clientId, clientUser.id))
+      .orderBy(desc(schema.bookings.createdAt));
+    
+    return results.map(r => ({
+      ...r.booking,
+      artist: r.artist,
+      client: r.client
+    }));
   }
 }
 
