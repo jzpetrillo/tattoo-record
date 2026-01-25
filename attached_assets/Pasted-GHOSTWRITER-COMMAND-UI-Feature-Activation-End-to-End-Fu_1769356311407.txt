@@ -1,0 +1,73 @@
+GHOSTWRITER COMMAND: UI Feature Activation & End-to-End Functionality Audit
+
+Objective:
+Ensure that all existing features in the application are fully active, correctly wired, visible in the UI, and functioning end-to-end across all user roles. Do not add new features unless required to make an existing feature operational.
+
+1. Inventory & Map All UI Features
+- Crawl the entire application UI including all routes, pages, dashboards, modals, drawers, tabs, dropdowns, and menus.
+- Create an internal map linking each UI element (buttons, links, forms, CTAs) to its intended backend action or data source.
+- Identify and resolve any orphaned, disabled, hidden, or placeholder UI elements.
+- Remove deprecated UI components or fully wire them to their intended functionality.
+
+2. Role-Based UI Validation (RBAC)
+For each user role (Admin, Agency, Agent, Talent, Brand, Subscriber if applicable):
+- Verify correct navigation menus and dashboards load.
+- Confirm all role-permitted features are visible and functional.
+- Ensure restricted features are hidden or gracefully blocked.
+- Validate login redirects, deep-link access, and permission gating.
+
+3. Page-Level Functionality Verification
+For every page in the application:
+- Confirm the page loads without errors.
+- Validate all required API calls execute successfully.
+- Ensure loading, empty, and error states render intentionally.
+- Confirm all data fields render correctly and match backend schemas.
+
+4. Interactive Element Testing
+For every interactive UI element (buttons, toggles, links, forms):
+- Verify user interaction triggers the correct backend action.
+- Confirm UI updates correctly on success or failure.
+- Test create, edit, save, submit, approve, reject, archive, delete, connect, disconnect, publish, and unpublish actions.
+- Eliminate any silent failures or no-op interactions.
+
+5. Forms & Input Validation
+For all forms:
+- Enforce required fields and validation rules.
+- Display clear validation and error messages.
+- Ensure successful submissions persist data correctly.
+- Confirm saved data rehydrates on reload.
+- Validate cancel and reset behavior.
+
+6. Data Consistency & UI Synchronization
+- Ensure list views reflect real-time database state.
+- Confirm detail views match list data.
+- Validate changes propagate immediately across all relevant UI surfaces.
+- Test create, update, delete, and status changes across views.
+
+7. Navigation & Routing Integrity
+- Validate all internal routes resolve correctly.
+- Eliminate broken links and 404s.
+- Ensure navigation respects RBAC rules.
+- Confirm browser back/forward navigation works correctly.
+
+8. Modals, Drawers & Overlays
+For all overlays:
+- Confirm they open and close reliably.
+- Validate submit actions persist data and update parent UI.
+- Ensure overlays do not trap focus or scrolling.
+
+9. UI State & Visual Integrity
+- Validate loading, disabled, and empty states are intentional.
+- Remove permanently loading skeletons or spinners.
+- Ensure layouts render correctly across common screen sizes.
+- Fix overlapping or broken visual elements.
+
+10. Error Handling & Edge Case Testing
+- Test empty datasets, permission denials, network failures, invalid inputs, and partial data.
+- Ensure the UI fails gracefully with clear user feedback.
+- Prevent crashes, frozen states, or unrecoverable errors.
+
+11. Final Verification
+- Produce a pass/fail checklist for each page and major feature.
+- Fix all blocking issues discovered during the audit.
+- Confirm the application is fully functional, stable, and ready for production use.

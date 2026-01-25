@@ -1,0 +1,85 @@
+GHOSTWRITER COMMAND: Design System + Navigation Consistency Audit (All Pages)
+
+Objective:
+Perform a complete audit and fix pass to ensure the application has consistent design, navigation, and UI patterns across ALL pages. Similar elements (profiles, cards, tables, headers, CTAs, modals, forms, badges, avatars, etc.) must look and behave the same everywhere and match the app’s overall design style. Do not introduce new product features—only design-system alignment, UI consistency, and navigation coherence.
+
+1) Establish the Source of Truth Design System
+- Identify the existing “current best” styling in the app (fonts, spacing, colors, border radius, shadows, button styles, icon style, input styles).
+- Create/confirm a central design system layer:
+  - Global theme tokens (colors, typography, spacing, radius, shadows, z-index)
+  - Standard components (Button, Input, Select, Card, Badge, Avatar, Tabs, Modal, Drawer, Table, Toast, EmptyState, Loader)
+- Ensure all pages use the shared tokens/components and remove ad-hoc inline styling where possible.
+
+2) Full UI Crawl + Component Pattern Inventory
+- Crawl every route and capture a structured inventory of:
+  - Navigation (top nav, sidebar, breadcrumbs, page headers)
+  - Repeated UI patterns (profile headers, cards, list rows, tables, detail pages, metric blocks)
+  - Forms (labels, spacing, validation states, helper text)
+  - Modals/drawers (layout, headers, footer CTAs)
+  - Empty/loading/error states
+- For each repeated pattern, identify any visual inconsistencies in spacing, typography, sizing, borders, shadows, alignment, hover states, and icon usage.
+
+3) Standardize Key Reusable Patterns (Must Match Everywhere)
+Ensure the following patterns are standardized and reused universally:
+- Profile header pattern (avatar, name, sub-info, status badges, primary CTAs)
+- Card pattern (padding, border, shadow, hover, header/footer layout)
+- Metric tiles / stat blocks (labels, number styling, spacing, icon usage)
+- List rows (avatar + primary/secondary text, right-side actions, hover/selection)
+- Tables (header style, row height, striping/hover, empty state, pagination)
+- Forms (label style, spacing, required indicators, error states, helper text)
+- Buttons (sizes, variants, icons, disabled/loading states)
+- Badges/chips (status colors, shape, text sizing)
+- Modals/drawers (consistent header, close behavior, footer button layout)
+
+4) Navigation Consistency + Information Architecture Audit
+- Ensure navigation structure is consistent by role and across pages:
+  - Same nav ordering, naming conventions, icon style, and active-state behavior
+  - Consistent page header layout (title, subtitle, primary CTA placement, breadcrumbs if used)
+  - Consistent back navigation patterns (back buttons, breadcrumbs, deep-link behavior)
+- Verify every page has:
+  - Clear “where am I” context (title + supporting info)
+  - A consistent place for primary actions
+  - No duplicate or conflicting navigation entries
+
+5) Layout Grid + Spacing Rules (Enforce Globally)
+- Standardize page layout rules:
+  - Max content width strategy (full-width vs contained)
+  - Consistent gutters/margins/padding across pages
+  - Consistent vertical rhythm (section spacing, header spacing, card spacing)
+- Fix misalignments and inconsistent spacing across all screens.
+
+6) Typography + Iconography Consistency
+- Enforce consistent typography scale:
+  - H1/H2/H3 hierarchy, body text, captions, labels
+  - Consistent font weights and line heights
+- Ensure consistent icon set, sizing, stroke weight, and placement across all pages.
+
+7) State Design Consistency (Loading / Empty / Error)
+- Standardize:
+  - Skeleton loaders (same style and duration)
+  - Empty states (icon + title + helper copy + CTA)
+  - Error banners/toasts (same style, severity colors, placement)
+- Replace generic or inconsistent states with standardized components.
+
+8) Interaction + Micro-UX Consistency
+- Standardize hover/focus/active states across:
+  - Cards, list rows, buttons, links, inputs
+- Ensure keyboard focus states are visible and consistent.
+- Standardize dropdown/menu styling and placement.
+
+9) Implementation Rules (Hard Requirements)
+- Replace page-specific CSS with shared components/tokens where possible.
+- Do not allow one-off variants of the same UI element unless explicitly justified.
+- If multiple versions of the same pattern exist, pick ONE canonical version and refactor all others to match it.
+
+10) Deliverables
+- Produce a “Design + Navigation Consistency Report” listing:
+  - Canonical component patterns chosen (with references to where they appear)
+  - Pages updated
+  - Components refactored/replaced
+  - Remaining exceptions (if any) with rationale
+- Confirm final state:
+  - Profiles look identical across contexts (Talent/Agent/Brand/etc.)
+  - Cards and tables are consistent across the app
+  - Navigation feels unified and predictable across all pages and roles
+  - The entire UI reads as one cohesive product

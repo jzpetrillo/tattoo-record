@@ -62,16 +62,24 @@ export default function FlashSalesPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-background flex">
+      <div className="min-h-screen bg-background">
         <SidebarNav />
-        <main className="flex-1 md:ml-64 mb-16 md:mb-0">
-          <div className="max-w-7xl mx-auto p-4">
-            <div className="text-center py-8">
-              <div className="animate-pulse">
-                <div className="h-8 bg-secondary rounded w-48 mx-auto mb-4"></div>
-                <div className="h-4 bg-secondary rounded w-32 mx-auto"></div>
+        <main className="lg:ml-64 pb-20 lg:pb-8 pt-4 max-w-6xl mx-auto px-4">
+          <div className="mb-6">
+            <div className="h-8 bg-secondary rounded w-48 mb-2 animate-pulse"></div>
+            <div className="h-4 bg-secondary rounded w-64 animate-pulse"></div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {[1, 2, 3, 4, 5, 6].map((i) => (
+              <div key={i} className="border border-border overflow-hidden animate-pulse">
+                <div className="aspect-square bg-secondary" />
+                <div className="p-4 space-y-3">
+                  <div className="h-5 bg-secondary rounded w-3/4" />
+                  <div className="h-4 bg-secondary rounded w-1/2" />
+                  <div className="h-6 bg-secondary rounded w-24" />
+                </div>
               </div>
-            </div>
+            ))}
           </div>
         </main>
         <MobileNav />
@@ -80,133 +88,112 @@ export default function FlashSalesPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background flex">
+    <div className="min-h-screen bg-background">
       <SidebarNav />
-      <main className="flex-1 md:ml-64 mb-16 md:mb-0">
-        <div className="max-w-7xl mx-auto p-4 lg:pt-8">
-          {/* Header */}
-          <div className="border-b border-border pb-4 mb-6">
-            <div className="flex items-center gap-3">
-              <Zap className="w-8 h-8 text-yellow-500" />
-              <div>
-                <h1 className="text-3xl font-bold uppercase tracking-tight" data-testid="text-page-title">
-                  Flash Sales
-                </h1>
-                <p className="text-sm text-muted-foreground mt-1">
-                  Limited-time tattoo deals from artists
-                </p>
-              </div>
-            </div>
+      <main className="lg:ml-64 pb-20 lg:pb-8 pt-4 max-w-6xl mx-auto px-4">
+        <div className="mb-6 flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold mb-1" data-testid="text-page-title">
+              Flash Sales
+            </h1>
+            <p className="text-sm text-muted-foreground">
+              Limited-time tattoo deals from artists
+            </p>
           </div>
+        </div>
 
-          {/* Flash Sales Grid */}
-          {flashSales.length === 0 ? (
-            <div className="text-center py-12 border border-border rounded-lg" data-testid="empty-state">
-              <Zap className="w-16 h-16 mx-auto mb-4 text-muted-foreground" />
-              <h2 className="text-xl font-semibold mb-2">No active flash sales</h2>
-              <p className="text-muted-foreground">
-                Check back soon for limited-time tattoo deals
-              </p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {flashSales.map((sale) => (
-                <Link
-                  key={sale.id}
-                  href={`/u/${sale.artist?.username || ''}`}
-                  data-testid={`flash-sale-${sale.id}`}
-                >
-                  <Card className="p-0 overflow-hidden hover:shadow-lg hover:-translate-y-0.5 transition-all cursor-pointer border-border group">
-                    {/* Sale Image */}
-                    <div className="aspect-square bg-secondary relative overflow-hidden">
-                      {sale.imageUrl ? (
-                        <>
-                          <img
-                            src={sale.imageUrl}
-                            alt={sale.title}
-                            className="w-full h-full object-cover group-hover:scale-105 transition-transform"
-                          />
-                          <div className="absolute top-3 right-3 bg-yellow-500 rounded-full px-3 py-1 flex items-center gap-1">
-                            <Zap className="w-4 h-4 text-white fill-current" />
-                            <span className="text-white text-sm font-bold">FLASH</span>
-                          </div>
-                        </>
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center text-muted-foreground">
-                          <Zap className="w-16 h-16" />
+        {/* Flash Sales Grid */}
+        {flashSales.length === 0 ? (
+          <div className="text-center py-12 border border-border" data-testid="empty-state">
+            <Zap className="w-16 h-16 mx-auto mb-4 text-muted-foreground" />
+            <h2 className="text-xl font-semibold mb-2">No active flash sales</h2>
+            <p className="text-muted-foreground">
+              Check back soon for limited-time tattoo deals
+            </p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {flashSales.map((sale) => (
+              <Link
+                key={sale.id}
+                href={`/u/${sale.artist?.username || ''}`}
+                data-testid={`flash-sale-${sale.id}`}
+              >
+                <Card className="p-0 overflow-hidden hover:shadow-lg hover:-translate-y-0.5 transition-all cursor-pointer border-border group">
+                  <div className="aspect-square bg-secondary relative overflow-hidden">
+                    {sale.imageUrl ? (
+                      <>
+                        <img
+                          src={sale.imageUrl}
+                          alt={sale.title}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                        />
+                        <div className="absolute top-3 right-3 bg-yellow-500 rounded-full px-3 py-1 flex items-center gap-1">
+                          <Zap className="w-4 h-4 text-white fill-current" />
+                          <span className="text-white text-sm font-bold">FLASH</span>
                         </div>
-                      )}
+                      </>
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-muted-foreground">
+                        <Zap className="w-16 h-16" />
+                      </div>
+                    )}
+                  </div>
+                  <div className="p-4 space-y-3">
+                    <div>
+                      <h3 className="font-semibold text-lg line-clamp-1 mb-1" data-testid={`sale-title-${sale.id}`}>
+                        {sale.title}
+                      </h3>
+                      <p className="text-sm text-muted-foreground">
+                        by {sale.artist?.username || 'Unknown Artist'}
+                      </p>
                     </div>
-
-                    {/* Sale Details */}
-                    <div className="p-4 space-y-3">
-                      {/* Title & Artist */}
-                      <div>
-                        <h3 className="font-semibold text-lg line-clamp-1 mb-1" data-testid={`sale-title-${sale.id}`}>
-                          {sale.title}
-                        </h3>
-                        <p className="text-sm text-muted-foreground">
-                          by {sale.artist?.username || 'Unknown Artist'}
-                        </p>
+                    {sale.description && (
+                      <p className="text-sm text-muted-foreground line-clamp-2">
+                        {sale.description}
+                      </p>
+                    )}
+                    <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-1">
+                        <DollarSign className="w-4 h-4" />
+                        <span className="font-bold text-lg">${sale.discountedPrice ?? 0}</span>
                       </div>
-
-                      {/* Description */}
-                      {sale.description && (
-                        <p className="text-sm text-muted-foreground line-clamp-2">
-                          {sale.description}
-                        </p>
-                      )}
-
-                      {/* Pricing */}
-                      <div className="flex items-center gap-3">
-                        <div className="flex items-center gap-1">
-                          <DollarSign className="w-4 h-4" />
-                          <span className="font-bold text-lg">${sale.discountedPrice ?? 0}</span>
-                        </div>
-                        {sale.originalPrice && sale.discountedPrice && sale.originalPrice > sale.discountedPrice && (
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm text-muted-foreground line-through">
-                              ${sale.originalPrice}
-                            </span>
-                            <span className="text-sm font-semibold text-green-600 dark:text-green-400">
-                              {Math.round((1 - sale.discountedPrice / sale.originalPrice) * 100)}% OFF
-                            </span>
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Metadata */}
-                      <div className="flex items-center justify-between pt-2 border-t border-border">
-                        {/* Time Remaining */}
-                        <div className="flex items-center gap-1.5">
-                          <Clock className={`w-4 h-4 ${getUrgencyColor(sale.endDate)}`} />
-                          <span className={`text-sm font-medium ${getUrgencyColor(sale.endDate)}`}>
-                            {getRemainingTime(sale.endDate)}
+                      {sale.originalPrice && sale.discountedPrice && sale.originalPrice > sale.discountedPrice && (
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm text-muted-foreground line-through">
+                            ${sale.originalPrice}
+                          </span>
+                          <span className="text-sm font-semibold text-green-600">
+                            {Math.round((1 - sale.discountedPrice / sale.originalPrice) * 100)}% OFF
                           </span>
                         </div>
-
-                        {/* Slots */}
-                        {sale.spotsAvailable && (
-                          <div className="text-sm text-muted-foreground">
-                            {sale.spotsAvailable} {sale.spotsAvailable === 1 ? 'spot' : 'spots'} left
-                          </div>
-                        )}
+                      )}
+                    </div>
+                    <div className="flex items-center justify-between pt-2 border-t border-border">
+                      <div className="flex items-center gap-1.5">
+                        <Clock className={`w-4 h-4 ${getUrgencyColor(sale.endDate)}`} />
+                        <span className={`text-sm font-medium ${getUrgencyColor(sale.endDate)}`}>
+                          {getRemainingTime(sale.endDate)}
+                        </span>
                       </div>
-
-                      {/* Location */}
-                      {sale.artist?.location?.city && (
-                        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                          <MapPin className="w-3 h-3" />
-                          <span>{sale.artist.location.city}, {sale.artist.location.country}</span>
+                      {sale.spotsAvailable && (
+                        <div className="text-sm text-muted-foreground">
+                          {sale.spotsAvailable} {sale.spotsAvailable === 1 ? 'spot' : 'spots'} left
                         </div>
                       )}
                     </div>
-                  </Card>
-                </Link>
-              ))}
-            </div>
-          )}
-        </div>
+                    {sale.artist?.location?.city && (
+                      <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                        <MapPin className="w-3 h-3" />
+                        <span>{sale.artist.location.city}, {sale.artist.location.country}</span>
+                      </div>
+                    )}
+                  </div>
+                </Card>
+              </Link>
+            ))}
+          </div>
+        )}
       </main>
       <MobileNav />
     </div>
