@@ -481,42 +481,42 @@ export default function BookingsPage() {
                 </DialogContent>
               </Dialog>
             )}
+        </div>
+
+        <Tabs value={statusFilter} onValueChange={setStatusFilter} className="mb-6">
+          <TabsList className="bg-white dark:bg-black border border-black dark:border-white">
+            <TabsTrigger value="ALL" className="data-[state=active]:bg-black data-[state=active]:text-white dark:data-[state=active]:bg-white dark:data-[state=active]:text-black" data-testid="tab-all">
+              All
+            </TabsTrigger>
+            <TabsTrigger value="PENDING" className="data-[state=active]:bg-black data-[state=active]:text-white dark:data-[state=active]:bg-white dark:data-[state=active]:text-black" data-testid="tab-pending">
+              Pending
+            </TabsTrigger>
+            <TabsTrigger value="APPROVED" className="data-[state=active]:bg-black data-[state=active]:text-white dark:data-[state=active]:bg-white dark:data-[state=active]:text-black" data-testid="tab-approved">
+              Approved
+            </TabsTrigger>
+            <TabsTrigger value="COMPLETED" className="data-[state=active]:bg-black data-[state=active]:text-white dark:data-[state=active]:bg-white dark:data-[state=active]:text-black" data-testid="tab-completed">
+              Completed
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
+
+        {isLoading ? (
+          <div className="flex items-center justify-center py-12">
+            <p className="text-gray-500 dark:text-gray-400">Loading bookings...</p>
           </div>
+        ) : bookings.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-12">
+            <Calendar className="w-12 h-12 text-gray-400 mb-4" />
+            <p className="text-gray-500 dark:text-gray-400">No bookings found</p>
+          </div>
+        ) : (
+          <div className="grid gap-4">
+            {bookings.map((booking: any) => {
+              const isArtist = booking.artistId === user.id;
+              const isClient = booking.clientId === user.id;
 
-          <Tabs value={statusFilter} onValueChange={setStatusFilter} className="mb-6">
-            <TabsList className="bg-white dark:bg-black border border-black dark:border-white">
-              <TabsTrigger value="ALL" className="data-[state=active]:bg-black data-[state=active]:text-white dark:data-[state=active]:bg-white dark:data-[state=active]:text-black" data-testid="tab-all">
-                All
-              </TabsTrigger>
-              <TabsTrigger value="PENDING" className="data-[state=active]:bg-black data-[state=active]:text-white dark:data-[state=active]:bg-white dark:data-[state=active]:text-black" data-testid="tab-pending">
-                Pending
-              </TabsTrigger>
-              <TabsTrigger value="APPROVED" className="data-[state=active]:bg-black data-[state=active]:text-white dark:data-[state=active]:bg-white dark:data-[state=active]:text-black" data-testid="tab-approved">
-                Approved
-              </TabsTrigger>
-              <TabsTrigger value="COMPLETED" className="data-[state=active]:bg-black data-[state=active]:text-white dark:data-[state=active]:bg-white dark:data-[state=active]:text-black" data-testid="tab-completed">
-                Completed
-              </TabsTrigger>
-            </TabsList>
-          </Tabs>
-
-          {isLoading ? (
-            <div className="flex items-center justify-center py-12">
-              <p className="text-gray-500 dark:text-gray-400">Loading bookings...</p>
-            </div>
-          ) : bookings.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12">
-              <Calendar className="w-12 h-12 text-gray-400 mb-4" />
-              <p className="text-gray-500 dark:text-gray-400">No bookings found</p>
-            </div>
-          ) : (
-            <div className="grid gap-4">
-              {bookings.map((booking: any) => {
-                const isArtist = booking.artistId === user.id;
-                const isClient = booking.clientId === user.id;
-
-                return (
-                  <Card key={booking.id} className="bg-white dark:bg-black border-black dark:border-white p-6" data-testid={`card-booking-${booking.id}`}>
+              return (
+                <Card key={booking.id} className="bg-white dark:bg-black border-black dark:border-white p-6" data-testid={`card-booking-${booking.id}`}>
                     <div className="flex items-start justify-between mb-4">
                       <div className="flex-1">
                         <div className="flex items-center gap-3 mb-2 flex-wrap">
@@ -670,8 +670,7 @@ export default function BookingsPage() {
               })}
             </div>
           )}
-        </div>
-      </div>
+      </main>
 
       <MobileNav />
     </div>
