@@ -95,7 +95,7 @@ export default function Jobs() {
       <main className="lg:ml-64 pb-20 lg:pb-8 pt-4 max-w-4xl mx-auto px-4">
         <div className="mb-6 flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold mb-1">Job Board</h1>
+            <h1 className="text-2xl font-bold mb-1" data-testid="page-title">Job Board</h1>
             <p className="text-sm text-muted-foreground">Find your next opportunity in the tattoo industry</p>
           </div>
 

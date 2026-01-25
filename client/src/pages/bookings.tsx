@@ -219,15 +219,14 @@ export default function BookingsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-white dark:bg-black">
+    <div className="min-h-screen bg-background">
       <SidebarNav />
       
-      <div className="lg:ml-64 pb-20 lg:pb-8">
-        <div className="max-w-7xl mx-auto p-6">
-          <div className="flex items-center justify-between mb-8">
-            <h1 className="text-3xl font-bold text-black dark:text-white uppercase tracking-tight">
-              Bookings
-            </h1>
+      <main className="lg:ml-64 pb-20 lg:pb-8 pt-4 max-w-6xl mx-auto px-4">
+        <div className="flex items-center justify-between mb-6">
+          <h1 className="text-2xl font-bold mb-1" data-testid="page-title">
+            Bookings
+          </h1>
             
             {user.role !== "STUDIO" && (
               <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>

@@ -91,3 +91,10 @@ The database is seeded with comprehensive test data for all engagement features:
     - **Flash Sales Management**: View all flash sales with delete functionality
     - **Bookings Overview**: View all bookings across the platform with status and payment info
     - **Security**: All admin endpoints protected with `requireAuth` + `requireRole(["ADMIN"])`, sensitive user data (password hashes) excluded from API responses
+*   **Design System Standardization (Jan 2026)**:
+    - **Page Layout Pattern**: All main pages use `lg:ml-64 pb-20 lg:pb-8 pt-4` for consistent sidebar offset and padding
+    - **Page Headers**: Standardized to `text-2xl font-bold mb-1` for titles, `text-sm text-muted-foreground` for subtitles
+    - **Max-width Guidelines**: `max-w-2xl` for narrow content (notifications, saved), `max-w-4xl` for medium (jobs), `max-w-6xl` for wide grids (explore, bookings, flash-sales)
+    - **Test IDs**: All page titles have `data-testid="page-title"` for E2E testing
+    - **PageLayout Component**: Reusable component at `client/src/components/layout/page-layout.tsx` with props for title, subtitle, maxWidth, headerAction
+    - **Exceptions**: Messages page uses special full-height chat layout, Home page has unique feed layout with featured carousel

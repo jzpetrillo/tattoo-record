@@ -182,105 +182,102 @@ export default function Notifications() {
   const groupedNotifications = groupNotificationsByDate(notifications);
 
   return (
-    <div className="flex min-h-screen bg-background">
+    <div className="min-h-screen bg-background">
       <SidebarNav />
       
-      <main className="flex-1 lg:ml-64">
-        <div className="max-w-2xl mx-auto px-4 py-6">
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h1 className="text-2xl font-semibold tracking-tight">Notifications</h1>
-              {unreadCount > 0 && (
-                <p className="text-sm text-muted-foreground mt-1">
-                  {unreadCount} unread notification{unreadCount > 1 ? "s" : ""}
-                </p>
-              )}
-            </div>
+      <main className="lg:ml-64 pb-20 lg:pb-8 pt-4 max-w-2xl mx-auto px-4">
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h1 className="text-2xl font-bold mb-1" data-testid="page-title">Notifications</h1>
             {unreadCount > 0 && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => markAllAsReadMutation.mutate()}
-                disabled={markAllAsReadMutation.isPending}
-                data-testid="button-mark-all-read"
-                className="text-sm"
-              >
-                Mark all as read
-              </Button>
+              <p className="text-sm text-muted-foreground">
+                {unreadCount} unread notification{unreadCount > 1 ? "s" : ""}
+              </p>
             )}
           </div>
+          {unreadCount > 0 && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => markAllAsReadMutation.mutate()}
+              disabled={markAllAsReadMutation.isPending}
+              data-testid="button-mark-all-read"
+              className="text-sm"
+            >
+              Mark all as read
+            </Button>
+          )}
+        </div>
 
-          {isLoading ? (
-            <div className="space-y-2">
-              {[...Array(5)].map((_, i) => (
-                <NotificationSkeleton key={i} />
-              ))}
-            </div>
-          ) : notifications.length === 0 ? (
-            <div className="text-center py-12" data-testid="text-no-notifications">
-              <Bell className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
-              <p className="text-muted-foreground">No notifications yet</p>
-              <p className="text-sm text-muted-foreground mt-1">
-                When someone follows you or likes your posts, you'll see it here
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-6">
-              {groupedNotifications.map((group) => (
-                <div key={group.label}>
-                  <h2 className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground mb-3 px-1">
-                    {group.label}
-                  </h2>
-                  <div className="space-y-2">
-                    {group.notifications.map((notification) => (
-                      <div
-                        key={notification.notification.id}
-                        className={`flex items-center gap-4 p-4 border border-border text-left transition-colors hover:bg-muted/50 ${
-                          !notification.notification.isRead ? "bg-muted/30 border-l-2 border-l-primary" : ""
-                        }`}
-                        data-testid={`notification-${notification.notification.id}`}
+        {isLoading ? (
+          <div className="space-y-2">
+            {[...Array(5)].map((_, i) => (
+              <NotificationSkeleton key={i} />
+            ))}
+          </div>
+        ) : notifications.length === 0 ? (
+          <div className="text-center py-12" data-testid="text-no-notifications">
+            <Bell className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
+            <p className="text-muted-foreground">No notifications yet</p>
+            <p className="text-sm text-muted-foreground mt-1">
+              When someone follows you or likes your posts, you'll see it here
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-6">
+            {groupedNotifications.map((group) => (
+              <div key={group.label}>
+                <h2 className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground mb-3 px-1">
+                  {group.label}
+                </h2>
+                <div className="space-y-2">
+                  {group.notifications.map((notification) => (
+                    <div
+                      key={notification.notification.id}
+                      className={`flex items-center gap-4 p-4 border border-border text-left transition-colors hover:bg-muted/50 ${
+                        !notification.notification.isRead ? "bg-muted/30 border-l-2 border-l-primary" : ""
+                      }`}
+                      data-testid={`notification-${notification.notification.id}`}
+                    >
+                      <button
+                        onClick={() => handleNotificationClick(notification)}
+                        className="flex-shrink-0"
                       >
-                        <button
-                          onClick={() => handleNotificationClick(notification)}
-                          className="flex-shrink-0"
-                        >
-                          {notification.actor?.avatarUrl ? (
-                            <img
-                              src={notification.actor.avatarUrl}
-                              alt={notification.actor.username}
-                              className="w-12 h-12 rounded-full object-cover"
-                              data-testid={`img-avatar-${notification.notification.id}`}
-                            />
-                          ) : (
-                            <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center">
-                              {getNotificationIcon(notification.notification.type, notification.notification.payload)}
-                            </div>
-                          )}
-                        </button>
-
-                        <button
-                          onClick={() => handleNotificationClick(notification)}
-                          className="flex-1 min-w-0 text-left"
-                        >
-                          <p className="text-sm">
-                            {getNotificationMessage(notification)}
-                          </p>
-                          <p className="text-xs text-muted-foreground mt-1">
-                            {formatDistanceToNow(new Date(notification.notification.createdAt), {
-                              addSuffix: true,
-                            })}
-                          </p>
-                        </button>
-
-                        <div className="flex items-center gap-2 flex-shrink-0">
-                          {notification.notification.type === "FOLLOW" && notification.actor && (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                followBackMutation.mutate(notification.actor!.id);
-                              }}
+                        {notification.actor?.avatarUrl ? (
+                          <img
+                            src={notification.actor.avatarUrl}
+                            alt={notification.actor.username}
+                            className="w-12 h-12 rounded-full object-cover"
+                            data-testid={`img-avatar-${notification.notification.id}`}
+                          />
+                        ) : (
+                          <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center">
+                            {getNotificationIcon(notification.notification.type, notification.notification.payload)}
+                          </div>
+                        )}
+                      </button>
+                      <button
+                        onClick={() => handleNotificationClick(notification)}
+                        className="flex-1 min-w-0 text-left"
+                      >
+                        <p className="text-sm">
+                          {getNotificationMessage(notification)}
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {formatDistanceToNow(new Date(notification.notification.createdAt), {
+                            addSuffix: true,
+                          })}
+                        </p>
+                      </button>
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        {notification.notification.type === "FOLLOW" && notification.actor && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              followBackMutation.mutate(notification.actor!.id);
+                            }}
                               disabled={followBackMutation.isPending}
                               data-testid={`button-follow-back-${notification.notification.id}`}
                               className="text-xs"
