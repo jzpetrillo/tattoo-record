@@ -1,0 +1,186 @@
+GHOSTWRITER COMMAND: Perform Full Application Codebase Audit & Validation
+
+Objective
+Audit the entire application codebase to ensure it is:
+- Up to date with current framework and dependency best practices
+- Clean, readable, and maintainable
+- Fully functional across ALL pages, user roles, and environments
+- Secure, performant, and production-ready
+- Backward-compatible with existing data and live users
+
+IMPORTANT CONSTRAINTS
+- Do NOT remove or break existing features
+- Do NOT alter database schemas unless explicitly required to fix bugs
+- Do NOT change UI/UX unless fixing broken behavior or inconsistencies
+- All fixes must preserve current functionality and flows
+
+---
+
+1. DEPENDENCY & FRAMEWORK AUDIT
+Scan and validate:
+- Frontend framework versions (React / Next / Vue / etc.)
+- Backend runtime (Node / Express / Fastify / etc.)
+- ORM / database client versions
+- Auth libraries (sessions, JWT, OAuth)
+- Email, storage, payments, API SDKs
+
+Actions:
+- Identify outdated or deprecated packages
+- Flag security vulnerabilities
+- Update dependencies ONLY if safe and non-breaking
+- Remove unused dependencies
+- Align package versions to stable LTS where possible
+
+Output:
+- Dependency health report
+- List of updates applied (if any)
+- List of updates recommended but deferred (with reason)
+
+---
+
+2. PROJECT STRUCTURE & ARCHITECTURE REVIEW
+Analyze:
+- Folder organization and naming conventions
+- Separation of concerns (UI, services, controllers, models, utils)
+- Reusable components vs duplicated logic
+- API route consistency
+- Environment config separation (dev / staging / prod)
+
+Actions:
+- Flag architectural smells or inconsistencies
+- Normalize file naming and directory structure where safe
+- Remove dead or unreachable code
+- Ensure environment variables are properly scoped and documented
+
+---
+
+3. ROUTING & PAGE VALIDATION (CRITICAL)
+Enumerate and test:
+- All public pages
+- All authenticated pages
+- All role-gated pages (Admin, Agency, Agent, Talent, Brand)
+- Dynamic routes and parameterized pages
+- Redirects and 404/403 handling
+
+Actions:
+- Verify every route resolves without runtime errors
+- Confirm correct RBAC enforcement on every page
+- Ensure unauthorized access is blocked
+- Ensure broken links, missing pages, or orphan routes are fixed
+
+Output:
+- Complete route map
+- List of broken or misconfigured routes (fixed)
+- Confirmation of role-based access correctness
+
+---
+
+4. UI & COMPONENT HEALTH CHECK
+Audit:
+- Shared UI components
+- Forms and form validation
+- Modals, drawers, dropdowns
+- Loading states, empty states, error states
+- Image loading and fallbacks
+
+Actions:
+- Fix console errors and warnings
+- Ensure components render safely with missing or partial data
+- Eliminate hydration errors (if applicable)
+- Normalize props and state usage
+- Ensure consistent styling behavior across pages
+
+---
+
+5. DATA FLOW & STATE INTEGRITY
+Inspect:
+- API requests and responses
+- State management (local state, context, stores)
+- Caching and revalidation
+- Error handling paths
+- Edge cases (empty data, deleted records, partial records)
+
+Actions:
+- Ensure all API calls handle errors gracefully
+- Ensure optimistic updates are safe
+- Prevent undefined/null crashes
+- Confirm no data is silently failing to load
+
+---
+
+6. AUTHENTICATION, AUTHORIZATION & SECURITY
+Verify:
+- Login, logout, registration flows
+- Session persistence and expiration
+- Password handling and hashing
+- OAuth integrations (if any)
+- RBAC middleware coverage
+
+Actions:
+- Confirm auth is enforced on all protected routes
+- Validate permissions for create/edit/delete actions
+- Ensure no privilege escalation paths exist
+- Confirm secrets are not exposed client-side
+
+---
+
+7. PAYMENTS, EMAIL & EXTERNAL SERVICES
+Audit integrations:
+- Email delivery (verification, notifications)
+- Payment processing (if applicable)
+- File storage (uploads, access control)
+- Webhooks and background jobs
+- Third-party APIs
+
+Actions:
+- Validate API keys and environment bindings
+- Ensure retries and failure handling exist
+- Confirm idempotency where required
+- Prevent duplicate sends or charges
+
+---
+
+8. PERFORMANCE & STABILITY CHECK
+Evaluate:
+- Page load performance
+- API response times
+- N+1 queries
+- Unnecessary re-renders
+- Excessive network requests
+
+Actions:
+- Add memoization or batching where safe
+- Reduce redundant API calls
+- Ensure pagination and limits are enforced
+- Remove debug logs and dev-only tooling
+
+---
+
+9. LOGGING, MONITORING & ERROR HANDLING
+Ensure:
+- Errors are logged clearly
+- Client vs server errors are separated
+- Sensitive data is not logged
+- Failures surface useful messages for users and admins
+
+Actions:
+- Normalize error handling patterns
+- Add guardrails where silent failures exist
+
+---
+
+10. FINAL VERIFICATION & SIGN-OFF
+Perform:
+- Full app walkthrough as each role
+- Smoke test all major flows
+- Confirm no regressions
+- Confirm app builds and runs cleanly with no warnings
+
+Final Output Required:
+- ✔ Audit summary
+- ✔ List of fixes applied
+- ✔ List of risks or follow-ups (if any)
+- ✔ Confirmation that all pages load and function correctly
+- ✔ Confirmation app is production-ready
+
+END COMMAND

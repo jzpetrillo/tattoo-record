@@ -7,25 +7,20 @@ export async function getPersonalizedFeed(
   limit: number = 20,
   offset: number = 0
 ) {
-  console.log(`[FEED] getPersonalizedFeed called for userId: ${userId}`);
-  
   const followedUsers = await db
     .select({ followingId: follows.followingId })
     .from(follows)
     .where(eq(follows.followerId, userId));
 
   const followedUserIds = followedUsers.map((f) => f.followingId);
-  console.log(`[FEED] User ${userId} follows ${followedUserIds.length} users:`, followedUserIds);
   
   // If user doesn't follow anyone, show them the public feed (discovery mode)
   if (followedUserIds.length === 0) {
-    console.log(`[FEED] User follows no one, returning public feed for discovery`);
     return getPublicFeed(limit, offset, userId);
   }
   
   // Include user's own posts in their feed
   const userIdsToShow = [...followedUserIds, userId];
-  console.log(`[FEED] userIdsToShow (${userIdsToShow.length}):`, userIdsToShow);
 
   const feedPosts = await db
     .select({
@@ -58,13 +53,6 @@ export async function getPersonalizedFeed(
     .orderBy(desc(sql`engagement_score`))
     .limit(limit)
     .offset(offset);
-
-  console.log(`[FEED DEBUG] User ${userId} - Found ${feedPosts.length} posts`);
-  if (feedPosts.length > 0) {
-    feedPosts.forEach((item, idx) => {
-      console.log(`[FEED DEBUG] Post ${idx + 1}: id=${item.post.id}, caption=${item.post.caption?.substring(0, 50) || '(empty)'}, media=${item.post.media?.length || 0} items, score=${item.engagementScore}`);
-    });
-  }
 
   return feedPosts;
 }
