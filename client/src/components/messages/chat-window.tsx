@@ -5,18 +5,20 @@ import { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { createWebSocket, sendWebSocketMessage } from "@/lib/websocket";
+import { ArrowLeft, Send, Image, Plus, Smile, Phone, Video, MoreVertical } from "lucide-react";
 
 interface ChatWindowProps {
   conversationId: string | null;
+  onBack?: () => void;
 }
 
-export default function ChatWindow({ conversationId }: ChatWindowProps) {
+export default function ChatWindow({ conversationId, onBack }: ChatWindowProps) {
   const { token, user } = useAuth();
   const queryClient = useQueryClient();
   const [message, setMessage] = useState("");
   const [socket, setSocket] = useState<WebSocket | null>(null);
 
-  const { data: messages } = useQuery({
+  const { data: messages } = useQuery<any[]>({
     queryKey: [`/api/conversations/${conversationId}/messages`],
     enabled: !!token && !!conversationId,
   });
@@ -75,30 +77,41 @@ export default function ChatWindow({ conversationId }: ChatWindowProps) {
 
   return (
     <div className="flex flex-col flex-1">
-      <div className="p-4 border-b border-border bg-card flex items-center justify-between">
-        <div className="flex items-center gap-3">
+      <div className="p-3 sm:p-4 border-b border-border bg-card flex items-center justify-between">
+        <div className="flex items-center gap-2 sm:gap-3">
+          {onBack && (
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              onClick={onBack}
+              className="lg:hidden min-h-[44px] min-w-[44px]"
+              data-testid="button-back-to-conversations"
+            >
+              <ArrowLeft className="w-5 h-5" />
+            </Button>
+          )}
           <img
             src="https://ui-avatars.com/api/?name=User"
             alt="User"
             className="w-10 h-10 rounded-full"
           />
           <div>
-            <h3 className="font-semibold">Chat User</h3>
+            <h3 className="font-semibold text-sm sm:text-base">Chat User</h3>
             <p className="text-xs text-green-500 flex items-center gap-1">
-              <i className="fas fa-circle text-[6px]"></i>
+              <span className="w-1.5 h-1.5 bg-green-500 rounded-full"></span>
               Online
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          <Button variant="ghost" size="icon">
-            <i className="fas fa-phone"></i>
+        <div className="flex items-center gap-1">
+          <Button variant="ghost" size="icon" className="hidden sm:flex min-h-[44px] min-w-[44px]">
+            <Phone className="w-5 h-5" />
           </Button>
-          <Button variant="ghost" size="icon">
-            <i className="fas fa-video"></i>
+          <Button variant="ghost" size="icon" className="hidden sm:flex min-h-[44px] min-w-[44px]">
+            <Video className="w-5 h-5" />
           </Button>
-          <Button variant="ghost" size="icon">
-            <i className="fas fa-ellipsis-v"></i>
+          <Button variant="ghost" size="icon" className="min-h-[44px] min-w-[44px]">
+            <MoreVertical className="w-5 h-5" />
           </Button>
         </div>
       </div>
@@ -128,13 +141,13 @@ export default function ChatWindow({ conversationId }: ChatWindowProps) {
         })}
       </div>
 
-      <div className="p-4 border-t border-border bg-card">
-        <div className="flex items-end gap-3">
-          <Button variant="ghost" size="icon">
-            <i className="fas fa-plus text-xl"></i>
+      <div className="p-3 sm:p-4 border-t border-border bg-card safe-area-bottom">
+        <div className="flex items-center gap-2">
+          <Button variant="ghost" size="icon" className="hidden sm:flex min-h-[44px] min-w-[44px]">
+            <Plus className="w-5 h-5" />
           </Button>
-          <Button variant="ghost" size="icon">
-            <i className="fas fa-image text-xl"></i>
+          <Button variant="ghost" size="icon" className="min-h-[44px] min-w-[44px]">
+            <Image className="w-5 h-5" />
           </Button>
           <div className="flex-1 relative">
             <Input
@@ -142,20 +155,21 @@ export default function ChatWindow({ conversationId }: ChatWindowProps) {
               onChange={(e) => setMessage(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && sendMessageMutation.mutate()}
               placeholder="Type a message..."
-              className="bg-secondary border-border rounded-2xl pr-12"
+              className="bg-secondary border-border rounded-2xl pr-12 min-h-[44px]"
               data-testid="input-message"
             />
-            <Button variant="ghost" size="icon" className="absolute right-1 bottom-1">
-              <i className="far fa-smile text-xl"></i>
+            <Button variant="ghost" size="icon" className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8">
+              <Smile className="w-5 h-5" />
             </Button>
           </div>
           <Button
             onClick={() => sendMessageMutation.mutate()}
             disabled={!message.trim() || sendMessageMutation.isPending}
             size="icon"
+            className="min-h-[44px] min-w-[44px]"
             data-testid="button-send-message"
           >
-            <i className="fas fa-paper-plane"></i>
+            <Send className="w-5 h-5" />
           </Button>
         </div>
       </div>

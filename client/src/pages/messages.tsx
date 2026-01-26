@@ -11,13 +11,11 @@ export default function Messages() {
   const { token } = useAuth();
   const [location] = useLocation();
 
-  // Handle withUserId query parameter to open conversation with specific user
   useEffect(() => {
     const params = new URLSearchParams(location.split('?')[1]);
     const withUserId = params.get('withUserId');
     
     if (withUserId && token) {
-      // Fetch or create conversation with this user
       fetch(`/api/messages?withUserId=${withUserId}`, {
         headers: {
           'Authorization': `Bearer ${token}`
@@ -33,18 +31,25 @@ export default function Messages() {
     }
   }, [location, token]);
 
+  const handleBackToList = () => {
+    setSelectedConversation(null);
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <SidebarNav />
-      <main className="lg:ml-64 h-screen flex">
+      <main className="lg:ml-64 h-[100dvh] flex pb-16 lg:pb-0">
         <div className={`${selectedConversation ? 'hidden lg:block' : 'block'} w-full lg:w-auto`}>
           <ConversationList 
             onSelectConversation={setSelectedConversation} 
             selectedConversation={selectedConversation}
           />
         </div>
-        <div className={`${selectedConversation ? 'block' : 'hidden lg:hidden'} flex-1`}>
-          <ChatWindow conversationId={selectedConversation} />
+        <div className={`${selectedConversation ? 'flex' : 'hidden lg:flex'} flex-1 flex-col`}>
+          <ChatWindow 
+            conversationId={selectedConversation} 
+            onBack={handleBackToList}
+          />
         </div>
       </main>
       <MobileNav />

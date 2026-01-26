@@ -1,0 +1,50 @@
+GHOSTWRITER COMMAND: Mobile Responsiveness & Mobile UX Audit (All Pages)
+
+Objective:
+Perform a complete audit and fix pass to ensure the application is fully mobile-friendly, responsive, and usable across all modern mobile devices (iOS and Android).
+
+1) Global Mobile Responsiveness Review
+- Review all pages, routes, modals, and user flows on mobile screen sizes
+- Test common mobile breakpoints (small, standard, and large phones)
+- Eliminate horizontal scrolling and viewport overflow issues
+- Ensure layouts adapt cleanly to mobile widths
+
+2) Layout & Component Behavior on Mobile
+- Convert fixed-width or desktop-only layouts to responsive layouts
+- Ensure shared components (cards, profiles, tables, forms, modals) render correctly on mobile
+- Stack multi-column layouts appropriately on small screens
+- Maintain consistent spacing and alignment on mobile
+
+3) Navigation & Interaction
+- Ensure navigation is mobile-appropriate (hamburger menu, drawer, or bottom nav)
+- Remove hover-only interactions and replace with tap-based behavior
+- Ensure navigation is accessible and usable on all mobile pages
+
+4) Typography & Readability
+- Ensure text scales properly on mobile
+- Prevent text clipping, overlap, or overflow
+- Maintain readable font sizes and line spacing
+
+5) Forms, Inputs & Touch Targets
+- Optimize all forms for mobile usage
+- Ensure inputs use correct mobile-friendly types
+- Make buttons, links, and interactive elements touch-friendly
+- Prevent inputs from being obscured by keyboards or fixed elements
+
+6) Images & Media
+- Ensure all images and media scale responsively
+- Preserve aspect ratios and prevent layout breaking
+- Optimize images for mobile performance where needed
+
+7) Performance & Mobile UX
+- Identify and fix mobile-specific performance issues
+- Remove or simplify desktop-only animations that degrade mobile UX
+- Ensure smooth scrolling and interactions on mobile devices
+
+8) Final Validation
+- Validate core workflows on mobile (auth, profiles, dashboards, messaging, payments, etc.)
+- Ensure feature parity between desktop and mobile
+- Fix any remaining mobile UI or UX inconsistencies
+
+Deliverable:
+Apply all necessary CSS, layout, and component updates so the application feels clean, intuitive, and production-ready on mobile devices.
