@@ -134,32 +134,32 @@ export default function CreatePostModal({ open, onClose }: CreatePostModalProps)
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-2xl w-[calc(100%-2rem)] sm:w-full max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Create New Content</DialogTitle>
         </DialogHeader>
 
         <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as typeof activeTab)} className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="post" className="flex items-center gap-2" data-testid="tab-post">
+          <TabsList className="grid w-full grid-cols-3 min-h-[44px]">
+            <TabsTrigger value="post" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm min-h-[40px]" data-testid="tab-post">
               <ImageIcon className="w-4 h-4" />
-              Post
+              <span className="hidden xs:inline">Post</span>
             </TabsTrigger>
-            <TabsTrigger value="story" className="flex items-center gap-2" data-testid="tab-story">
+            <TabsTrigger value="story" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm min-h-[40px]" data-testid="tab-story">
               <Clock className="w-4 h-4" />
-              Story
+              <span className="hidden xs:inline">Story</span>
             </TabsTrigger>
-            <TabsTrigger value="reel" className="flex items-center gap-2" data-testid="tab-reel">
+            <TabsTrigger value="reel" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm min-h-[40px]" data-testid="tab-reel">
               <VideoIcon className="w-4 h-4" />
-              Reel
+              <span className="hidden xs:inline">Reel</span>
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="post" className="space-y-6 mt-6">
-            <div className="border-2 border-dashed border-border rounded-xl p-12 text-center hover:border-primary transition-colors cursor-pointer bg-secondary/20">
-              <ImageIcon className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-              <p className="text-sm font-medium mb-2">Drag photos and videos here</p>
-              <p className="text-xs text-muted-foreground mb-4">or click to browse</p>
+          <TabsContent value="post" className="space-y-4 sm:space-y-6 mt-4 sm:mt-6">
+            <div className="border-2 border-dashed border-border rounded-xl p-6 sm:p-12 text-center hover:border-primary active:border-primary transition-colors cursor-pointer bg-secondary/20 touch-manipulation">
+              <ImageIcon className="w-10 h-10 sm:w-12 sm:h-12 mx-auto text-muted-foreground mb-3 sm:mb-4" />
+              <p className="text-sm font-medium mb-2">Tap to add photos or videos</p>
+              <p className="text-xs text-muted-foreground mb-4">or drag and drop</p>
               <Input
                 type="file"
                 multiple
@@ -170,8 +170,8 @@ export default function CreatePostModal({ open, onClose }: CreatePostModalProps)
                 data-testid="input-file-upload"
               />
               <label htmlFor="post-file-upload">
-                <Button type="button" asChild>
-                  <span>Select from computer</span>
+                <Button type="button" asChild className="min-h-[44px]">
+                  <span>Select files</span>
                 </Button>
               </label>
             </div>
@@ -193,38 +193,36 @@ export default function CreatePostModal({ open, onClose }: CreatePostModalProps)
 
             <div>
               <label className="block text-sm font-medium mb-2">Visibility</label>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-2 sm:gap-3">
                 <button
                   onClick={() => setVisibility("PUBLIC")}
-                  className={`flex items-center gap-2 rounded-lg p-3 transition-colors ${
+                  className={`flex items-center justify-center gap-2 rounded-lg p-3 min-h-[48px] transition-colors touch-manipulation ${
                     visibility === "PUBLIC"
                       ? "bg-primary/20 border border-primary text-primary"
                       : "bg-secondary border border-border text-muted-foreground"
                   }`}
                   data-testid="button-visibility-public"
                 >
-                  <i className="fas fa-globe"></i>
                   <span className="text-sm font-medium">Public</span>
                 </button>
                 <button
                   onClick={() => setVisibility("FOLLOWERS")}
-                  className={`flex items-center gap-2 rounded-lg p-3 transition-colors ${
+                  className={`flex items-center justify-center gap-2 rounded-lg p-3 min-h-[48px] transition-colors touch-manipulation ${
                     visibility === "FOLLOWERS"
                       ? "bg-primary/20 border border-primary text-primary"
                       : "bg-secondary border border-border text-muted-foreground"
                   }`}
                   data-testid="button-visibility-followers"
                 >
-                  <i className="fas fa-user-friends"></i>
                   <span className="text-sm font-medium">Followers</span>
                 </button>
               </div>
             </div>
           </TabsContent>
 
-          <TabsContent value="story" className="space-y-6 mt-6">
-            <div className="border-2 border-dashed border-border rounded-xl p-12 text-center hover:border-primary transition-colors cursor-pointer bg-secondary/20">
-              <Clock className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
+          <TabsContent value="story" className="space-y-4 sm:space-y-6 mt-4 sm:mt-6">
+            <div className="border-2 border-dashed border-border rounded-xl p-6 sm:p-12 text-center hover:border-primary active:border-primary transition-colors cursor-pointer bg-secondary/20 touch-manipulation">
+              <Clock className="w-10 h-10 sm:w-12 sm:h-12 mx-auto text-muted-foreground mb-3 sm:mb-4" />
               <p className="text-sm font-medium mb-2">Add to your story</p>
               <p className="text-xs text-muted-foreground mb-4">Stories disappear after 24 hours</p>
               <Input
@@ -236,8 +234,8 @@ export default function CreatePostModal({ open, onClose }: CreatePostModalProps)
                 data-testid="input-story-upload"
               />
               <label htmlFor="story-file-upload">
-                <Button type="button" asChild>
-                  <span>Select from computer</span>
+                <Button type="button" asChild className="min-h-[44px]">
+                  <span>Select file</span>
                 </Button>
               </label>
             </div>
@@ -247,9 +245,9 @@ export default function CreatePostModal({ open, onClose }: CreatePostModalProps)
             )}
           </TabsContent>
 
-          <TabsContent value="reel" className="space-y-6 mt-6">
-            <div className="border-2 border-dashed border-border rounded-xl p-12 text-center hover:border-primary transition-colors cursor-pointer bg-secondary/20">
-              <VideoIcon className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
+          <TabsContent value="reel" className="space-y-4 sm:space-y-6 mt-4 sm:mt-6">
+            <div className="border-2 border-dashed border-border rounded-xl p-6 sm:p-12 text-center hover:border-primary active:border-primary transition-colors cursor-pointer bg-secondary/20 touch-manipulation">
+              <VideoIcon className="w-10 h-10 sm:w-12 sm:h-12 mx-auto text-muted-foreground mb-3 sm:mb-4" />
               <p className="text-sm font-medium mb-2">Upload your reel</p>
               <p className="text-xs text-muted-foreground mb-4">Short vertical video</p>
               <Input
@@ -261,7 +259,7 @@ export default function CreatePostModal({ open, onClose }: CreatePostModalProps)
                 data-testid="input-reel-upload"
               />
               <label htmlFor="reel-file-upload">
-                <Button type="button" asChild>
+                <Button type="button" asChild className="min-h-[44px]">
                   <span>Select video</span>
                 </Button>
               </label>
@@ -284,29 +282,27 @@ export default function CreatePostModal({ open, onClose }: CreatePostModalProps)
 
             <div>
               <label className="block text-sm font-medium mb-2">Visibility</label>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-2 sm:gap-3">
                 <button
                   onClick={() => setVisibility("PUBLIC")}
-                  className={`flex items-center gap-2 rounded-lg p-3 transition-colors ${
+                  className={`flex items-center justify-center gap-2 rounded-lg p-3 min-h-[48px] transition-colors touch-manipulation ${
                     visibility === "PUBLIC"
                       ? "bg-primary/20 border border-primary text-primary"
                       : "bg-secondary border border-border text-muted-foreground"
                   }`}
                   data-testid="button-reel-visibility-public"
                 >
-                  <i className="fas fa-globe"></i>
                   <span className="text-sm font-medium">Public</span>
                 </button>
                 <button
                   onClick={() => setVisibility("FOLLOWERS")}
-                  className={`flex items-center gap-2 rounded-lg p-3 transition-colors ${
+                  className={`flex items-center justify-center gap-2 rounded-lg p-3 min-h-[48px] transition-colors touch-manipulation ${
                     visibility === "FOLLOWERS"
                       ? "bg-primary/20 border border-primary text-primary"
                       : "bg-secondary border border-border text-muted-foreground"
                   }`}
                   data-testid="button-reel-visibility-followers"
                 >
-                  <i className="fas fa-user-friends"></i>
                   <span className="text-sm font-medium">Followers</span>
                 </button>
               </div>
@@ -314,14 +310,14 @@ export default function CreatePostModal({ open, onClose }: CreatePostModalProps)
           </TabsContent>
         </Tabs>
 
-        <div className="flex gap-3 mt-6">
-          <Button variant="outline" onClick={onClose} className="flex-1" data-testid="button-cancel">
+        <div className="flex gap-2 sm:gap-3 mt-4 sm:mt-6">
+          <Button variant="outline" onClick={onClose} className="flex-1 min-h-[44px]" data-testid="button-cancel">
             Cancel
           </Button>
           <Button
             onClick={handleSubmit}
             disabled={(activeTab !== "post" && files.length === 0) || (activeTab === "post" && !caption && files.length === 0) || isSubmitting}
-            className="flex-1"
+            className="flex-1 min-h-[44px]"
             data-testid="button-share-post"
           >
             {isSubmitting ? "Sharing..." : `Share ${activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}`}
