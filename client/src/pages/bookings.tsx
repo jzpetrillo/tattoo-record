@@ -484,17 +484,17 @@ export default function BookingsPage() {
         </div>
 
         <Tabs value={statusFilter} onValueChange={setStatusFilter} className="mb-6">
-          <TabsList className="bg-white dark:bg-black border border-black dark:border-white">
-            <TabsTrigger value="ALL" className="data-[state=active]:bg-black data-[state=active]:text-white dark:data-[state=active]:bg-white dark:data-[state=active]:text-black" data-testid="tab-all">
+          <TabsList className="bg-white dark:bg-black border border-black dark:border-white h-12 flex-wrap sm:flex-nowrap">
+            <TabsTrigger value="ALL" className="min-h-[44px] px-3 sm:px-4 data-[state=active]:bg-black data-[state=active]:text-white dark:data-[state=active]:bg-white dark:data-[state=active]:text-black" data-testid="tab-all">
               All
             </TabsTrigger>
-            <TabsTrigger value="PENDING" className="data-[state=active]:bg-black data-[state=active]:text-white dark:data-[state=active]:bg-white dark:data-[state=active]:text-black" data-testid="tab-pending">
+            <TabsTrigger value="PENDING" className="min-h-[44px] px-3 sm:px-4 data-[state=active]:bg-black data-[state=active]:text-white dark:data-[state=active]:bg-white dark:data-[state=active]:text-black" data-testid="tab-pending">
               Pending
             </TabsTrigger>
-            <TabsTrigger value="APPROVED" className="data-[state=active]:bg-black data-[state=active]:text-white dark:data-[state=active]:bg-white dark:data-[state=active]:text-black" data-testid="tab-approved">
+            <TabsTrigger value="APPROVED" className="min-h-[44px] px-3 sm:px-4 data-[state=active]:bg-black data-[state=active]:text-white dark:data-[state=active]:bg-white dark:data-[state=active]:text-black" data-testid="tab-approved">
               Approved
             </TabsTrigger>
-            <TabsTrigger value="COMPLETED" className="data-[state=active]:bg-black data-[state=active]:text-white dark:data-[state=active]:bg-white dark:data-[state=active]:text-black" data-testid="tab-completed">
+            <TabsTrigger value="COMPLETED" className="min-h-[44px] px-3 sm:px-4 data-[state=active]:bg-black data-[state=active]:text-white dark:data-[state=active]:bg-white dark:data-[state=active]:text-black" data-testid="tab-completed">
               Completed
             </TabsTrigger>
           </TabsList>

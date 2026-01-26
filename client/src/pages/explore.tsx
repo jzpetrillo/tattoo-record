@@ -162,32 +162,32 @@ export default function Explore() {
             onValueChange={(value) => handleTypeChange(value as UserType)}
             className="flex-1"
           >
-            <TabsList className="grid w-full grid-cols-4 h-12 bg-transparent p-0 gap-2" data-testid="filter-tabs">
+            <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 h-auto bg-transparent p-0 gap-1 sm:gap-2" data-testid="filter-tabs">
               <TabsTrigger 
                 value="ALL" 
                 data-testid="filter-all"
-                className="data-[state=active]:bg-black data-[state=active]:text-white rounded-none border border-border"
+                className="min-h-[44px] text-xs sm:text-sm data-[state=active]:bg-black data-[state=active]:text-white rounded-none border border-border"
               >
                 All
               </TabsTrigger>
               <TabsTrigger 
                 value="STUDIO" 
                 data-testid="filter-studios"
-                className="data-[state=active]:bg-black data-[state=active]:text-white rounded-none border border-border"
+                className="min-h-[44px] text-xs sm:text-sm data-[state=active]:bg-black data-[state=active]:text-white rounded-none border border-border"
               >
                 Studios
               </TabsTrigger>
               <TabsTrigger 
                 value="ARTIST" 
                 data-testid="filter-artists"
-                className="data-[state=active]:bg-black data-[state=active]:text-white rounded-none border border-border"
+                className="min-h-[44px] text-xs sm:text-sm data-[state=active]:bg-black data-[state=active]:text-white rounded-none border border-border"
               >
                 Artists
               </TabsTrigger>
               <TabsTrigger 
                 value="ENTHUSIAST" 
                 data-testid="filter-enthusiasts"
-                className="data-[state=active]:bg-black data-[state=active]:text-white rounded-none border border-border"
+                className="min-h-[44px] text-xs sm:text-sm data-[state=active]:bg-black data-[state=active]:text-white rounded-none border border-border"
               >
                 Enthusiasts
               </TabsTrigger>
