@@ -98,3 +98,9 @@ The database is seeded with comprehensive test data for all engagement features:
     - **Test IDs**: All page titles have `data-testid="page-title"` for E2E testing
     - **PageLayout Component**: Reusable component at `client/src/components/layout/page-layout.tsx` with props for title, subtitle, maxWidth, headerAction
     - **Exceptions**: Messages page uses special full-height chat layout, Home page has unique feed layout with featured carousel
+*   **Mobile Responsiveness Improvements (Jan 2026)**:
+    - **Global CSS Utilities**: Added `safe-area-bottom`, `safe-area-top`, `touch-manipulation`, `min-touch-target` classes in `index.css` for mobile accessibility
+    - **Touch Targets**: All interactive elements meet 44px minimum touch target size (booking tabs, explore filter tabs, modal buttons)
+    - **Create Post Modal**: Responsive sizing with `max-w-2xl w-[calc(100%-2rem)] max-h-[90vh]`, touch-friendly file upload zones, 44px tab triggers
+    - **Responsive Grids**: Explore filter tabs use `grid-cols-2 sm:grid-cols-4` for mobile layout
+    - **Safe Area Insets**: CSS utilities use `env(safe-area-inset-bottom)` for devices with notches

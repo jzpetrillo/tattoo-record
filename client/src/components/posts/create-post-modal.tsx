@@ -141,17 +141,17 @@ export default function CreatePostModal({ open, onClose }: CreatePostModalProps)
 
         <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as typeof activeTab)} className="w-full">
           <TabsList className="grid w-full grid-cols-3 min-h-[44px]">
-            <TabsTrigger value="post" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm min-h-[40px]" data-testid="tab-post">
+            <TabsTrigger value="post" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm min-h-[44px]" data-testid="tab-post">
               <ImageIcon className="w-4 h-4" />
-              <span className="hidden xs:inline">Post</span>
+              <span className="hidden sm:inline">Post</span>
             </TabsTrigger>
-            <TabsTrigger value="story" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm min-h-[40px]" data-testid="tab-story">
+            <TabsTrigger value="story" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm min-h-[44px]" data-testid="tab-story">
               <Clock className="w-4 h-4" />
-              <span className="hidden xs:inline">Story</span>
+              <span className="hidden sm:inline">Story</span>
             </TabsTrigger>
-            <TabsTrigger value="reel" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm min-h-[40px]" data-testid="tab-reel">
+            <TabsTrigger value="reel" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm min-h-[44px]" data-testid="tab-reel">
               <VideoIcon className="w-4 h-4" />
-              <span className="hidden xs:inline">Reel</span>
+              <span className="hidden sm:inline">Reel</span>
             </TabsTrigger>
           </TabsList>
 
