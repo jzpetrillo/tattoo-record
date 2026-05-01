@@ -9,6 +9,7 @@ import { formatDistanceToNow, isToday, isYesterday, isThisWeek, format } from "d
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { NotificationSkeleton } from "@/components/ui/skeletons";
+import { EmptyState } from "@/components/ui/empty-state";
 
 interface Notification {
   notification: {
@@ -78,19 +79,19 @@ export default function Notifications() {
 
   const getNotificationIcon = (type: string, payload?: { type?: string }) => {
     if (type === "SYSTEM" && payload?.type === "BOOKING_REMINDER") {
-      return <Calendar className="w-5 h-5 text-blue-500" />;
+      return <Calendar className="w-5 h-5 text-muted-foreground" />;
     }
     switch (type) {
       case "FOLLOW":
-        return <UserPlus className="w-5 h-5" />;
+        return <UserPlus className="w-5 h-5 text-muted-foreground" />;
       case "LIKE":
-        return <Heart className="w-5 h-5 fill-red-500 text-red-500" />;
+        return <Heart className="w-5 h-5 text-muted-foreground" />;
       case "COMMENT":
-        return <MessageCircle className="w-5 h-5" />;
+        return <MessageCircle className="w-5 h-5 text-muted-foreground" />;
       case "APPROVAL":
-        return <CheckCircle className="w-5 h-5 text-green-500" />;
+        return <CheckCircle className="w-5 h-5 text-muted-foreground" />;
       default:
-        return <Bell className="w-5 h-5" />;
+        return <Bell className="w-5 h-5 text-muted-foreground" />;
     }
   };
 
@@ -216,13 +217,12 @@ export default function Notifications() {
             ))}
           </div>
         ) : notifications.length === 0 ? (
-          <div className="text-center py-12" data-testid="text-no-notifications">
-            <Bell className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
-            <p className="text-muted-foreground">No notifications yet</p>
-            <p className="text-sm text-muted-foreground mt-1">
-              When someone follows you or likes your posts, you'll see it here
-            </p>
-          </div>
+          <EmptyState
+            icon={Bell}
+            title="No notifications yet"
+            description="When someone follows you or likes your posts, you'll see it here"
+            data-testid="text-no-notifications"
+          />
         ) : (
           <div className="space-y-6">
             {groupedNotifications.map((group) => (

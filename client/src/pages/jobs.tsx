@@ -7,7 +7,6 @@ import SidebarNav from "@/components/layout/sidebar-nav";
 import MobileNav from "@/components/layout/mobile-nav";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
@@ -16,8 +15,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Plus, MapPin, DollarSign, Briefcase, MessageCircle } from "lucide-react";
+import { Plus, MapPin, DollarSign, Briefcase } from "lucide-react";
 import { Link } from "wouter";
+import { JobCardSkeleton } from "@/components/ui/skeletons";
+import { EmptyState } from "@/components/ui/empty-state";
+import { StatusBadge } from "@/components/ui/status-badge";
 
 const createJobSchema = z.object({
   title: z.string().min(1, "Title is required").max(255),
@@ -235,48 +237,49 @@ export default function Jobs() {
         </div>
 
         {isLoading ? (
-          <div className="text-center py-12 text-muted-foreground">Loading jobs...</div>
-        ) : jobs?.length === 0 ? (
-          <div className="text-center py-12">
-            <Briefcase className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
-            <p className="text-muted-foreground">No jobs posted yet</p>
+          <div className="space-y-4">
+            {[1, 2, 3].map((i) => <JobCardSkeleton key={i} />)}
           </div>
+        ) : !jobs?.length ? (
+          <EmptyState
+            icon={Briefcase}
+            title="No jobs posted yet"
+            description="Check back soon for new opportunities in the tattoo industry."
+          />
         ) : (
           <div className="space-y-4">
             {jobs?.map((item: any) => (
               <Link key={item.job.id} href={`/jobs/${item.job.id}`}>
-                <Card className="p-6 cursor-pointer hover:shadow-md transition-shadow" data-testid={`job-${item.job.id}`}>
-                  <div className="flex items-start gap-4 mb-4">
-                    <div className="w-12 h-12 rounded-full bg-secondary flex items-center justify-center flex-shrink-0">
-                      <span className="text-sm font-semibold">{item.studio.username[0].toUpperCase()}</span>
+                <Card className="p-6 cursor-pointer hover:shadow-md transition-shadow border-border" data-testid={`job-${item.job.id}`}>
+                  <div className="flex items-start gap-4">
+                    <div className="w-12 h-12 bg-secondary flex items-center justify-center flex-shrink-0 font-semibold text-sm">
+                      {item.studio.username[0].toUpperCase()}
                     </div>
-                    <div className="flex-1">
-                      <div className="flex items-start justify-between mb-2">
-                        <div>
-                          <h3 className="font-bold text-lg hover:text-primary transition-colors" data-testid={`text-job-title-${item.job.id}`}>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-start justify-between gap-2 mb-1">
+                        <div className="min-w-0">
+                          <h3 className="font-bold truncate" data-testid={`text-job-title-${item.job.id}`}>
                             {item.job.title}
                           </h3>
                           <p className="text-sm text-muted-foreground">{item.studio.username}</p>
                         </div>
-                        <Badge variant="secondary" data-testid={`badge-job-type-${item.job.id}`}>
-                          {item.job.type.replace("_", " ")}
-                        </Badge>
+                        <StatusBadge status={item.job.type} type="job-type" data-testid={`badge-job-type-${item.job.id}`} />
                       </div>
-                      
-                      <div className="flex flex-wrap gap-4 text-sm text-muted-foreground mb-3">
+
+                      <div className="flex flex-wrap gap-3 text-sm text-muted-foreground my-2">
                         {item.job.location && (
                           <div className="flex items-center gap-1">
-                            <MapPin className="w-4 h-4" />
+                            <MapPin className="w-3.5 h-3.5" />
                             <span>{item.job.location}</span>
                           </div>
                         )}
                         <div className="flex items-center gap-1">
-                          <DollarSign className="w-4 h-4" />
+                          <DollarSign className="w-3.5 h-3.5" />
                           <span>{formatSalary(item.job.salaryMinCents, item.job.salaryMaxCents)}</span>
                         </div>
                       </div>
 
-                      <p className="text-sm leading-relaxed line-clamp-2">{item.job.description}</p>
+                      <p className="text-sm text-muted-foreground leading-relaxed line-clamp-2">{item.job.description}</p>
                     </div>
                   </div>
                 </Card>

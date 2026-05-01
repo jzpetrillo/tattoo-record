@@ -11,9 +11,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { 
   Check, X, ShieldCheck, Users, Clock, CheckCircle2, XCircle, 
   LayoutDashboard, FileText, Briefcase, Zap, Calendar, Search,
-  Trash2, Star, StarOff, Ban, UserCheck, Eye, MoreHorizontal,
-  TrendingUp, UserPlus, Image, DollarSign
+  Trash2, Star, StarOff, Ban, UserPlus, Image, DollarSign
 } from "lucide-react";
+import { EmptyState } from "@/components/ui/empty-state";
+import { StatusBadge } from "@/components/ui/status-badge";
 import { useToast } from "@/hooks/use-toast";
 import SidebarNav from "@/components/layout/sidebar-nav";
 import MobileNav from "@/components/layout/mobile-nav";
@@ -304,12 +305,12 @@ export default function AdminDashboard() {
     <div className="min-h-screen bg-background">
       <SidebarNav />
       
-      <div className="lg:ml-64 pb-16 lg:pb-0">
-        <div className="container max-w-7xl mx-auto p-4 lg:p-8">
-          <div className="mb-8">
-            <h1 className="text-3xl font-bold mb-2" data-testid="admin-title">Admin Dashboard</h1>
-            <p className="text-muted-foreground">
-              Manage and monitor your entire platform
+      <div className="lg:ml-64 pb-20 lg:pb-8 pt-4">
+        <div className="max-w-6xl mx-auto px-4">
+          <div className="mb-6">
+            <h1 className="text-2xl font-bold mb-1" data-testid="admin-title">Admin Dashboard</h1>
+            <p className="text-sm text-muted-foreground">
+              Manage and monitor your platform
             </p>
           </div>
 
@@ -333,7 +334,7 @@ export default function AdminDashboard() {
           {/* Overview Section */}
           {activeSection === "overview" && (
             <div className="space-y-6">
-              <h2 className="text-2xl font-semibold">Platform Overview</h2>
+              <h2 className="text-base font-semibold uppercase tracking-wider text-muted-foreground">Platform Overview</h2>
               
               {statsLoading ? (
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
@@ -393,7 +394,7 @@ export default function AdminDashboard() {
                         <Clock className="w-4 h-4" />
                         <span className="text-sm">Pending</span>
                       </div>
-                      <p className="text-3xl font-bold text-orange-500">{stats.pendingVerifications}</p>
+                      <p className="text-3xl font-bold">{stats.pendingVerifications}</p>
                     </CardContent>
                   </Card>
                   
@@ -418,8 +419,8 @@ export default function AdminDashboard() {
                   <CardContent>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                       {Object.entries(stats.usersByRole || {}).map(([role, count]) => (
-                        <div key={role} className="flex items-center justify-between p-4 border rounded-lg">
-                          <span className="font-medium">{role}</span>
+                        <div key={role} className="flex items-center justify-between p-4 border border-border">
+                          <span className="text-sm font-medium uppercase tracking-wide">{role}</span>
                           <Badge variant="secondary">{count as number}</Badge>
                         </div>
                       ))}
@@ -433,7 +434,7 @@ export default function AdminDashboard() {
           {/* Verification Section */}
           {activeSection === "verification" && (
             <div className="space-y-6">
-              <h2 className="text-2xl font-semibold">User Verification</h2>
+              <h2 className="text-base font-semibold uppercase tracking-wider text-muted-foreground">User Verification</h2>
               
               <Tabs value={verificationTab} onValueChange={setVerificationTab} className="w-full">
                 <TabsList className="grid w-full max-w-md grid-cols-4">
@@ -467,14 +468,11 @@ export default function AdminDashboard() {
                       ))}
                     </div>
                   ) : !verificationUsers || verificationUsers.length === 0 ? (
-                    <Card>
-                      <CardContent className="p-8 text-center">
-                        <ShieldCheck className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-                        <p className="text-lg font-medium mb-2">
-                          No {verificationTab} users found
-                        </p>
-                      </CardContent>
-                    </Card>
+                    <EmptyState
+                      icon={ShieldCheck}
+                      title={`No ${verificationTab} users`}
+                      description="No users match this verification status."
+                    />
                   ) : (
                     <div className="grid gap-4">
                       {verificationUsers.map((userItem: any) => (
@@ -492,11 +490,7 @@ export default function AdminDashboard() {
                                     <h3 className="font-semibold text-lg">{userItem.username}</h3>
                                     <Badge variant="outline" className="uppercase text-xs">{userItem.role}</Badge>
                                     {userItem.verificationStatus && (
-                                      <Badge 
-                                        variant={userItem.verificationStatus === "APPROVED" ? "default" : userItem.verificationStatus === "REJECTED" ? "destructive" : "secondary"}
-                                      >
-                                        {userItem.verificationStatus}
-                                      </Badge>
+                                      <StatusBadge status={userItem.verificationStatus} type="verification" />
                                     )}
                                   </div>
                                   <p className="text-sm text-muted-foreground mb-2">{userItem.email}</p>
@@ -544,7 +538,7 @@ export default function AdminDashboard() {
           {activeSection === "users" && (
             <div className="space-y-6">
               <div className="flex flex-col sm:flex-row justify-between gap-4">
-                <h2 className="text-2xl font-semibold">User Management</h2>
+                <h2 className="text-base font-semibold uppercase tracking-wider text-muted-foreground">User Management</h2>
                 <div className="flex gap-2">
                   <div className="relative">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -582,12 +576,11 @@ export default function AdminDashboard() {
                   ))}
                 </div>
               ) : !allUsers || allUsers.length === 0 ? (
-                <Card>
-                  <CardContent className="p-8 text-center">
-                    <Users className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-                    <p className="text-lg font-medium">No users found</p>
-                  </CardContent>
-                </Card>
+                <EmptyState
+                  icon={Users}
+                  title="No users found"
+                  description="Try adjusting your search or filter."
+                />
               ) : (
                 <div className="space-y-2">
                   {allUsers.map((userItem: any) => (
@@ -679,7 +672,7 @@ export default function AdminDashboard() {
           {/* Posts Management Section */}
           {activeSection === "posts" && (
             <div className="space-y-6">
-              <h2 className="text-2xl font-semibold">Posts Management</h2>
+              <h2 className="text-base font-semibold uppercase tracking-wider text-muted-foreground">Posts Management</h2>
 
               {postsLoading ? (
                 <div className="grid gap-4">
@@ -692,12 +685,7 @@ export default function AdminDashboard() {
                   ))}
                 </div>
               ) : !posts || posts.length === 0 ? (
-                <Card>
-                  <CardContent className="p-8 text-center">
-                    <FileText className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-                    <p className="text-lg font-medium">No posts found</p>
-                  </CardContent>
-                </Card>
+                <EmptyState icon={FileText} title="No posts" description="No posts have been created yet." />
               ) : (
                 <div className="space-y-2">
                   {posts.map((post: any) => (
@@ -776,7 +764,7 @@ export default function AdminDashboard() {
           {/* Jobs Management Section */}
           {activeSection === "jobs" && (
             <div className="space-y-6">
-              <h2 className="text-2xl font-semibold">Jobs Management</h2>
+              <h2 className="text-base font-semibold uppercase tracking-wider text-muted-foreground">Jobs Management</h2>
 
               {jobsLoading ? (
                 <div className="grid gap-4">
@@ -789,12 +777,7 @@ export default function AdminDashboard() {
                   ))}
                 </div>
               ) : !jobs || jobs.length === 0 ? (
-                <Card>
-                  <CardContent className="p-8 text-center">
-                    <Briefcase className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-                    <p className="text-lg font-medium">No job postings found</p>
-                  </CardContent>
-                </Card>
+                <EmptyState icon={Briefcase} title="No job postings" description="No jobs have been posted yet." />
               ) : (
                 <div className="space-y-2">
                   {jobs.map((job: any) => (
@@ -807,7 +790,7 @@ export default function AdminDashboard() {
                               <Badge variant={job.isActive ? "default" : "secondary"}>
                                 {job.isActive ? "Active" : "Inactive"}
                               </Badge>
-                              <Badge variant="outline">{job.type}</Badge>
+                              <StatusBadge status={job.type} type="job-type" />
                             </div>
                             <p className="text-sm text-muted-foreground">
                               {job.studio?.username || "Unknown Studio"} - {job.location || "Remote"}
@@ -860,7 +843,7 @@ export default function AdminDashboard() {
           {/* Flash Sales Management Section */}
           {activeSection === "flash-sales" && (
             <div className="space-y-6">
-              <h2 className="text-2xl font-semibold">Flash Sales Management</h2>
+              <h2 className="text-base font-semibold uppercase tracking-wider text-muted-foreground">Flash Sales Management</h2>
 
               {flashSalesLoading ? (
                 <div className="grid gap-4">
@@ -873,12 +856,7 @@ export default function AdminDashboard() {
                   ))}
                 </div>
               ) : !flashSales || flashSales.length === 0 ? (
-                <Card>
-                  <CardContent className="p-8 text-center">
-                    <Zap className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-                    <p className="text-lg font-medium">No flash sales found</p>
-                  </CardContent>
-                </Card>
+                <EmptyState icon={Zap} title="No flash sales" description="No flash sales have been created yet." />
               ) : (
                 <div className="space-y-2">
                   {flashSales.map((sale: any) => (
@@ -929,7 +907,7 @@ export default function AdminDashboard() {
           {/* Bookings Overview Section */}
           {activeSection === "bookings" && (
             <div className="space-y-6">
-              <h2 className="text-2xl font-semibold">Bookings Overview</h2>
+              <h2 className="text-base font-semibold uppercase tracking-wider text-muted-foreground">Bookings Overview</h2>
 
               {bookingsLoading ? (
                 <div className="grid gap-4">
@@ -942,12 +920,7 @@ export default function AdminDashboard() {
                   ))}
                 </div>
               ) : !bookings || bookings.length === 0 ? (
-                <Card>
-                  <CardContent className="p-8 text-center">
-                    <Calendar className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-                    <p className="text-lg font-medium">No bookings found</p>
-                  </CardContent>
-                </Card>
+                <EmptyState icon={Calendar} title="No bookings" description="No bookings have been made yet." />
               ) : (
                 <div className="space-y-2">
                   {bookings.map((booking: any) => (
@@ -959,16 +932,7 @@ export default function AdminDashboard() {
                               <span className="font-medium">
                                 {booking.client?.username || "Unknown"} → {booking.artist?.username || "Unknown"}
                               </span>
-                              <Badge 
-                                variant={
-                                  booking.status === "COMPLETED" ? "default" :
-                                  booking.status === "APPROVED" ? "secondary" :
-                                  booking.status === "PENDING" ? "outline" :
-                                  "destructive"
-                                }
-                              >
-                                {booking.status}
-                              </Badge>
+                              <StatusBadge status={booking.status} type="booking" />
                             </div>
                             <p className="text-sm text-muted-foreground">
                               {booking.scheduledAt ? new Date(booking.scheduledAt).toLocaleString() : "Not scheduled"}

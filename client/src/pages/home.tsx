@@ -186,7 +186,7 @@ export default function Home() {
             <Card className="mb-4 p-4 border-border" data-testid="featured-section">
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-2">
-                  <Star className="w-5 h-5 text-yellow-500 fill-current" />
+                  <Star className="w-5 h-5 text-foreground fill-current" />
                   <h2 className="font-semibold uppercase text-sm tracking-wide">Featured</h2>
                 </div>
                 <div className="flex gap-2">
@@ -226,7 +226,7 @@ export default function Home() {
                               alt="Featured post"
                               className="w-full h-full object-cover group-hover:scale-105 transition-transform"
                             />
-                            <div className="absolute top-2 right-2 bg-yellow-500 rounded-full p-1">
+                            <div className="absolute top-2 right-2 bg-black p-1">
                               <Star className="w-3 h-3 text-white fill-current" />
                             </div>
                           </>

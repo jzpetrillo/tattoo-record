@@ -4,6 +4,8 @@ import PostCard from "@/components/posts/post-card";
 import { Bookmark } from "lucide-react";
 import SidebarNav from "@/components/layout/sidebar-nav";
 import MobileNav from "@/components/layout/mobile-nav";
+import { FeedSkeleton } from "@/components/ui/skeletons";
+import { EmptyState } from "@/components/ui/empty-state";
 
 interface SavedPostItem {
   post: {
@@ -34,35 +36,6 @@ export default function SavedPostsPage() {
     enabled: !!token,
   });
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-background">
-        <SidebarNav />
-        <main className="lg:ml-64 pb-20 lg:pb-8 pt-4 max-w-2xl mx-auto px-4">
-          <div className="mb-6">
-            <div className="h-8 bg-secondary rounded w-48 mb-2 animate-pulse"></div>
-            <div className="h-4 bg-secondary rounded w-32 animate-pulse"></div>
-          </div>
-          <div className="space-y-6">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="border border-border p-4 animate-pulse">
-                <div className="flex gap-4 mb-4">
-                  <div className="w-10 h-10 rounded-full bg-secondary" />
-                  <div className="flex-1">
-                    <div className="h-4 bg-secondary rounded w-24 mb-2" />
-                    <div className="h-3 bg-secondary rounded w-16" />
-                  </div>
-                </div>
-                <div className="h-48 bg-secondary rounded" />
-              </div>
-            ))}
-          </div>
-        </main>
-        <MobileNav />
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-screen bg-background">
       <SidebarNav />
@@ -72,13 +45,13 @@ export default function SavedPostsPage() {
             Saved Posts
           </h1>
           <p className="text-sm text-muted-foreground">
-            {savedPosts.length} saved {savedPosts.length === 1 ? 'post' : 'posts'}
+            {isLoading ? "Loading…" : `${savedPosts.length} saved ${savedPosts.length === 1 ? "post" : "posts"}`}
           </p>
         </div>
 
         {collections.length > 0 && (
           <div className="flex gap-2 overflow-x-auto pb-4 mb-4">
-            <button 
+            <button
               className="px-4 py-2 text-sm border border-border hover:bg-secondary transition-colors whitespace-nowrap"
               data-testid="filter-all"
             >
@@ -96,14 +69,14 @@ export default function SavedPostsPage() {
           </div>
         )}
 
-        {savedPosts.length === 0 ? (
-          <div className="text-center py-12 border border-border" data-testid="empty-state">
-            <Bookmark className="w-16 h-16 mx-auto mb-4 text-muted-foreground" />
-            <h2 className="text-xl font-semibold mb-2">No saved posts yet</h2>
-            <p className="text-muted-foreground">
-              Posts you save will appear here
-            </p>
-          </div>
+        {isLoading ? (
+          <FeedSkeleton count={3} />
+        ) : savedPosts.length === 0 ? (
+          <EmptyState
+            icon={Bookmark}
+            title="No saved posts yet"
+            description="Posts you save will appear here"
+          />
         ) : (
           <div className="space-y-6">
             {savedPosts.map((item) => (

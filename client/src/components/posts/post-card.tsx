@@ -187,7 +187,7 @@ export default function PostCard({ post, author, isLiked = false, isSaved = fals
             <button
               onClick={() => likeMutation.mutate(!liked)}
               disabled={likeMutation.isPending}
-              className={`hover:text-primary transition-colors ${liked ? 'text-red-500' : ''}`}
+              className={`hover:text-primary transition-colors ${liked ? 'text-foreground' : ''}`}
               data-testid={`button-like-${post.id}`}
             >
               <Heart className={`w-6 h-6 ${liked ? 'fill-current' : ''}`} />

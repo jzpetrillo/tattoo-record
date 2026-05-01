@@ -27,32 +27,32 @@ export default function Create() {
       title: "Post",
       description: "Share photos and videos to your feed",
       icon: ImageIcon,
-      iconColor: "text-blue-500",
-      bgColor: "bg-blue-50 dark:bg-blue-950/30",
+      iconColor: "text-foreground",
+      bgColor: "bg-secondary",
     },
     {
       id: "reel",
       title: "Reel",
       description: "Create short video content",
       icon: Film,
-      iconColor: "text-purple-500",
-      bgColor: "bg-purple-50 dark:bg-purple-950/30",
+      iconColor: "text-foreground",
+      bgColor: "bg-secondary",
     },
     {
       id: "story",
       title: "Story",
       description: "Share a moment that disappears in 24 hours",
       icon: VideoIcon,
-      iconColor: "text-pink-500",
-      bgColor: "bg-pink-50 dark:bg-pink-950/30",
+      iconColor: "text-foreground",
+      bgColor: "bg-secondary",
     },
     {
       id: "live",
       title: "Go Live",
       description: "Start a live video stream",
       icon: Radio,
-      iconColor: "text-red-500",
-      bgColor: "bg-red-50 dark:bg-red-950/30",
+      iconColor: "text-foreground",
+      bgColor: "bg-secondary",
     },
   ];
 
@@ -62,9 +62,9 @@ export default function Create() {
       
       <main className="flex-1 lg:ml-64 pb-20 lg:pb-0">
         <div className="max-w-4xl mx-auto px-4 py-8">
-          <div className="mb-8">
-            <h1 className="text-3xl font-bold mb-2">Create</h1>
-            <p className="text-muted-foreground">Share your work with the community</p>
+          <div className="mb-6">
+            <h1 className="text-2xl font-bold mb-1" data-testid="page-title">Create</h1>
+            <p className="text-sm text-muted-foreground">Share your work with the community</p>
           </div>
 
           <div className="grid md:grid-cols-2 gap-4">

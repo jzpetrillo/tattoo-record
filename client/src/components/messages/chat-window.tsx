@@ -97,8 +97,8 @@ export default function ChatWindow({ conversationId, onBack }: ChatWindowProps) 
           />
           <div>
             <h3 className="font-semibold text-sm sm:text-base">Chat User</h3>
-            <p className="text-xs text-green-500 flex items-center gap-1">
-              <span className="w-1.5 h-1.5 bg-green-500 rounded-full"></span>
+            <p className="text-xs text-muted-foreground flex items-center gap-1">
+              <span className="w-1.5 h-1.5 bg-foreground rounded-full"></span>
               Online
             </p>
           </div>

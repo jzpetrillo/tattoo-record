@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Sparkles, Palette, MapPin, Ruler, Droplets, Info, Loader2 } from "lucide-react";
+import { Sparkles, Palette, MapPin, Ruler, Droplets, Info, Loader2, CheckCircle2 } from "lucide-react";
 
 const TATTOO_STYLES = [
   "Traditional",
@@ -90,16 +90,11 @@ export default function AIRecommendations() {
   return (
     <div className="min-h-screen bg-background">
       <SidebarNav />
-      <main className="lg:ml-64 pb-20 lg:pb-8">
-        <div className="max-w-4xl mx-auto px-4 py-8">
-          <div className="mb-8">
-            <div className="flex items-center gap-3 mb-2">
-              <div className="p-2 bg-primary/10 rounded-lg">
-                <Sparkles className="w-6 h-6 text-primary" />
-              </div>
-              <h1 className="text-3xl font-bold">AI Tattoo Recommendations</h1>
-            </div>
-            <p className="text-muted-foreground">
+      <main className="lg:ml-64 pb-20 lg:pb-8 pt-4">
+        <div className="max-w-4xl mx-auto px-4">
+          <div className="mb-6">
+            <h1 className="text-2xl font-bold mb-1" data-testid="page-title">AI Recommendations</h1>
+            <p className="text-sm text-muted-foreground">
               Get personalized tattoo design recommendations powered by AI
             </p>
           </div>

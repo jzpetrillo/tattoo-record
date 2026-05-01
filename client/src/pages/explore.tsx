@@ -262,20 +262,28 @@ export default function Explore() {
         {isLoading ? (
           <ExploreGridSkeleton count={6} />
         ) : filteredUsers.length === 0 ? (
-          <div className="text-center py-24">
-            <Grid3X3 className="w-16 h-16 mx-auto mb-4 opacity-20" />
-            <p className="text-xl font-light text-muted-foreground">No users found</p>
-            <p className="text-sm text-muted-foreground mt-2">Try adjusting your filters</p>
-            {hasActiveFilters && (
-              <Button 
-                variant="outline" 
-                className="mt-4"
-                onClick={clearFilters}
-                data-testid="button-clear-filters-empty"
-              >
-                Clear all filters
-              </Button>
-            )}
+          <div className="py-8">
+            <div
+              className="flex flex-col items-center justify-center py-16 px-4 text-center border border-border"
+              data-testid="empty-state"
+            >
+              <div className="w-12 h-12 flex items-center justify-center border border-border mb-4">
+                <Grid3X3 className="w-6 h-6 text-muted-foreground" />
+              </div>
+              <h3 className="text-sm font-semibold uppercase tracking-wider mb-1">No users found</h3>
+              <p className="text-sm text-muted-foreground max-w-xs">Try adjusting your search filters to find what you&apos;re looking for.</p>
+              {hasActiveFilters && (
+                <div className="mt-4">
+                  <Button
+                    variant="outline"
+                    onClick={clearFilters}
+                    data-testid="button-clear-filters-empty"
+                  >
+                    Clear all filters
+                  </Button>
+                </div>
+              )}
+            </div>
           </div>
         ) : (
           <>

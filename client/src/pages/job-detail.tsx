@@ -18,6 +18,8 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { ArrowLeft, MapPin, DollarSign, Briefcase, Building2, Edit, Trash2 } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
+import { EmptyState } from "@/components/ui/empty-state";
 import { Link } from "wouter";
 
 const applyJobSchema = z.object({
@@ -139,7 +141,13 @@ export default function JobDetail() {
       <div className="min-h-screen bg-background">
         <SidebarNav />
         <main className="lg:ml-64 pb-20 lg:pb-8 pt-4 max-w-4xl mx-auto px-4">
-          <div className="text-center py-12">Loading...</div>
+          <Skeleton className="h-8 w-48 mb-6" />
+          <div className="space-y-4">
+            <Skeleton className="h-10 w-3/4" />
+            <Skeleton className="h-5 w-1/2" />
+            <Skeleton className="h-40 w-full" />
+            <Skeleton className="h-32 w-full" />
+          </div>
         </main>
         <MobileNav />
       </div>
@@ -151,7 +159,7 @@ export default function JobDetail() {
       <div className="min-h-screen bg-background">
         <SidebarNav />
         <main className="lg:ml-64 pb-20 lg:pb-8 pt-4 max-w-4xl mx-auto px-4">
-          <div className="text-center py-12">Job not found</div>
+          <EmptyState icon={Briefcase} title="Job not found" description="This job posting may have been removed or is no longer available." />
         </main>
         <MobileNav />
       </div>

@@ -328,7 +328,7 @@ export default function Profile() {
                   {user?.username}
                 </h1>
                 {user?.isVerified && (
-                  <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" data-testid="icon-verified" />
+                  <Star className="w-4 h-4 fill-foreground text-foreground" data-testid="icon-verified" />
                 )}
               </div>
             </div>
@@ -450,11 +450,7 @@ export default function Profile() {
               
               {/* Role Badge */}
               <div className="flex items-center gap-2 mt-2">
-                <span className={`px-2 py-0.5 rounded text-xs font-medium ${
-                  user?.role === "STUDIO" ? "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200" :
-                  user?.role === "ARTIST" ? "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200" :
-                  "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
-                }`}>
+                <span className="px-2 py-0.5 border border-border text-xs font-medium uppercase tracking-wide text-muted-foreground">
                   {user?.role}
                 </span>
               </div>

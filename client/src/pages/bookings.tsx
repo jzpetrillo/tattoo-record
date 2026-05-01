@@ -12,13 +12,16 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, Clock, Plus, CheckCircle, XCircle, DollarSign, Image as ImageIcon, CreditCard, Bell } from "lucide-react";
+import { Calendar, Clock, Plus, CheckCircle, XCircle, DollarSign, CreditCard, Bell } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { format } from "date-fns";
 import SidebarNav from "@/components/layout/sidebar-nav";
 import MobileNav from "@/components/layout/mobile-nav";
+import { BookingCardSkeleton } from "@/components/ui/skeletons";
+import { EmptyState } from "@/components/ui/empty-state";
+import { StatusBadge } from "@/components/ui/status-badge";
 
 const bookingSchema = z.object({
   artistId: z.string().min(1, "Artist is required"),
@@ -164,36 +167,6 @@ export default function BookingsPage() {
 
   // Server handles filtering via status query parameter
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "PENDING": return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200";
-      case "APPROVED": return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200";
-      case "REJECTED": return "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200";
-      case "COMPLETED": return "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200";
-      case "CANCELLED": return "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200";
-      default: return "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200";
-    }
-  };
-
-  const getPaymentStatusColor = (status: PaymentStatus) => {
-    switch (status) {
-      case "UNPAID": return "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200";
-      case "DEPOSIT_PAID": return "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200";
-      case "FULLY_PAID": return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200";
-      case "REFUNDED": return "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200";
-      default: return "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200";
-    }
-  };
-
-  const getPaymentStatusLabel = (status: PaymentStatus) => {
-    switch (status) {
-      case "UNPAID": return "Unpaid";
-      case "DEPOSIT_PAID": return "Deposit Paid";
-      case "FULLY_PAID": return "Fully Paid";
-      case "REFUNDED": return "Refunded";
-      default: return status;
-    }
-  };
 
   const formatPrice = (cents?: number) => {
     if (!cents) return "N/A";
@@ -501,14 +474,15 @@ export default function BookingsPage() {
         </Tabs>
 
         {isLoading ? (
-          <div className="flex items-center justify-center py-12">
-            <p className="text-gray-500 dark:text-gray-400">Loading bookings...</p>
+          <div className="grid gap-4">
+            {[1, 2, 3].map((i) => <BookingCardSkeleton key={i} />)}
           </div>
         ) : bookings.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-12">
-            <Calendar className="w-12 h-12 text-gray-400 mb-4" />
-            <p className="text-gray-500 dark:text-gray-400">No bookings found</p>
-          </div>
+          <EmptyState
+            icon={Calendar}
+            title="No bookings found"
+            description={statusFilter === "ALL" ? "Create your first booking to get started." : `No ${statusFilter.toLowerCase()} bookings.`}
+          />
         ) : (
           <div className="grid gap-4">
             {bookings.map((booking: any) => {
@@ -523,14 +497,9 @@ export default function BookingsPage() {
                           <h3 className="text-xl font-bold text-black dark:text-white uppercase tracking-tight" data-testid={`text-booking-title-${booking.id}`}>
                             {booking.title}
                           </h3>
-                          <Badge className={getStatusColor(booking.status)} data-testid={`badge-status-${booking.id}`}>
-                            {booking.status}
-                          </Badge>
+                          <StatusBadge status={booking.status} type="booking" data-testid={`badge-status-${booking.id}`} />
                           {(booking.depositCents || booking.totalPriceCents) && (
-                            <Badge className={getPaymentStatusColor(booking.paymentStatus || "UNPAID")} data-testid={`badge-payment-${booking.id}`}>
-                              <CreditCard className="w-3 h-3 mr-1" />
-                              {getPaymentStatusLabel(booking.paymentStatus || "UNPAID")}
-                            </Badge>
+                            <StatusBadge status={booking.paymentStatus || "UNPAID"} type="payment" data-testid={`badge-payment-${booking.id}`} />
                           )}
                         </div>
                         
@@ -540,7 +509,7 @@ export default function BookingsPage() {
                           </p>
                         )}
 
-                        <div className="flex flex-wrap gap-4 text-sm text-gray-600 dark:text-gray-400">
+                        <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
                           <div className="flex items-center gap-2">
                             <Calendar className="w-4 h-4" />
                             <span data-testid={`text-scheduled-${booking.id}`}>
@@ -572,9 +541,9 @@ export default function BookingsPage() {
                         </div>
 
                         {booking.notes && (
-                          <div className="mt-3 p-3 bg-gray-50 dark:bg-gray-900 border border-black dark:border-white">
-                            <p className="text-sm text-gray-700 dark:text-gray-300" data-testid={`text-notes-${booking.id}`}>
-                              <strong>Notes:</strong> {booking.notes}
+                          <div className="mt-3 p-3 bg-muted border border-border">
+                            <p className="text-sm text-muted-foreground" data-testid={`text-notes-${booking.id}`}>
+                              <strong className="text-foreground">Notes:</strong> {booking.notes}
                             </p>
                           </div>
                         )}
@@ -586,7 +555,6 @@ export default function BookingsPage() {
                         <>
                           <Button
                             size="sm"
-                            className="bg-green-600 text-white hover:bg-green-700"
                             onClick={() => updateStatusMutation.mutate({ id: booking.id, status: "APPROVED" })}
                             disabled={updateStatusMutation.isPending}
                             data-testid={`button-approve-${booking.id}`}
@@ -597,7 +565,6 @@ export default function BookingsPage() {
                           <Button
                             size="sm"
                             variant="outline"
-                            className="border-red-600 text-red-600 hover:bg-red-50 dark:hover:bg-red-950"
                             onClick={() => updateStatusMutation.mutate({ id: booking.id, status: "REJECTED" })}
                             disabled={updateStatusMutation.isPending}
                             data-testid={`button-reject-${booking.id}`}
@@ -607,11 +574,10 @@ export default function BookingsPage() {
                           </Button>
                         </>
                       )}
-                      
+
                       {isArtist && booking.status === "APPROVED" && (
                         <Button
                           size="sm"
-                          className="bg-blue-600 text-white hover:bg-blue-700"
                           onClick={() => updateStatusMutation.mutate({ id: booking.id, status: "COMPLETED" })}
                           disabled={updateStatusMutation.isPending}
                           data-testid={`button-complete-${booking.id}`}
@@ -621,33 +587,30 @@ export default function BookingsPage() {
                         </Button>
                       )}
 
-                      {/* Payment status buttons for artists */}
                       {isArtist && booking.status === "APPROVED" && booking.depositCents > 0 && booking.paymentStatus === "UNPAID" && (
                         <Button
                           size="sm"
                           variant="outline"
-                          className="border-orange-500 text-orange-600 hover:bg-orange-50 dark:hover:bg-orange-950"
                           onClick={() => markDepositPaidMutation.mutate(booking.id)}
                           disabled={markDepositPaidMutation.isPending}
                           data-testid={`button-mark-deposit-paid-${booking.id}`}
                         >
                           <CreditCard className="w-4 h-4 mr-1" />
-                          Mark Deposit Paid
+                          Deposit Received
                         </Button>
                       )}
 
-                      {isArtist && booking.status === "APPROVED" && booking.totalPriceCents > 0 && 
+                      {isArtist && booking.status === "APPROVED" && booking.totalPriceCents > 0 &&
                        (booking.paymentStatus === "UNPAID" || booking.paymentStatus === "DEPOSIT_PAID") && (
                         <Button
                           size="sm"
                           variant="outline"
-                          className="border-green-500 text-green-600 hover:bg-green-50 dark:hover:bg-green-950"
                           onClick={() => markFullyPaidMutation.mutate(booking.id)}
                           disabled={markFullyPaidMutation.isPending}
                           data-testid={`button-mark-fully-paid-${booking.id}`}
                         >
                           <CreditCard className="w-4 h-4 mr-1" />
-                          Mark Fully Paid
+                          Mark Paid
                         </Button>
                       )}
 

@@ -7,6 +7,10 @@ import MobileNav from "@/components/layout/mobile-nav";
 import LiveStreamCard from "@/components/live/live-stream-card";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Skeleton } from "@/components/ui/skeleton";
+import { EmptyState } from "@/components/ui/empty-state";
 import { Radio, Video } from "lucide-react";
 import {
   Dialog,
@@ -15,8 +19,6 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 
 export default function LiveEvents() {
@@ -26,7 +28,7 @@ export default function LiveEvents() {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
 
-  const { data: liveEvents } = useQuery<any[]>({
+  const { data: liveEvents, isLoading } = useQuery<any[]>({
     queryKey: ["/api/livestream-events?status=LIVE"],
   });
 
@@ -41,7 +43,7 @@ export default function LiveEvents() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/livestream-events"] });
-      toast({ title: "Success", description: "You are now live!" });
+      toast({ title: "You are now live!" });
       setShowGoLiveDialog(false);
       setTitle("");
       setDescription("");
@@ -62,57 +64,57 @@ export default function LiveEvents() {
   return (
     <div className="min-h-screen bg-background">
       <SidebarNav />
-      <main className="lg:ml-64 pb-20 lg:pb-0">
-        <div className="max-w-6xl mx-auto px-4 py-6">
-          <div className="mb-6 flex items-start justify-between gap-4">
-            <div>
-              <h1 className="text-2xl font-bold mb-2">Live Events</h1>
-              <p className="text-muted-foreground">Watch artists create amazing tattoos in real-time</p>
-            </div>
-            {user && (
-              <Button 
-                onClick={() => setShowGoLiveDialog(true)}
-                className="gap-2"
-                data-testid="button-go-live"
-              >
-                <Radio className="w-4 h-4" />
-                Go Live
-              </Button>
-            )}
+      <main className="lg:ml-64 pb-20 lg:pb-8 pt-4 max-w-6xl mx-auto px-4">
+        <div className="mb-6 flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold mb-1" data-testid="page-title">Live Events</h1>
+            <p className="text-sm text-muted-foreground">Watch artists create tattoos in real-time</p>
           </div>
+          {user && (
+            <Button
+              onClick={() => setShowGoLiveDialog(true)}
+              className="gap-2"
+              data-testid="button-go-live"
+            >
+              <Radio className="w-4 h-4" />
+              Go Live
+            </Button>
+          )}
+        </div>
 
-          <div className="flex gap-2 mb-6 overflow-x-auto scrollbar-hide pb-2">
-            <button className="px-4 py-2 bg-primary text-primary-foreground rounded-full font-medium text-sm whitespace-nowrap" data-testid="filter-live-now">
-              <i className="fas fa-circle text-[6px] mr-2 animate-pulse"></i>
-              Live Now ({liveEvents?.length || 0})
-            </button>
-            <button className="px-4 py-2 bg-secondary text-muted-foreground hover:text-foreground rounded-full font-medium text-sm whitespace-nowrap transition-colors" data-testid="filter-upcoming">
-              Upcoming
-            </button>
-            <button className="px-4 py-2 bg-secondary text-muted-foreground hover:text-foreground rounded-full font-medium text-sm whitespace-nowrap transition-colors" data-testid="filter-following">
-              Following
-            </button>
-          </div>
-
+        {isLoading ? (
           <div className="grid md:grid-cols-2 gap-6">
-            {liveEvents?.map((item: any) => (
-              <LiveStreamCard key={item.event.id} event={item.event} host={item.host} />
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="border border-border overflow-hidden">
+                <Skeleton className="aspect-video w-full" />
+                <div className="p-4 space-y-2">
+                  <Skeleton className="h-5 w-3/4" />
+                  <Skeleton className="h-4 w-1/2" />
+                </div>
+              </div>
             ))}
           </div>
-
-          {liveEvents?.length === 0 && (
-            <div className="text-center py-12">
-              <Video className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
-              <p className="text-muted-foreground mb-4">No live streams at the moment</p>
-              {user && (
-                <Button onClick={() => setShowGoLiveDialog(true)} variant="outline" className="gap-2">
+        ) : !liveEvents?.length ? (
+          <EmptyState
+            icon={Video}
+            title="No live streams right now"
+            description="Check back soon, or start your own stream."
+            action={
+              user ? (
+                <Button onClick={() => setShowGoLiveDialog(true)} variant="outline" className="gap-2" data-testid="button-be-first-live">
                   <Radio className="w-4 h-4" />
                   Be the first to go live
                 </Button>
-              )}
-            </div>
-          )}
-        </div>
+              ) : undefined
+            }
+          />
+        ) : (
+          <div className="grid md:grid-cols-2 gap-6">
+            {liveEvents.map((item: any) => (
+              <LiveStreamCard key={item.event.id} event={item.event} host={item.host} />
+            ))}
+          </div>
+        )}
       </main>
       <MobileNav />
 
@@ -124,10 +126,10 @@ export default function LiveEvents() {
               Start a live stream to share your work with the community
             </DialogDescription>
           </DialogHeader>
-          
-          <div className="space-y-4 mt-4">
+
+          <div className="space-y-4 mt-2">
             <div>
-              <label className="text-sm font-medium mb-2 block">Title *</label>
+              <label className="text-sm font-medium mb-1.5 block">Title *</label>
               <Input
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
@@ -137,7 +139,7 @@ export default function LiveEvents() {
             </div>
 
             <div>
-              <label className="text-sm font-medium mb-2 block">Description</label>
+              <label className="text-sm font-medium mb-1.5 block">Description</label>
               <Textarea
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
@@ -147,7 +149,7 @@ export default function LiveEvents() {
               />
             </div>
 
-            <div className="flex gap-2 justify-end pt-4">
+            <div className="flex gap-2 justify-end pt-2 border-t border-border">
               <Button
                 variant="outline"
                 onClick={() => setShowGoLiveDialog(false)}
