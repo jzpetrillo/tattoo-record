@@ -9,7 +9,7 @@ interface StoryViewerProps {
 export default function StoryViewer({ userId, onClose }: StoryViewerProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
 
-  const { data: stories } = useQuery({
+  const { data: stories } = useQuery<any[]>({
     queryKey: [`/api/stories/${userId}`],
   });
 

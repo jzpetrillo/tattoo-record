@@ -88,7 +88,7 @@ export default function PostCard({ post, author, isLiked = false, isSaved = fals
     },
   });
 
-  const { data: comments } = useQuery({
+  const { data: comments } = useQuery<any[]>({
     queryKey: [`/api/posts/${post.id}/comments`],
     enabled: showComments && !!token,
   });
@@ -107,7 +107,7 @@ export default function PostCard({ post, author, isLiked = false, isSaved = fals
     },
   });
 
-  const { data: conversations } = useQuery({
+  const { data: conversations } = useQuery<any[]>({
     queryKey: ["/api/conversations"],
     enabled: showShareDialog && !!token,
   });

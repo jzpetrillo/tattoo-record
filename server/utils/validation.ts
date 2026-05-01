@@ -83,3 +83,25 @@ export const aiRecommendationSchema = z.object({
   placement: z.string().optional(),
   size: z.string().optional()
 });
+
+// Whitelist of fields a user is allowed to update on their own profile.
+// Critical fields (role, isVerified, verificationStatus, isBanned, etc.) are excluded.
+export const updateUserSchema = z.object({
+  firstName: z.string().max(100).optional(),
+  lastName: z.string().max(100).optional(),
+  bio: z.string().max(1000).optional(),
+  avatarUrl: z.string().url().optional().or(z.literal("")),
+  bannerUrl: z.string().url().optional().or(z.literal("")),
+  location: z.object({
+    city: z.string().optional(),
+    country: z.string().optional(),
+    lat: z.number().optional(),
+    lng: z.number().optional(),
+  }).optional(),
+  website: z.string().url().optional().or(z.literal("")),
+  socialHandles: z.record(z.string()).optional(),
+  specialties: z.array(z.string()).optional(),
+  styles: z.array(z.string()).optional(),
+  hourlyRateCents: z.number().int().nonnegative().optional(),
+  address: z.string().max(500).optional(),
+});

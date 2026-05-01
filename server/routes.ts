@@ -2,6 +2,9 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import bcrypt from "bcrypt";
 import multer from "multer";
+import { eq, and, isNull } from "drizzle-orm";
+import { db } from "./db";
+import * as schema from "@shared/schema";
 import { storage } from "./storage";
 import { requireAuth, requireRole, generateToken, type AuthRequest } from "./middleware/auth";
 import { uploadMedia, deleteMedia } from "./services/cloudinary";
@@ -135,11 +138,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.put("/api/users/me", requireAuth, async (req: AuthRequest, res) => {
     try {
-      const updates = req.body;
-      const user = await storage.updateUser(req.userId!, updates);
+      const validated = validation.updateUserSchema.parse(req.body);
+      const user = await storage.updateUser(req.userId!, validated);
       res.json(user);
     } catch (error: any) {
-      res.status(500).json({ message: error.message });
+      res.status(400).json({ message: error.message });
     }
   });
 
@@ -267,6 +270,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.delete("/api/posts/:id", requireAuth, async (req: AuthRequest, res) => {
     try {
+      const result = await storage.getPost(req.params.id);
+      if (!result) {
+        return res.status(404).json({ message: "Post not found" });
+      }
+      if (result.post.authorId !== req.userId) {
+        return res.status(403).json({ message: "Not authorized to delete this post" });
+      }
       await storage.deletePost(req.params.id);
       res.json({ message: "Post deleted" });
     } catch (error: any) {
@@ -311,6 +321,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.delete("/api/posts/:postId/comments/:commentId", requireAuth, async (req: AuthRequest, res) => {
     try {
+      const [comment] = await db
+        .select()
+        .from(schema.comments)
+        .where(and(eq(schema.comments.id, req.params.commentId), isNull(schema.comments.deletedAt)))
+        .limit(1);
+      if (!comment) {
+        return res.status(404).json({ message: "Comment not found" });
+      }
+      // Allow deletion by the comment author only
+      if (comment.userId !== req.userId) {
+        return res.status(403).json({ message: "Not authorized to delete this comment" });
+      }
       await storage.deleteComment(req.params.commentId);
       res.json({ message: "Comment deleted" });
     } catch (error: any) {
@@ -427,6 +449,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/conversations/:id/messages", requireAuth, async (req: AuthRequest, res) => {
     try {
+      // Verify the requesting user is a participant in this conversation
+      const [participant] = await db
+        .select()
+        .from(schema.conversationParticipants)
+        .where(and(
+          eq(schema.conversationParticipants.conversationId, req.params.id),
+          eq(schema.conversationParticipants.userId, req.userId!)
+        ))
+        .limit(1);
+      if (!participant) {
+        return res.status(403).json({ message: "Not a participant in this conversation" });
+      }
       const limit = parseInt(req.query.limit as string) || 50;
       const messages = await storage.getMessages(req.params.id, limit);
       res.json(messages);
@@ -437,14 +471,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/conversations/:id/messages", requireAuth, async (req: AuthRequest, res) => {
     try {
-      const messageData: any = {
+      // Verify the requesting user is a participant in this conversation
+      const [participant] = await db
+        .select()
+        .from(schema.conversationParticipants)
+        .where(and(
+          eq(schema.conversationParticipants.conversationId, req.params.id),
+          eq(schema.conversationParticipants.userId, req.userId!)
+        ))
+        .limit(1);
+      if (!participant) {
+        return res.status(403).json({ message: "Not a participant in this conversation" });
+      }
+      const validated = validation.createMessageSchema.parse({
         conversationId: req.params.id,
+        body: req.body.body,
+        media: req.body.media,
+        replyToId: req.body.replyToId,
+      });
+      const messageData = {
+        ...validated,
         senderId: req.userId!,
-        body: req.body.body || null,
-        media: req.body.media || null,
-        replyToId: req.body.replyToId || null
       };
-      const message = await storage.createMessage(messageData);
+      const message = await storage.createMessage(messageData as any);
       res.json(message);
     } catch (error: any) {
       res.status(400).json({ message: error.message });
@@ -644,6 +693,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.put("/api/flash-sales/:id", requireAuth, requireRole(["ARTIST"]), async (req: AuthRequest, res) => {
     try {
+      const flashSale = await storage.getFlashSale(req.params.id);
+      if (!flashSale) {
+        return res.status(404).json({ message: "Flash sale not found" });
+      }
+      if ((flashSale as any).artistId !== req.userId) {
+        return res.status(403).json({ message: "Not authorized to edit this flash sale" });
+      }
       const updated = await storage.updateFlashSale(req.params.id, req.body);
       res.json(updated);
     } catch (error: any) {
@@ -694,6 +750,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.put("/api/bookings/:id", requireAuth, async (req: AuthRequest, res) => {
     try {
+      const booking = await storage.getBooking(req.params.id);
+      if (!booking) {
+        return res.status(404).json({ message: "Booking not found" });
+      }
+      // Only the artist or client involved in the booking may update it
+      if (booking.artistId !== req.userId && booking.clientId !== req.userId) {
+        return res.status(403).json({ message: "Not authorized to update this booking" });
+      }
       const updated = await storage.updateBooking(req.params.id, req.body);
       res.json(updated);
     } catch (error: any) {
@@ -745,6 +809,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.delete("/api/bookings/:id", requireAuth, async (req: AuthRequest, res) => {
     try {
+      const booking = await storage.getBooking(req.params.id);
+      if (!booking) {
+        return res.status(404).json({ message: "Booking not found" });
+      }
+      // Only the artist or client involved in the booking may cancel it
+      if (booking.artistId !== req.userId && booking.clientId !== req.userId) {
+        return res.status(403).json({ message: "Not authorized to cancel this booking" });
+      }
       await storage.deleteBooking(req.params.id);
       res.json({ message: "Booking cancelled" });
     } catch (error: any) {
@@ -752,8 +824,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Process booking reminders (can be called by cron or manually)
-  app.post("/api/bookings/process-reminders", async (req, res) => {
+  // Process booking reminders (admin only)
+  app.post("/api/bookings/process-reminders", requireAuth, requireRole(["ADMIN"]), async (req: AuthRequest, res) => {
     try {
       const bookings = await storage.getBookingsNeedingReminders();
       const remindersCreated: string[] = [];
@@ -828,6 +900,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.put("/api/livestream-events/:id", requireAuth, async (req: AuthRequest, res) => {
     try {
+      const [event] = await db
+        .select()
+        .from(schema.livestreamEvents)
+        .where(eq(schema.livestreamEvents.id, req.params.id))
+        .limit(1);
+      if (!event) {
+        return res.status(404).json({ message: "Livestream event not found" });
+      }
+      if (event.hostId !== req.userId) {
+        return res.status(403).json({ message: "Not authorized to edit this event" });
+      }
       await storage.updateLivestreamEvent(req.params.id, req.body);
       res.json({ message: "Event updated" });
     } catch (error: any) {

@@ -1,6 +1,5 @@
 import OpenAI from "openai";
 
-// the newest OpenAI model is "gpt-5" which was released August 7, 2025. do not change this unless explicitly requested by the user
 let openai: OpenAI | null = null;
 
 // Check for Replit AI Integrations first, then fall back to user API key
@@ -55,7 +54,7 @@ Provide a JSON response with:
 Respond only with valid JSON.`;
 
     const response = await openai.chat.completions.create({
-      model: "gpt-5",
+      model: "gpt-4o",
       messages: [
         {
           role: "system",

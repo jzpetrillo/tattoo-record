@@ -5,7 +5,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { queryClient, apiRequest } from "@/lib/queryClient";
+import { queryClient } from "@/lib/queryClient";
+import { apiRequest } from "@/lib/api";
+import { useAuth } from "@/hooks/use-auth";
 import { Building2, Search } from "lucide-react";
 
 export function StudioConnectionDialog() {
@@ -14,20 +16,19 @@ export function StudioConnectionDialog() {
   const [selectedStudio, setSelectedStudio] = useState<any>(null);
   const [note, setNote] = useState("");
   const { toast } = useToast();
+  const { token } = useAuth();
 
-  const { data: searchResults } = useQuery({
+  const { data: searchResults } = useQuery<{ users: any[]; posts: any[]; hashtags: any[] }>({
     queryKey: ["/api/search", searchQuery],
     enabled: searchQuery.length > 2,
   });
 
-  const studios = searchResults?.users?.filter((u: any) => u.role === "STUDIO") || [];
+  const studios = (searchResults?.users ?? []).filter((u: any) => u.role === "STUDIO");
 
   const requestMutation = useMutation({
     mutationFn: async (data: any) => {
-      return apiRequest("/api/studio-approvals", {
-        method: "POST",
-        body: JSON.stringify(data),
-      });
+      const res = await apiRequest("POST", "/api/studio-approvals", data, token!);
+      return res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/studio-approvals"] });

@@ -4,7 +4,11 @@ import { db } from "../db";
 import { users } from "@shared/schema";
 import { eq } from "drizzle-orm";
 
-const JWT_SECRET = process.env.JWT_SECRET || "inktagram-secret-key";
+const _jwtSecret = process.env.JWT_SECRET || process.env.SESSION_SECRET;
+if (!_jwtSecret) {
+  throw new Error("JWT_SECRET or SESSION_SECRET environment variable must be set");
+}
+const JWT_SECRET: string = _jwtSecret;
 
 export interface AuthRequest extends Request {
   userId?: string;
@@ -23,7 +27,7 @@ export async function requireAuth(
     }
 
     const token = authHeader.substring(7);
-    const decoded = jwt.verify(token, JWT_SECRET) as { userId: string };
+    const decoded = jwt.verify(token, JWT_SECRET) as unknown as { userId: string };
 
     const [user] = await db
       .select()

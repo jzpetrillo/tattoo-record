@@ -7,7 +7,7 @@ import { ImageIcon } from "lucide-react";
 export default function PostFeed() {
   const { token } = useAuth();
 
-  const { data: posts, isLoading } = useQuery({
+  const { data: posts, isLoading } = useQuery<any[]>({
     queryKey: ["/api/posts"],
     enabled: !!token,
   });
