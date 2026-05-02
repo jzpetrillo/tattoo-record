@@ -1123,27 +1123,41 @@ export class DatabaseStorage implements IStorage {
 
   // Admin Stats
   async getAdminStats() {
-    const allUsers = await db.select().from(schema.users);
-    const allPosts = await db.select().from(schema.posts);
-    const allBookings = await db.select().from(schema.bookings);
-    const allJobs = await db.select().from(schema.jobPostings);
-    
+    // Use COUNT aggregates and grouped queries — never SELECT * for stats
+    const userRows = await db
+      .select({ role: schema.users.role, verificationStatus: schema.users.verificationStatus })
+      .from(schema.users)
+      .where(isNull(schema.users.deletedAt));
+
+    const [postCount] = await db
+      .select({ count: sql<number>`COUNT(*)` })
+      .from(schema.posts)
+      .where(isNull(schema.posts.deletedAt));
+
+    const [bookingCount] = await db
+      .select({ count: sql<number>`COUNT(*)` })
+      .from(schema.bookings);
+
+    const [jobCount] = await db
+      .select({ count: sql<number>`COUNT(*)` })
+      .from(schema.jobPostings);
+
     const usersByRole: Record<string, number> = {};
     let pendingVerifications = 0;
-    
-    allUsers.forEach(user => {
+
+    userRows.forEach(user => {
       usersByRole[user.role] = (usersByRole[user.role] || 0) + 1;
       if (user.verificationStatus === "PENDING") {
         pendingVerifications++;
       }
     });
-    
+
     return {
-      totalUsers: allUsers.length,
+      totalUsers: userRows.length,
       usersByRole,
-      totalPosts: allPosts.length,
-      totalBookings: allBookings.length,
-      totalJobs: allJobs.length,
+      totalPosts: Number(postCount?.count ?? 0),
+      totalBookings: Number(bookingCount?.count ?? 0),
+      totalJobs: Number(jobCount?.count ?? 0),
       pendingVerifications
     };
   }

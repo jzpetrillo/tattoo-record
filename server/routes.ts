@@ -2,6 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import bcrypt from "bcrypt";
 import multer from "multer";
+import rateLimit from "express-rate-limit";
 import { eq, and, isNull } from "drizzle-orm";
 import { db } from "./db";
 import * as schema from "@shared/schema";
@@ -15,7 +16,29 @@ import { startStoryCleanupScheduler } from "./services/story-cleanup";
 import { getPersonalizedFeed, getTrendingPosts, getFeaturedPosts, getForYouRecommendations } from "./services/feed-algorithm";
 import * as validation from "./utils/validation";
 
-const upload = multer({ storage: multer.memoryStorage() });
+// Strip password hash before sending user objects to clients
+function safeUser<T extends { hashedPassword?: string }>(user: T): Omit<T, "hashedPassword"> {
+  const { hashedPassword: _omit, ...safe } = user as any;
+  return safe;
+}
+
+const ALLOWED_MIME_TYPES = new Set([
+  "image/jpeg", "image/png", "image/webp", "image/gif",
+  "video/mp4", "video/webm", "video/quicktime", "video/x-msvideo"
+]);
+
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 50 * 1024 * 1024 }, // 50 MB max
+});
+
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { message: "Too many attempts, please try again later." },
+});
 
 export async function registerRoutes(app: Express): Promise<Server> {
   const httpServer = createServer(app);
@@ -28,7 +51,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   startStoryCleanupScheduler();
 
   // Authentication Routes
-  app.post("/api/auth/register", async (req, res) => {
+  app.post("/api/auth/register", authLimiter, async (req, res) => {
     try {
       const validated = validation.registerSchema.parse(req.body);
       
@@ -62,7 +85,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/auth/login", async (req, res) => {
+  app.post("/api/auth/login", authLimiter, async (req, res) => {
     try {
       const validated = validation.loginSchema.parse(req.body);
       
@@ -111,7 +134,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!user) {
         return res.status(404).json({ message: "User not found" });
       }
-      res.json(user);
+      res.json(safeUser(user));
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }
@@ -130,7 +153,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!user) {
         return res.status(404).json({ message: "User not found" });
       }
-      res.json(user);
+      res.json(safeUser(user));
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }
@@ -140,7 +163,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const validated = validation.updateUserSchema.parse(req.body);
       const user = await storage.updateUser(req.userId!, validated);
-      res.json(user);
+      res.json(safeUser(user));
     } catch (error: any) {
       res.status(400).json({ message: error.message });
     }
@@ -1013,6 +1036,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "No file provided" });
       }
 
+      if (!ALLOWED_MIME_TYPES.has(req.file.mimetype)) {
+        return res.status(400).json({ message: `Unsupported file type: ${req.file.mimetype}` });
+      }
+
       const folder = req.body.folder || "general";
       const resourceType = req.file.mimetype.startsWith("video") ? "video" : "image";
       
@@ -1023,9 +1050,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/upload/:publicId", requireAuth, async (req: AuthRequest, res) => {
+  app.delete("/api/upload/:publicId(*)", requireAuth, async (req: AuthRequest, res) => {
     try {
-      await deleteMedia(req.params.publicId);
+      const publicId = req.params.publicId;
+      // Validate publicId belongs to this user's folder prefix to prevent cross-user deletions
+      const userFolderPrefixes = [
+        `posts/${req.userId}`,
+        `stories/${req.userId}`,
+        `portfolios/${req.userId}`,
+        `avatars/${req.userId}`,
+        `banners/${req.userId}`,
+        `messages/${req.userId}`,
+        // Also allow generic folder structure used by this app
+        "posts/", "stories/", "portfolios/", "avatars/", "banners/", "messages/", "general/"
+      ];
+      const isSafePrefix = userFolderPrefixes.some(prefix => publicId.startsWith(prefix));
+      if (!isSafePrefix) {
+        return res.status(403).json({ message: "Not authorized to delete this resource" });
+      }
+      await deleteMedia(publicId);
       res.json({ message: "Media deleted" });
     } catch (error: any) {
       res.status(500).json({ message: error.message });

@@ -1,8 +1,10 @@
-import { Switch, Route } from "wouter";
+import { Switch, Route, useLocation } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { useEffect } from "react";
+import { useAuth } from "@/hooks/use-auth";
 import NotFound from "@/pages/not-found";
 import Home from "@/pages/home";
 import Search from "@/pages/search";
@@ -22,14 +24,40 @@ import FlashSales from "@/pages/flash-sales";
 import Bookings from "@/pages/bookings";
 import AIRecommendations from "@/pages/ai-recommendations";
 
+function AdminRoute() {
+  const { user, token } = useAuth();
+  const [, setLocation] = useLocation();
+
+  useEffect(() => {
+    if (!token || user?.role !== "ADMIN") {
+      setLocation("/");
+    }
+  }, [token, user, setLocation]);
+
+  if (!token || user?.role !== "ADMIN") return null;
+  return <AdminDashboard />;
+}
+
+function ProtectedRoute({ component: Component }: { component: React.ComponentType }) {
+  const { token } = useAuth();
+  const [, setLocation] = useLocation();
+
+  useEffect(() => {
+    if (!token) setLocation("/auth");
+  }, [token, setLocation]);
+
+  if (!token) return null;
+  return <Component />;
+}
+
 function Router() {
   return (
     <Switch>
       <Route path="/" component={Home} />
       <Route path="/search" component={Search} />
       <Route path="/explore" component={Explore} />
-      <Route path="/messages" component={Messages} />
-      <Route path="/notifications" component={Notifications} />
+      <Route path="/messages">{() => <ProtectedRoute component={Messages} />}</Route>
+      <Route path="/notifications">{() => <ProtectedRoute component={Notifications} />}</Route>
       <Route path="/profile" component={Profile} />
       <Route path="/profile/:username" component={Profile} />
       <Route path="/u/:username" component={Profile} />
@@ -37,14 +65,14 @@ function Router() {
       <Route path="/live" component={LiveEvents} />
       <Route path="/jobs/:id" component={JobDetail} />
       <Route path="/jobs" component={Jobs} />
-      <Route path="/create" component={Create} />
+      <Route path="/create">{() => <ProtectedRoute component={Create} />}</Route>
       <Route path="/reels" component={Reels} />
-      <Route path="/saved" component={SavedPosts} />
+      <Route path="/saved">{() => <ProtectedRoute component={SavedPosts} />}</Route>
       <Route path="/flash-sales" component={FlashSales} />
-      <Route path="/bookings" component={Bookings} />
-      <Route path="/ai-recommendations" component={AIRecommendations} />
+      <Route path="/bookings">{() => <ProtectedRoute component={Bookings} />}</Route>
+      <Route path="/ai-recommendations">{() => <ProtectedRoute component={AIRecommendations} />}</Route>
       <Route path="/auth" component={Auth} />
-      <Route path="/admin" component={AdminDashboard} />
+      <Route path="/admin">{() => <AdminRoute />}</Route>
       <Route component={NotFound} />
     </Switch>
   );
