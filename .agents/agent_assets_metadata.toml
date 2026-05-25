@@ -1,0 +1,8 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "Ip9knRsbto6zP2ViZKV1X"
+uri = "file://docs/FULL_APPLICATION_SPECIFICATION.md"
+type = "text"
+title = "Full Application Specification"

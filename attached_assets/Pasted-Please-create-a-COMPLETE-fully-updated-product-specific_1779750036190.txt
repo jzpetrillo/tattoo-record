@@ -1,0 +1,349 @@
+Please create a COMPLETE, fully updated product specification and technical audit document for the entire application.
+
+The goal of this document is:
+1. To give a complete snapshot of the current application
+2. To allow external review inside ChatGPT
+3. To identify anything missing before launch
+4. To ensure both frontend and backend are fully complete, production-ready, and logically connected
+
+This document needs to be EXTREMELY detailed and comprehensive. Assume it will be reviewed by a CTO, product lead, QA engineer, security reviewer, and operations team.
+
+IMPORTANT:
+Do not summarize or simplify.
+I want a FULL system specification with technical detail.
+
+Please generate this as a single organized markdown file named:
+
+/docs/FULL_APPLICATION_SPECIFICATION.md
+
+The document should include ALL of the following sections:
+
+# 1. Executive Overview
+- What the application does
+- Primary user types
+- Core business workflows
+- Main platform capabilities
+- Current build status
+- Intended production architecture
+
+# 2. Complete Feature Inventory
+List EVERY feature currently implemented, including:
+- Frontend features
+- Backend features
+- Admin tools
+- Public-facing features
+- Hidden/internal features
+- Automation systems
+- Permissions systems
+- Notification systems
+- Billing/payment systems
+- Search/filter systems
+- CRM/workflow systems
+- Social integrations
+- Public profile/media kit systems
+- Campaign systems
+- Opportunity systems
+- Marketplace/discovery systems
+- Messaging/email systems
+- Analytics/reporting systems
+
+For EACH feature include:
+- Feature name
+- Purpose
+- User types with access
+- Frontend routes/pages
+- Backend APIs/services
+- Database tables/models involved
+- Current status (complete/incomplete/partial)
+- Known issues or limitations
+- Dependencies/integrations
+
+# 3. Complete User Role & Permission Matrix
+Document ALL user roles and permissions, including:
+- Admin
+- Agency owner
+- Agent
+- Talent/creator
+- Brand
+- Public/non-authenticated user
+- Internal support/admin roles
+
+For EACH role explain:
+- Accessible pages
+- Allowed actions
+- Restricted actions
+- Navigation differences
+- Data visibility
+- Workflow permissions
+
+# 4. Full Frontend Architecture
+Document:
+- Frameworks/libraries used
+- Routing structure
+- Layout system
+- Design system/components
+- State management
+- Forms architecture
+- API communication layer
+- Authentication flow
+- Responsive/mobile strategy
+- Reusable components
+- Page structure patterns
+
+Include:
+- Full route inventory
+- All pages/screens
+- Shared layouts
+- Component hierarchy
+- UI inconsistencies still remaining
+- Design debt
+- Missing states/loading/error handling
+
+# 5. Full Backend Architecture
+Document:
+- Backend stack
+- API architecture
+- Service structure
+- Authentication/authorization
+- Middleware
+- Database ORM/models
+- Queue/background jobs
+- File upload/storage handling
+- Stripe/payment handling
+- Email handling
+- Notification systems
+- Webhooks
+- Scheduled jobs/cron systems
+- Logging/error handling
+
+Include:
+- Every API endpoint
+- Request/response purpose
+- Auth requirements
+- Connected frontend usage
+- Unused/dead endpoints
+- Security concerns
+- Missing validation/error handling
+
+# 6. Complete Database Documentation
+Document ALL database tables/models:
+For EACH table/model include:
+- Purpose
+- Relationships
+- Key fields
+- Nullable fields
+- Constraints
+- Indexes
+- Usage within application
+- Potential issues
+- Missing normalization or cleanup opportunities
+
+Also include:
+- ERD-style relationship explanation
+- Data lifecycle flows
+- Soft delete/archive behavior
+- Audit logging behavior
+
+# 7. Authentication & Security Review
+Audit:
+- Authentication flow
+- Session handling
+- Role enforcement
+- API authorization
+- Public/private route handling
+- File access permissions
+- Stripe security
+- Environment variable usage
+- Secrets handling
+- Input validation
+- XSS/CSRF concerns
+- Rate limiting
+- Abuse prevention
+- Webhook verification
+- SQL injection protection
+
+Clearly identify:
+- Security risks
+- Missing protections
+- Production concerns
+- Recommended fixes before launch
+
+# 8. Stripe & Financial Systems Audit
+Document ALL payment-related functionality:
+- Connected accounts
+- Marketplace payouts
+- Revenue splits
+- Invoices
+- Payment collection
+- Refund handling
+- Commission calculations
+- Remittance flows
+- Vendor payments
+- Webhook flows
+- Failure handling
+- Retry systems
+
+Identify:
+- Edge cases
+- Potential financial risks
+- Missing accounting logic
+- Missing audit trails
+- Reconciliation concerns
+
+# 9. Public Pages & SEO Audit
+Document:
+- Landing pages
+- Directory pages
+- Media kits
+- Brand pages
+- Agency/agent public pages
+- Shareable/public URLs
+- SEO setup
+- Meta tags
+- Sitemap handling
+- Structured data
+- Indexing concerns
+- Performance concerns
+
+Identify:
+- Inconsistent experiences
+- Missing navigation
+- Branding inconsistencies
+- Conversion weaknesses
+
+# 10. Third-Party Integrations
+List ALL integrations:
+- Stripe
+- OpenAI
+- Instagram
+- TikTok
+- YouTube
+- Email providers
+- CRM tools
+- Analytics tools
+- Storage providers
+- OAuth providers
+- Any APIs/services
+
+For EACH include:
+- Purpose
+- Current implementation status
+- OAuth/authentication handling
+- Webhooks used
+- Failure handling
+- Missing functionality
+- Production readiness
+
+# 11. Automation & Workflow Systems
+Document:
+- Campaign workflows
+- Opportunity workflows
+- Approval flows
+- Payment workflows
+- Notification triggers
+- Email automations
+- Status transitions
+- Scheduled tasks
+- Internal operations workflows
+
+Include:
+- State diagrams where possible
+- Missing workflow logic
+- Potential bottlenecks
+- Broken/incomplete transitions
+
+# 12. Full QA & Testing Audit
+Document:
+- Existing tests
+- Missing tests
+- E2E coverage
+- Frontend QA gaps
+- Backend QA gaps
+- Mobile QA gaps
+- Permission testing gaps
+- Stripe/payment testing gaps
+- Public page testing gaps
+- Error handling gaps
+
+Include:
+- A COMPLETE launch readiness checklist
+- Critical bugs still needing review
+- Recommended manual testing flows
+
+# 13. Performance & Scalability Audit
+Review:
+- Slow pages/components
+- Inefficient queries
+- Bundle size concerns
+- Re-render issues
+- API bottlenecks
+- Database bottlenecks
+- Image optimization
+- Caching opportunities
+- Queue/scaling concerns
+
+Identify:
+- Production scaling risks
+- High-risk architecture areas
+- Recommended optimizations
+
+# 14. Missing Features / Incomplete Areas
+Create a brutally honest section listing:
+- Features partially implemented
+- Placeholder/mock functionality
+- Broken flows
+- Missing backend support
+- Missing frontend support
+- Areas likely to break in production
+- Technical debt
+- Design debt
+- Security debt
+- Operational risks
+
+Do NOT hide issues.
+
+# 15. Production Readiness Assessment
+Provide:
+- Overall readiness score
+- Frontend readiness score
+- Backend readiness score
+- Security readiness score
+- Payment system readiness score
+- Scalability readiness score
+
+Then provide:
+- MUST FIX before launch
+- SHOULD FIX before launch
+- NICE TO HAVE improvements
+
+# 16. Appendix
+Include:
+- Full route map
+- Full API map
+- Environment variables list
+- Cron jobs list
+- Webhook list
+- Database schema export
+- File/folder architecture overview
+- Dependency inventory
+- Unused/deprecated files/services
+
+IMPORTANT REQUIREMENTS:
+- Be exhaustive
+- Do not omit technical details
+- Do not simplify architecture
+- Include incomplete systems
+- Include TODOs/future work if found
+- Include inconsistencies and concerns
+- Include assumptions where architecture is unclear
+- Identify dead code or duplicate systems
+- Call out disconnected frontend/backend logic
+- Clearly identify mock data vs real production logic
+
+FINAL STEP:
+After generating the specification:
+1. Review the entire codebase again
+2. Verify nothing major was omitted
+3. Add a final “Launch Blockers” section
+4. Add a “Recommended Next 30 Days” roadmap
+5. Ensure the spec reflects the ACTUAL implemented system, not aspirational functionality
