@@ -1,8 +1,10 @@
 import express, { type Request, Response, NextFunction } from "express";
+import helmet from "helmet";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 
 const app = express();
+app.use(helmet({ contentSecurityPolicy: false }));
 
 declare module 'http' {
   interface IncomingMessage {
