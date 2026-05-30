@@ -51,19 +51,7 @@ export function setupMessageWebSocket(server: Server) {
             break;
 
           case "TYPING":
-            broadcastToConversation(
-              wss,
-              message.payload.conversationId,
-              ws.userId!,
-              {
-                type: "TYPING",
-                payload: {
-                  conversationId: message.payload.conversationId,
-                  userId: ws.userId,
-                  isTyping: message.payload.isTyping
-                }
-              }
-            );
+            await handleTyping(wss, ws.userId!, message.payload);
             break;
 
           case "REACTION_ADDED":
@@ -191,6 +179,26 @@ async function handleReaction(wss: WebSocketServer, message: WSMessage) {
   });
 }
 
+async function handleTyping(wss: WebSocketServer, senderId: string, payload: any) {
+  const participants = await db
+    .select()
+    .from(conversationParticipants)
+    .where(eq(conversationParticipants.conversationId, payload.conversationId));
+
+  participants.forEach((participant) => {
+    if (participant.userId !== senderId) {
+      sendToUser(wss, participant.userId, {
+        type: "TYPING",
+        payload: {
+          conversationId: payload.conversationId,
+          userId: senderId,
+          isTyping: payload.isTyping
+        }
+      });
+    }
+  });
+}
+
 function broadcast(wss: WebSocketServer, message: WSMessage) {
   const data = JSON.stringify(message);
   wss.clients.forEach((client: WSClient) => {
@@ -209,19 +217,3 @@ function sendToUser(wss: WebSocketServer, userId: string, message: WSMessage) {
   });
 }
 
-function broadcastToConversation(
-  wss: WebSocketServer,
-  conversationId: string,
-  excludeUserId: string,
-  message: WSMessage
-) {
-  const data = JSON.stringify(message);
-  wss.clients.forEach((client: WSClient) => {
-    if (
-      client.userId !== excludeUserId &&
-      client.readyState === WebSocket.OPEN
-    ) {
-      client.send(data);
-    }
-  });
-}
