@@ -252,7 +252,7 @@ export default function Auth() {
             </Form>
           )}
 
-          {isLogin && (
+          {isLogin && import.meta.env.MODE !== 'production' && (
             <>
               <div className="relative my-6">
                 <Separator />

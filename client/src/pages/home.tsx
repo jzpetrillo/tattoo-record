@@ -96,6 +96,7 @@ export default function Home() {
             A Platform for Tattoo Artists & Enthusiasts
           </p>
           
+          {import.meta.env.MODE !== 'production' && (
           <div className="mb-12">
             <p className="text-xs uppercase tracking-wider opacity-40 mb-4">Quick Demo Login</p>
             <div className="flex gap-4 justify-center flex-wrap">
@@ -133,6 +134,7 @@ export default function Home() {
               </button>
             </div>
           </div>
+          )}
 
           <Link href="/auth">
             <button className="px-8 py-3 border border-foreground hover:bg-foreground hover:text-background transition-all uppercase text-sm tracking-wider" data-testid="button-enter">
