@@ -928,34 +928,35 @@ export class DatabaseStorage implements IStorage {
 
   // Bookings
   async createBooking(data: typeof schema.bookings.$inferInsert) {
-    // Atomically claim a flash sale slot before inserting the booking.
-    // The conditional WHERE ensures only one concurrent request can succeed
-    // when the last slot is taken — PostgreSQL row-level locking handles the rest.
-    if (data.flashSaleId) {
-      const [claimed] = await db
-        .update(schema.flashSales)
-        .set({ bookedSlots: sql`${schema.flashSales.bookedSlots} + 1` })
-        .where(
-          and(
-            eq(schema.flashSales.id, data.flashSaleId),
-            sql`${schema.flashSales.bookedSlots} < ${schema.flashSales.availableSlots}`,
-            eq(schema.flashSales.isActive, true),
-            sql`${schema.flashSales.expiresAt} > NOW()`
+    return db.transaction(async (tx) => {
+      // Atomically claim a flash sale slot inside a transaction.
+      // If the booking insert subsequently fails, the slot increment is rolled back.
+      if (data.flashSaleId) {
+        const [claimed] = await tx
+          .update(schema.flashSales)
+          .set({ bookedSlots: sql`${schema.flashSales.bookedSlots} + 1` })
+          .where(
+            and(
+              eq(schema.flashSales.id, data.flashSaleId),
+              sql`${schema.flashSales.bookedSlots} < ${schema.flashSales.availableSlots}`,
+              eq(schema.flashSales.isActive, true),
+              sql`${schema.flashSales.expiresAt} > NOW()`
+            )
           )
-        )
-        .returning({ id: schema.flashSales.id });
+          .returning({ id: schema.flashSales.id });
 
-      if (!claimed) {
-        throw new Error("This flash sale is fully booked or no longer available");
+        if (!claimed) {
+          throw new Error("This flash sale is fully booked or no longer available");
+        }
       }
-    }
 
-    const [booking] = await db
-      .insert(schema.bookings)
-      .values(data)
-      .returning();
+      const [booking] = await tx
+        .insert(schema.bookings)
+        .values(data)
+        .returning();
 
-    return booking;
+      return booking;
+    });
   }
 
   async getBookings(filters: { artistId?: string; clientId?: string; status?: string }) {
