@@ -928,19 +928,33 @@ export class DatabaseStorage implements IStorage {
 
   // Bookings
   async createBooking(data: typeof schema.bookings.$inferInsert) {
+    // Atomically claim a flash sale slot before inserting the booking.
+    // The conditional WHERE ensures only one concurrent request can succeed
+    // when the last slot is taken — PostgreSQL row-level locking handles the rest.
+    if (data.flashSaleId) {
+      const [claimed] = await db
+        .update(schema.flashSales)
+        .set({ bookedSlots: sql`${schema.flashSales.bookedSlots} + 1` })
+        .where(
+          and(
+            eq(schema.flashSales.id, data.flashSaleId),
+            sql`${schema.flashSales.bookedSlots} < ${schema.flashSales.availableSlots}`,
+            eq(schema.flashSales.isActive, true),
+            sql`${schema.flashSales.expiresAt} > NOW()`
+          )
+        )
+        .returning({ id: schema.flashSales.id });
+
+      if (!claimed) {
+        throw new Error("This flash sale is fully booked or no longer available");
+      }
+    }
+
     const [booking] = await db
       .insert(schema.bookings)
       .values(data)
       .returning();
-    
-    // If it's a flash sale booking, increment booked slots
-    if (data.flashSaleId) {
-      await db
-        .update(schema.flashSales)
-        .set({ bookedSlots: sql`${schema.flashSales.bookedSlots} + 1` })
-        .where(eq(schema.flashSales.id, data.flashSaleId));
-    }
-    
+
     return booking;
   }
 
