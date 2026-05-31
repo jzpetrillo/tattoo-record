@@ -1377,5 +1377,73 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Admin - Change user role
+  app.put("/api/admin/users/:id/role", requireAuth, requireRole(["ADMIN"]), async (req: AuthRequest, res) => {
+    try {
+      const { role } = req.body;
+      if (!["ARTIST", "STUDIO", "ENTHUSIAST", "ADMIN"].includes(role)) {
+        return res.status(400).json({ message: "Invalid role" });
+      }
+      await storage.changeUserRole(req.params.id, role);
+      res.json({ message: "User role updated successfully" });
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+
+  // Admin - Toggle flash sale active status
+  app.put("/api/admin/flash-sales/:id/toggle", requireAuth, requireRole(["ADMIN"]), async (req: AuthRequest, res) => {
+    try {
+      await storage.toggleFlashSaleActive(req.params.id);
+      res.json({ message: "Flash sale status toggled" });
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+
+  // Admin - Update flash sale
+  app.put("/api/admin/flash-sales/:id", requireAuth, requireRole(["ADMIN"]), async (req: AuthRequest, res) => {
+    try {
+      const updated = await storage.updateFlashSale(req.params.id, req.body);
+      res.json(updated);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+
+  // Admin - Create flash sale on behalf of an artist
+  app.post("/api/admin/flash-sales", requireAuth, requireRole(["ADMIN"]), async (req: AuthRequest, res) => {
+    try {
+      const { artistId, title, description, originalPriceCents, flashPriceCents, availableSlots, expiresAt } = req.body;
+      if (!artistId || !title || !originalPriceCents || !flashPriceCents || !availableSlots || !expiresAt) {
+        return res.status(400).json({ message: "Missing required fields" });
+      }
+      const sale = await storage.createFlashSale({
+        artistId,
+        title,
+        description: description || null,
+        originalPriceCents: parseInt(originalPriceCents),
+        flashPriceCents: parseInt(flashPriceCents),
+        availableSlots: parseInt(availableSlots),
+        expiresAt: new Date(expiresAt),
+        media: [],
+        isActive: true,
+      });
+      res.status(201).json(sale);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+
+  // Admin - Cancel booking (status override)
+  app.put("/api/admin/bookings/:id/cancel", requireAuth, requireRole(["ADMIN"]), async (req: AuthRequest, res) => {
+    try {
+      await storage.cancelBookingAdmin(req.params.id);
+      res.json({ message: "Booking cancelled successfully" });
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+
   return httpServer;
 }

@@ -86,6 +86,7 @@ export const users = pgTable("users", {
   tiktok: varchar("tiktok", { length: 100 }),
   twitter: varchar("twitter", { length: 100 }),
   isVerified: boolean("is_verified").notNull().default(false),
+  isBanned: boolean("is_banned").notNull().default(false),
   verificationStatus: approvalStatusEnum("verification_status"),
   location: jsonb("location").$type<{
     city?: string;

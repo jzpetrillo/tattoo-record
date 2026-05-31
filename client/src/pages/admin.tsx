@@ -11,7 +11,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { 
   Check, X, ShieldCheck, Users, Clock, CheckCircle2, XCircle, 
   LayoutDashboard, FileText, Briefcase, Zap, Calendar, Search,
-  Trash2, Star, StarOff, Ban, UserPlus, Image, DollarSign
+  Trash2, Star, StarOff, Ban, UserPlus, Image, DollarSign,
+  UserCog, UserCheck, Power, Plus, Edit2
 } from "lucide-react";
 import { EmptyState } from "@/components/ui/empty-state";
 import { StatusBadge } from "@/components/ui/status-badge";
@@ -30,6 +31,13 @@ export default function AdminDashboard() {
   const [userRoleFilter, setUserRoleFilter] = useState<string>("all");
   const [userSearch, setUserSearch] = useState("");
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [roleChangeUserId, setRoleChangeUserId] = useState<string | null>(null);
+  const [roleChangeValue, setRoleChangeValue] = useState<string>("");
+  const [createSaleOpen, setCreateSaleOpen] = useState(false);
+  const [editSaleId, setEditSaleId] = useState<string | null>(null);
+  const [newSale, setNewSale] = useState({ artistId: "", title: "", description: "", originalPrice: "", flashPrice: "", availableSlots: "1", expiresAt: "" });
+  const [postsFeatureFilter, setPostsFeatureFilter] = useState<string>("all");
+  const [postsAuthorSearch, setPostsAuthorSearch] = useState<string>("");
 
   // Stats query
   const { data: stats, isLoading: statsLoading } = useQuery({
@@ -130,6 +138,20 @@ export default function AdminDashboard() {
       return res.json();
     },
     enabled: !!token && user?.role === "ADMIN" && activeSection === "bookings",
+  });
+
+  // Artists list for flash sale create dialog
+  const { data: artistsList } = useQuery({
+    queryKey: ["/api/admin/all-users", "ARTIST", ""],
+    queryFn: async () => {
+      const res = await fetch(`/api/admin/all-users?role=ARTIST&limit=200`, {
+        headers: { Authorization: `Bearer ${token}` },
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error("Failed to fetch artists");
+      return res.json();
+    },
+    enabled: !!token && user?.role === "ADMIN" && createSaleOpen,
   });
 
   // Mutations
@@ -265,6 +287,63 @@ export default function AdminDashboard() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/flash-sales"] });
       toast({ title: "Flash sale deleted", description: "The flash sale has been deleted." });
+    },
+    onError: (error: any) => {
+      toast({ variant: "destructive", title: "Error", description: error.message });
+    },
+  });
+
+  const toggleFlashSaleMutation = useMutation({
+    mutationFn: async (saleId: string) => apiRequest("PUT", `/api/admin/flash-sales/${saleId}/toggle`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/flash-sales"] });
+      toast({ title: "Flash sale updated", description: "The flash sale status has been toggled." });
+    },
+    onError: (error: any) => {
+      toast({ variant: "destructive", title: "Error", description: error.message });
+    },
+  });
+
+  const createFlashSaleMutation = useMutation({
+    mutationFn: async (data: typeof newSale) => apiRequest("POST", "/api/admin/flash-sales", {
+      artistId: data.artistId,
+      title: data.title,
+      description: data.description || undefined,
+      originalPriceCents: Math.round(parseFloat(data.originalPrice) * 100),
+      flashPriceCents: Math.round(parseFloat(data.flashPrice) * 100),
+      availableSlots: parseInt(data.availableSlots),
+      expiresAt: data.expiresAt,
+    }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/flash-sales"] });
+      setCreateSaleOpen(false);
+      setNewSale({ artistId: "", title: "", description: "", originalPrice: "", flashPrice: "", availableSlots: "1", expiresAt: "" });
+      toast({ title: "Flash sale created", description: "The flash sale has been created." });
+    },
+    onError: (error: any) => {
+      toast({ variant: "destructive", title: "Error", description: error.message });
+    },
+  });
+
+  const changeRoleMutation = useMutation({
+    mutationFn: async ({ userId, role }: { userId: string; role: string }) =>
+      apiRequest("PUT", `/api/admin/users/${userId}/role`, { role }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/all-users"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/stats"] });
+      setRoleChangeUserId(null);
+      toast({ title: "Role updated", description: "The user's role has been changed." });
+    },
+    onError: (error: any) => {
+      toast({ variant: "destructive", title: "Error", description: error.message });
+    },
+  });
+
+  const cancelBookingMutation = useMutation({
+    mutationFn: async (bookingId: string) => apiRequest("PUT", `/api/admin/bookings/${bookingId}/cancel`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/bookings"] });
+      toast({ title: "Booking cancelled", description: "The booking has been cancelled." });
     },
     onError: (error: any) => {
       toast({ variant: "destructive", title: "Error", description: error.message });
@@ -597,15 +676,15 @@ export default function AdminDashboard() {
                               <div className="flex items-center gap-2">
                                 <span className="font-medium">{userItem.username}</span>
                                 <Badge variant="outline" className="uppercase text-xs">{userItem.role}</Badge>
-                                {userItem.verificationStatus === "REJECTED" && (
+                                {userItem.isBanned && (
                                   <Badge variant="destructive" className="text-xs">Banned</Badge>
                                 )}
                               </div>
                               <p className="text-sm text-muted-foreground">{userItem.email}</p>
                             </div>
                           </div>
-                          <div className="flex gap-2">
-                            {userItem.verificationStatus === "REJECTED" ? (
+                          <div className="flex gap-2 flex-wrap justify-end">
+                            {userItem.isBanned ? (
                               <Button
                                 size="sm"
                                 variant="outline"
@@ -628,6 +707,47 @@ export default function AdminDashboard() {
                                 Ban
                               </Button>
                             )}
+                            <Dialog open={roleChangeUserId === userItem.id} onOpenChange={(open) => !open && setRoleChangeUserId(null)}>
+                              <DialogTrigger asChild>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => { setRoleChangeUserId(userItem.id); setRoleChangeValue(userItem.role); }}
+                                  data-testid={`button-role-${userItem.id}`}
+                                >
+                                  <UserCog className="w-4 h-4" />
+                                </Button>
+                              </DialogTrigger>
+                              <DialogContent>
+                                <DialogHeader>
+                                  <DialogTitle>Change Role — {userItem.username}</DialogTitle>
+                                  <DialogDescription>
+                                    Select a new role for this user. This affects what features they can access.
+                                  </DialogDescription>
+                                </DialogHeader>
+                                <Select value={roleChangeValue} onValueChange={setRoleChangeValue}>
+                                  <SelectTrigger data-testid="select-new-role">
+                                    <SelectValue placeholder="Select role" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="ENTHUSIAST">Enthusiast</SelectItem>
+                                    <SelectItem value="ARTIST">Artist</SelectItem>
+                                    <SelectItem value="STUDIO">Studio</SelectItem>
+                                    <SelectItem value="ADMIN">Admin</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                                <DialogFooter>
+                                  <Button variant="outline" onClick={() => setRoleChangeUserId(null)}>Cancel</Button>
+                                  <Button
+                                    onClick={() => changeRoleMutation.mutate({ userId: userItem.id, role: roleChangeValue })}
+                                    disabled={changeRoleMutation.isPending || roleChangeValue === userItem.role}
+                                    data-testid="button-confirm-role"
+                                  >
+                                    Save
+                                  </Button>
+                                </DialogFooter>
+                              </DialogContent>
+                            </Dialog>
                             <Dialog open={deleteConfirmId === userItem.id} onOpenChange={(open) => !open && setDeleteConfirmId(null)}>
                               <DialogTrigger asChild>
                                 <Button
@@ -672,7 +792,31 @@ export default function AdminDashboard() {
           {/* Posts Management Section */}
           {activeSection === "posts" && (
             <div className="space-y-6">
-              <h2 className="text-base font-semibold uppercase tracking-wider text-muted-foreground">Posts Management</h2>
+              <div className="flex flex-col sm:flex-row justify-between gap-4">
+                <h2 className="text-base font-semibold uppercase tracking-wider text-muted-foreground">Posts Management</h2>
+                <div className="flex gap-2">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Search by author..."
+                      value={postsAuthorSearch}
+                      onChange={(e) => setPostsAuthorSearch(e.target.value)}
+                      className="pl-9 w-52"
+                      data-testid="input-search-posts"
+                    />
+                  </div>
+                  <Select value={postsFeatureFilter} onValueChange={setPostsFeatureFilter}>
+                    <SelectTrigger className="w-36" data-testid="select-posts-filter">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Posts</SelectItem>
+                      <SelectItem value="featured">Featured Only</SelectItem>
+                      <SelectItem value="unfeatured">Not Featured</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
 
               {postsLoading ? (
                 <div className="grid gap-4">
@@ -688,7 +832,11 @@ export default function AdminDashboard() {
                 <EmptyState icon={FileText} title="No posts" description="No posts have been created yet." />
               ) : (
                 <div className="space-y-2">
-                  {posts.map((post: any) => (
+                  {posts.filter((post: any) => {
+                    const authorMatch = !postsAuthorSearch || (post.author?.username || "").toLowerCase().includes(postsAuthorSearch.toLowerCase());
+                    const featureMatch = postsFeatureFilter === "all" || (postsFeatureFilter === "featured" ? post.isFeatured : !post.isFeatured);
+                    return authorMatch && featureMatch;
+                  }).map((post: any) => (
                     <Card key={post.id} data-testid={`card-post-${post.id}`}>
                       <CardContent className="p-4">
                         <div className="flex items-start justify-between gap-4">
@@ -843,7 +991,76 @@ export default function AdminDashboard() {
           {/* Flash Sales Management Section */}
           {activeSection === "flash-sales" && (
             <div className="space-y-6">
-              <h2 className="text-base font-semibold uppercase tracking-wider text-muted-foreground">Flash Sales Management</h2>
+              <div className="flex justify-between items-center">
+                <h2 className="text-base font-semibold uppercase tracking-wider text-muted-foreground">Flash Sales Management</h2>
+                <Dialog open={createSaleOpen} onOpenChange={setCreateSaleOpen}>
+                  <DialogTrigger asChild>
+                    <Button size="sm" className="flex items-center gap-2" data-testid="button-create-sale">
+                      <Plus className="w-4 h-4" />
+                      Create Sale
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-md">
+                    <DialogHeader>
+                      <DialogTitle>Create Flash Sale</DialogTitle>
+                      <DialogDescription>Create a flash sale on behalf of an artist.</DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4 py-2">
+                      <div>
+                        <label className="text-xs uppercase tracking-wider text-muted-foreground mb-1 block">Artist</label>
+                        <Select value={newSale.artistId} onValueChange={(v) => setNewSale(s => ({ ...s, artistId: v }))}>
+                          <SelectTrigger data-testid="select-sale-artist">
+                            <SelectValue placeholder="Select artist..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {(artistsList || []).map((a: any) => (
+                              <SelectItem key={a.id} value={a.id}>{a.username}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <label className="text-xs uppercase tracking-wider text-muted-foreground mb-1 block">Title</label>
+                        <Input value={newSale.title} onChange={(e) => setNewSale(s => ({ ...s, title: e.target.value }))} placeholder="Flash sale title" data-testid="input-sale-title" />
+                      </div>
+                      <div>
+                        <label className="text-xs uppercase tracking-wider text-muted-foreground mb-1 block">Description (optional)</label>
+                        <Input value={newSale.description} onChange={(e) => setNewSale(s => ({ ...s, description: e.target.value }))} placeholder="Brief description" data-testid="input-sale-description" />
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="text-xs uppercase tracking-wider text-muted-foreground mb-1 block">Original Price ($)</label>
+                          <Input type="number" min="0" step="0.01" value={newSale.originalPrice} onChange={(e) => setNewSale(s => ({ ...s, originalPrice: e.target.value }))} placeholder="0.00" data-testid="input-sale-original-price" />
+                        </div>
+                        <div>
+                          <label className="text-xs uppercase tracking-wider text-muted-foreground mb-1 block">Flash Price ($)</label>
+                          <Input type="number" min="0" step="0.01" value={newSale.flashPrice} onChange={(e) => setNewSale(s => ({ ...s, flashPrice: e.target.value }))} placeholder="0.00" data-testid="input-sale-flash-price" />
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="text-xs uppercase tracking-wider text-muted-foreground mb-1 block">Available Slots</label>
+                          <Input type="number" min="1" value={newSale.availableSlots} onChange={(e) => setNewSale(s => ({ ...s, availableSlots: e.target.value }))} data-testid="input-sale-slots" />
+                        </div>
+                        <div>
+                          <label className="text-xs uppercase tracking-wider text-muted-foreground mb-1 block">Expires At</label>
+                          <Input type="datetime-local" value={newSale.expiresAt} onChange={(e) => setNewSale(s => ({ ...s, expiresAt: e.target.value }))} data-testid="input-sale-expires" />
+                        </div>
+                      </div>
+                    </div>
+                    <DialogFooter>
+                      <Button variant="outline" onClick={() => setCreateSaleOpen(false)}>Cancel</Button>
+                      <Button
+                        onClick={() => createFlashSaleMutation.mutate(newSale)}
+                        disabled={createFlashSaleMutation.isPending || !newSale.artistId || !newSale.title || !newSale.originalPrice || !newSale.flashPrice || !newSale.expiresAt}
+                        data-testid="button-confirm-create-sale"
+                      >
+                        {createFlashSaleMutation.isPending ? "Creating..." : "Create"}
+                      </Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
+              </div>
 
               {flashSalesLoading ? (
                 <div className="grid gap-4">
@@ -886,15 +1103,27 @@ export default function AdminDashboard() {
                               </p>
                             </div>
                           </div>
-                          <Button
-                            size="sm"
-                            variant="destructive"
-                            onClick={() => deleteFlashSaleMutation.mutate(sale.id)}
-                            disabled={deleteFlashSaleMutation.isPending}
-                            data-testid={`button-delete-sale-${sale.id}`}
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
+                          <div className="flex gap-2">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => toggleFlashSaleMutation.mutate(sale.id)}
+                              disabled={toggleFlashSaleMutation.isPending}
+                              data-testid={`button-toggle-sale-${sale.id}`}
+                            >
+                              <Power className="w-4 h-4 mr-1" />
+                              {sale.isActive ? "Pause" : "Resume"}
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="destructive"
+                              onClick={() => deleteFlashSaleMutation.mutate(sale.id)}
+                              disabled={deleteFlashSaleMutation.isPending}
+                              data-testid={`button-delete-sale-${sale.id}`}
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
                         </div>
                       </CardContent>
                     </Card>
@@ -943,8 +1172,22 @@ export default function AdminDashboard() {
                               </p>
                             )}
                           </div>
-                          <div className="text-right text-sm text-muted-foreground">
-                            <p>Payment: {booking.paymentStatus || "N/A"}</p>
+                          <div className="flex items-center gap-3">
+                            <div className="text-right text-sm text-muted-foreground">
+                              <p>Payment: {booking.paymentStatus || "N/A"}</p>
+                            </div>
+                            {booking.status !== "REJECTED" && booking.status !== "CANCELLED" && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => cancelBookingMutation.mutate(booking.id)}
+                                disabled={cancelBookingMutation.isPending}
+                                data-testid={`button-cancel-booking-${booking.id}`}
+                              >
+                                <XCircle className="w-4 h-4 mr-1" />
+                                Cancel
+                              </Button>
+                            )}
                           </div>
                         </div>
                       </CardContent>

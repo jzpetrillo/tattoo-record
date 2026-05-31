@@ -100,6 +100,9 @@ export interface IStorage {
   deleteUser(userId: string): Promise<void>;
   banUser(userId: string): Promise<void>;
   unbanUser(userId: string): Promise<void>;
+  changeUserRole(userId: string, role: string): Promise<void>;
+  toggleFlashSaleActive(saleId: string): Promise<void>;
+  cancelBookingAdmin(bookingId: string): Promise<void>;
   getAdminPosts(options: { limit: number; offset: number; featured?: boolean }): Promise<any[]>;
   featurePost(postId: string): Promise<void>;
   unfeaturePost(postId: string): Promise<void>;
@@ -1188,6 +1191,7 @@ export class DatabaseStorage implements IStorage {
       bio: schema.users.bio,
       avatarUrl: schema.users.avatarUrl,
       isVerified: schema.users.isVerified,
+      isBanned: schema.users.isBanned,
       verificationStatus: schema.users.verificationStatus,
       location: schema.users.location,
       createdAt: schema.users.createdAt,
@@ -1227,14 +1231,35 @@ export class DatabaseStorage implements IStorage {
 
   async banUser(userId: string) {
     await db.update(schema.users)
-      .set({ verificationStatus: "REJECTED" as any })
+      .set({ isBanned: true })
       .where(eq(schema.users.id, userId));
   }
 
   async unbanUser(userId: string) {
     await db.update(schema.users)
-      .set({ verificationStatus: "APPROVED" as any })
+      .set({ isBanned: false })
       .where(eq(schema.users.id, userId));
+  }
+
+  async changeUserRole(userId: string, role: string) {
+    await db.update(schema.users)
+      .set({ role: role as any })
+      .where(eq(schema.users.id, userId));
+  }
+
+  async toggleFlashSaleActive(saleId: string) {
+    await db.update(schema.flashSales)
+      .set({
+        isActive: sql`NOT ${schema.flashSales.isActive}`,
+        updatedAt: new Date()
+      })
+      .where(eq(schema.flashSales.id, saleId));
+  }
+
+  async cancelBookingAdmin(bookingId: string) {
+    await db.update(schema.bookings)
+      .set({ status: "REJECTED" as any, updatedAt: new Date() })
+      .where(eq(schema.bookings.id, bookingId));
   }
 
   async getAdminPosts(options: { limit: number; offset: number; featured?: boolean }) {
