@@ -160,6 +160,54 @@ export function ExploreGridSkeleton({ count = 6 }: { count?: number }) {
   );
 }
 
+export function LiveStreamCardSkeleton() {
+  return (
+    <div className="border border-border bg-background overflow-hidden" data-testid="skeleton-live-stream">
+      <Skeleton className="aspect-video w-full" />
+      <div className="p-4 space-y-2">
+        <div className="flex items-center justify-between">
+          <Skeleton className="h-5 w-3/4" />
+          <Skeleton className="h-5 w-14" />
+        </div>
+        <div className="flex items-center gap-2">
+          <Skeleton className="w-7 h-7 rounded-full flex-shrink-0" />
+          <Skeleton className="h-4 w-24" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export function AdminCardSkeleton() {
+  return (
+    <div className="border border-border bg-background p-6 space-y-3" data-testid="skeleton-admin-card">
+      <div className="flex items-center gap-4">
+        <Skeleton className="w-14 h-14 rounded-full flex-shrink-0" />
+        <div className="flex-1 space-y-2">
+          <Skeleton className="h-5 w-40" />
+          <Skeleton className="h-4 w-56" />
+        </div>
+        <div className="flex gap-2">
+          <Skeleton className="h-8 w-20" />
+          <Skeleton className="h-8 w-20" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export function AdminStatSkeleton() {
+  return (
+    <div className="border border-border bg-background p-6" data-testid="skeleton-admin-stat">
+      <div className="flex items-center gap-2 mb-2">
+        <Skeleton className="w-4 h-4" />
+        <Skeleton className="h-4 w-20" />
+      </div>
+      <Skeleton className="h-9 w-16" />
+    </div>
+  );
+}
+
 export function PortfolioGridSkeleton({ count = 4 }: { count?: number }) {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4" data-testid="skeleton-portfolio">

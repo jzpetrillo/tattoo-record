@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 import PostCard from "@/components/posts/post-card";
@@ -6,6 +7,7 @@ import SidebarNav from "@/components/layout/sidebar-nav";
 import MobileNav from "@/components/layout/mobile-nav";
 import { FeedSkeleton } from "@/components/ui/skeletons";
 import { EmptyState } from "@/components/ui/empty-state";
+import { cn } from "@/lib/utils";
 
 interface SavedPostItem {
   post: {
@@ -21,10 +23,12 @@ interface SavedPostItem {
     username: string;
     avatarUrl?: string;
   };
+  collectionName?: string;
 }
 
 export default function SavedPostsPage() {
   const { token } = useAuth();
+  const [selectedCollection, setSelectedCollection] = useState<string | null>(null);
 
   const { data: savedPosts = [], isLoading } = useQuery<SavedPostItem[]>({
     queryKey: ["/api/saved-posts"],
@@ -36,6 +40,10 @@ export default function SavedPostsPage() {
     enabled: !!token,
   });
 
+  const filteredPosts = selectedCollection
+    ? savedPosts.filter((item) => item.collectionName === selectedCollection)
+    : savedPosts;
+
   return (
     <div className="min-h-screen bg-background">
       <SidebarNav />
@@ -45,14 +53,18 @@ export default function SavedPostsPage() {
             Saved Posts
           </h1>
           <p className="text-sm text-muted-foreground">
-            {isLoading ? "Loading…" : `${savedPosts.length} saved ${savedPosts.length === 1 ? "post" : "posts"}`}
+            {isLoading ? "Loading…" : `${filteredPosts.length} saved ${filteredPosts.length === 1 ? "post" : "posts"}`}
           </p>
         </div>
 
         {collections.length > 0 && (
           <div className="flex gap-2 overflow-x-auto pb-4 mb-4">
             <button
-              className="px-4 py-2 text-sm border border-border hover:bg-secondary transition-colors whitespace-nowrap"
+              onClick={() => setSelectedCollection(null)}
+              className={cn(
+                "px-4 py-2 text-sm border border-border hover:bg-secondary transition-colors whitespace-nowrap",
+                selectedCollection === null && "bg-foreground text-background"
+              )}
               data-testid="filter-all"
             >
               All Posts
@@ -60,7 +72,11 @@ export default function SavedPostsPage() {
             {collections.map((collection) => (
               <button
                 key={collection}
-                className="px-4 py-2 text-sm border border-border hover:bg-secondary transition-colors whitespace-nowrap"
+                onClick={() => setSelectedCollection(collection === selectedCollection ? null : collection)}
+                className={cn(
+                  "px-4 py-2 text-sm border border-border hover:bg-secondary transition-colors whitespace-nowrap",
+                  selectedCollection === collection && "bg-foreground text-background"
+                )}
                 data-testid={`filter-${collection}`}
               >
                 {collection}
@@ -71,15 +87,26 @@ export default function SavedPostsPage() {
 
         {isLoading ? (
           <FeedSkeleton count={3} />
-        ) : savedPosts.length === 0 ? (
+        ) : filteredPosts.length === 0 ? (
           <EmptyState
             icon={Bookmark}
-            title="No saved posts yet"
-            description="Posts you save will appear here"
+            title={selectedCollection ? `No posts in "${selectedCollection}"` : "No saved posts yet"}
+            description={selectedCollection ? "Save posts to this collection to see them here." : "Posts you save will appear here"}
+            action={
+              selectedCollection ? (
+                <button
+                  onClick={() => setSelectedCollection(null)}
+                  className="text-sm underline text-muted-foreground"
+                  data-testid="button-show-all"
+                >
+                  Show all saved posts
+                </button>
+              ) : undefined
+            }
           />
         ) : (
           <div className="space-y-6">
-            {savedPosts.map((item) => (
+            {filteredPosts.map((item) => (
               <PostCard
                 key={item.post.id}
                 post={item.post}

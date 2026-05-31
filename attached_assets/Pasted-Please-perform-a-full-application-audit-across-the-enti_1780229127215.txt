@@ -1,0 +1,63 @@
+Please perform a full application audit across the entire codebase.
+
+Review every frontend page, component, route, form, modal, table, dashboard, settings area, and backend/API connection. Identify anything incomplete, partially built, inconsistent, missing, broken, or not connected properly.
+
+Specifically check:
+
+1. UI completeness
+- Confirm every main feature has a complete UI.
+- Confirm all navigation links work.
+- Identify dead buttons, placeholder pages, TODOs, mock sections, or unfinished areas.
+- Ensure empty states, loading states, error states, and success states exist where needed.
+
+2. CRUD completeness
+For every feature where users can create, view, update, delete, archive, approve, manage, or configure records, confirm the full flow exists:
+- List/index page
+- Create flow
+- Detail page
+- Edit/update flow
+- Delete/archive/deactivate flow where applicable
+- Validation, confirmations, and success/error messages
+- Proper routing after each action
+
+3. Detail pages
+Ensure detail pages exist for any record users need to manage, such as:
+- Users/accounts
+- Profiles
+- Customers/clients
+- Projects/jobs/tasks
+- Products/services
+- Orders/payments/invoices
+- Documents/files
+- Messages/notifications
+- Settings/preferences
+- Team members/roles
+- Any other app-specific record type
+
+4. Account and settings management
+Confirm users can manage their account where applicable:
+- Profile/contact information
+- Password/security
+- Organization or business details
+- Team members and permissions
+- Billing/subscription
+- Notification preferences
+- Integrations/connections
+
+5. Backend/API/data connection
+- Confirm frontend actions connect to real backend endpoints.
+- Identify mock data, hardcoded data, or temporary placeholders.
+- Confirm database models support the UI.
+- Confirm create/edit/delete actions persist correctly.
+- Confirm auth, permissions, and role-based access work properly.
+
+6. Consistency and polish
+- Ensure layouts, buttons, spacing, typography, cards, tables, forms, and page structures are consistent.
+- Make the app feel complete, professional, and production-ready.
+
+Please return:
+- A clear audit report organized by feature/module.
+- A list of missing or incomplete items.
+- Specific files, routes, components, endpoints, or models that need updates.
+- Recommended fixes in priority order.
+- Then implement the highest-priority fixes unless they require product decisions.

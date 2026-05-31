@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { EmptyState } from "@/components/ui/empty-state";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { AdminCardSkeleton, AdminStatSkeleton, BookingCardSkeleton, JobCardSkeleton, FlashSaleCardSkeleton } from "@/components/ui/skeletons";
 import { useToast } from "@/hooks/use-toast";
 import SidebarNav from "@/components/layout/sidebar-nav";
 import MobileNav from "@/components/layout/mobile-nav";
@@ -417,13 +418,7 @@ export default function AdminDashboard() {
               
               {statsLoading ? (
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-                  {[1, 2, 3, 4, 5, 6].map((i) => (
-                    <Card key={i} className="animate-pulse">
-                      <CardContent className="p-6">
-                        <div className="h-16 bg-muted rounded"></div>
-                      </CardContent>
-                    </Card>
-                  ))}
+                  {[1, 2, 3, 4, 5, 6].map((i) => <AdminStatSkeleton key={i} />)}
                 </div>
               ) : stats ? (
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
@@ -538,13 +533,7 @@ export default function AdminDashboard() {
                 <TabsContent value={verificationTab} className="mt-6">
                   {verificationLoading ? (
                     <div className="grid gap-4">
-                      {[1, 2, 3].map((i) => (
-                        <Card key={i} className="animate-pulse">
-                          <CardContent className="p-6">
-                            <div className="h-20 bg-muted rounded"></div>
-                          </CardContent>
-                        </Card>
-                      ))}
+                      {[1, 2, 3].map((i) => <AdminCardSkeleton key={i} />)}
                     </div>
                   ) : !verificationUsers || verificationUsers.length === 0 ? (
                     <EmptyState
@@ -646,13 +635,7 @@ export default function AdminDashboard() {
 
               {usersLoading ? (
                 <div className="grid gap-4">
-                  {[1, 2, 3, 4, 5].map((i) => (
-                    <Card key={i} className="animate-pulse">
-                      <CardContent className="p-4">
-                        <div className="h-16 bg-muted rounded"></div>
-                      </CardContent>
-                    </Card>
-                  ))}
+                  {[1, 2, 3, 4, 5].map((i) => <AdminCardSkeleton key={i} />)}
                 </div>
               ) : !allUsers || allUsers.length === 0 ? (
                 <EmptyState
@@ -820,13 +803,7 @@ export default function AdminDashboard() {
 
               {postsLoading ? (
                 <div className="grid gap-4">
-                  {[1, 2, 3, 4].map((i) => (
-                    <Card key={i} className="animate-pulse">
-                      <CardContent className="p-4">
-                        <div className="h-24 bg-muted rounded"></div>
-                      </CardContent>
-                    </Card>
-                  ))}
+                  {[1, 2, 3, 4].map((i) => <AdminCardSkeleton key={i} />)}
                 </div>
               ) : !posts || posts.length === 0 ? (
                 <EmptyState icon={FileText} title="No posts" description="No posts have been created yet." />
@@ -916,13 +893,7 @@ export default function AdminDashboard() {
 
               {jobsLoading ? (
                 <div className="grid gap-4">
-                  {[1, 2, 3].map((i) => (
-                    <Card key={i} className="animate-pulse">
-                      <CardContent className="p-4">
-                        <div className="h-20 bg-muted rounded"></div>
-                      </CardContent>
-                    </Card>
-                  ))}
+                  {[1, 2, 3].map((i) => <JobCardSkeleton key={i} />)}
                 </div>
               ) : !jobs || jobs.length === 0 ? (
                 <EmptyState icon={Briefcase} title="No job postings" description="No jobs have been posted yet." />
@@ -1063,14 +1034,8 @@ export default function AdminDashboard() {
               </div>
 
               {flashSalesLoading ? (
-                <div className="grid gap-4">
-                  {[1, 2, 3].map((i) => (
-                    <Card key={i} className="animate-pulse">
-                      <CardContent className="p-4">
-                        <div className="h-20 bg-muted rounded"></div>
-                      </CardContent>
-                    </Card>
-                  ))}
+                <div className="grid gap-4 md:grid-cols-2">
+                  {[1, 2, 3].map((i) => <FlashSaleCardSkeleton key={i} />)}
                 </div>
               ) : !flashSales || flashSales.length === 0 ? (
                 <EmptyState icon={Zap} title="No flash sales" description="No flash sales have been created yet." />
@@ -1140,13 +1105,7 @@ export default function AdminDashboard() {
 
               {bookingsLoading ? (
                 <div className="grid gap-4">
-                  {[1, 2, 3, 4].map((i) => (
-                    <Card key={i} className="animate-pulse">
-                      <CardContent className="p-4">
-                        <div className="h-16 bg-muted rounded"></div>
-                      </CardContent>
-                    </Card>
-                  ))}
+                  {[1, 2, 3, 4].map((i) => <BookingCardSkeleton key={i} />)}
                 </div>
               ) : !bookings || bookings.length === 0 ? (
                 <EmptyState icon={Calendar} title="No bookings" description="No bookings have been made yet." />

@@ -9,7 +9,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Skeleton } from "@/components/ui/skeleton";
+import { LiveStreamCardSkeleton } from "@/components/ui/skeletons";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Radio, Video } from "lucide-react";
 import {
@@ -84,15 +84,7 @@ export default function LiveEvents() {
 
         {isLoading ? (
           <div className="grid md:grid-cols-2 gap-6">
-            {[1, 2, 3, 4].map((i) => (
-              <div key={i} className="border border-border overflow-hidden">
-                <Skeleton className="aspect-video w-full" />
-                <div className="p-4 space-y-2">
-                  <Skeleton className="h-5 w-3/4" />
-                  <Skeleton className="h-4 w-1/2" />
-                </div>
-              </div>
-            ))}
+            {[1, 2, 3, 4].map((i) => <LiveStreamCardSkeleton key={i} />)}
           </div>
         ) : !liveEvents?.length ? (
           <EmptyState

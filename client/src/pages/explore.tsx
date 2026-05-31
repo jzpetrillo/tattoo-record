@@ -8,6 +8,7 @@ import { MapPin, Star, TrendingUp, Hash, Heart, Grid3X3, Palette, Building2, Use
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { ExploreGridSkeleton } from "@/components/ui/skeletons";
+import { EmptyState } from "@/components/ui/empty-state";
 
 type UserType = "ALL" | "STUDIO" | "ARTIST" | "ENTHUSIAST";
 
@@ -262,29 +263,18 @@ export default function Explore() {
         {isLoading ? (
           <ExploreGridSkeleton count={6} />
         ) : filteredUsers.length === 0 ? (
-          <div className="py-8">
-            <div
-              className="flex flex-col items-center justify-center py-16 px-4 text-center border border-border"
-              data-testid="empty-state"
-            >
-              <div className="w-12 h-12 flex items-center justify-center border border-border mb-4">
-                <Grid3X3 className="w-6 h-6 text-muted-foreground" />
-              </div>
-              <h3 className="text-sm font-semibold uppercase tracking-wider mb-1">No users found</h3>
-              <p className="text-sm text-muted-foreground max-w-xs">Try adjusting your search filters to find what you&apos;re looking for.</p>
-              {hasActiveFilters && (
-                <div className="mt-4">
-                  <Button
-                    variant="outline"
-                    onClick={clearFilters}
-                    data-testid="button-clear-filters-empty"
-                  >
-                    Clear all filters
-                  </Button>
-                </div>
-              )}
-            </div>
-          </div>
+          <EmptyState
+            icon={Grid3X3}
+            title="No users found"
+            description="Try adjusting your search filters to find what you're looking for."
+            action={
+              hasActiveFilters ? (
+                <Button variant="outline" onClick={clearFilters} data-testid="button-clear-filters-empty">
+                  Clear all filters
+                </Button>
+              ) : undefined
+            }
+          />
         ) : (
           <>
             <p className="text-sm text-muted-foreground mb-4">
