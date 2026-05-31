@@ -4,7 +4,51 @@ import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 
 const app = express();
-app.use(helmet({ contentSecurityPolicy: false }));
+const isDev = process.env.NODE_ENV === "development";
+
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: [
+        "'self'",
+        ...(isDev ? ["'unsafe-eval'", "'unsafe-inline'"] : []),
+      ],
+      styleSrc: [
+        "'self'",
+        "'unsafe-inline'",
+        "https://fonts.googleapis.com",
+      ],
+      fontSrc: [
+        "'self'",
+        "https://fonts.gstatic.com",
+        "data:",
+      ],
+      imgSrc: [
+        "'self'",
+        "data:",
+        "blob:",
+        "https://res.cloudinary.com",
+        "https://ui-avatars.com",
+        "https://picsum.photos",
+        "https://api.dicebear.com",
+        "https://commondatastorage.googleapis.com",
+      ],
+      mediaSrc: [
+        "'self'",
+        "blob:",
+        "https://res.cloudinary.com",
+        "https://commondatastorage.googleapis.com",
+      ],
+      connectSrc: [
+        "'self'",
+        "ws:",
+        "wss:",
+      ],
+      frameAncestors: ["'none'"],
+    },
+  },
+}));
 
 declare module 'http' {
   interface IncomingMessage {
