@@ -1,3 +1,4 @@
+import crypto from "crypto";
 import express, { type Request, Response, NextFunction } from "express";
 import helmet from "helmet";
 import { registerRoutes } from "./routes";
@@ -6,13 +7,22 @@ import { setupVite, serveStatic, log } from "./vite";
 const app = express();
 const isDev = process.env.NODE_ENV === "development";
 
+// Generate a cryptographic nonce for every request so the CSP header can
+// reference it and inline scripts can carry the matching nonce attribute.
+app.use((_req, res, next) => {
+  res.locals.nonce = crypto.randomBytes(16).toString("base64");
+  next();
+});
+
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
       scriptSrc: [
         "'self'",
-        ...(isDev ? ["'unsafe-eval'", "'unsafe-inline'"] : []),
+        // Emit 'nonce-<value>' per request — no unsafe-inline needed.
+        (_req: Request, res: Response) => `'nonce-${res.locals.nonce}'`,
+        ...(isDev ? ["'unsafe-eval'"] : []),
       ],
       styleSrc: [
         "'self'",

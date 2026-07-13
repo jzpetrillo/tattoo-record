@@ -43,6 +43,7 @@ export async function setupVite(app: Express, server: Server) {
   app.use(vite.middlewares);
   app.use("*", async (req, res, next) => {
     const url = req.originalUrl;
+    const nonce = res.locals.nonce as string;
 
     try {
       const clientTemplate = path.resolve(
@@ -58,7 +59,10 @@ export async function setupVite(app: Express, server: Server) {
         `src="/src/main.tsx"`,
         `src="/src/main.tsx?v=${nanoid()}"`,
       );
-      const page = await vite.transformIndexHtml(url, template);
+      let page = await vite.transformIndexHtml(url, template);
+      // Stamp every inline <script> with the per-request nonce so the CSP
+      // allows Vite's injected module-preload scripts without unsafe-inline.
+      page = page.replace(/<script/g, `<script nonce="${nonce}"`);
       res.status(200).set({ "Content-Type": "text/html" }).end(page);
     } catch (e) {
       vite.ssrFixStacktrace(e as Error);
@@ -76,10 +80,22 @@ export function serveStatic(app: Express) {
     );
   }
 
-  app.use(express.static(distPath));
+  // Serve all static assets (JS, CSS, images…) but disable the default index
+  // fallback so that requests for "/" and "/index.html" fall through to the
+  // catch-all below, which injects the per-request CSP nonce before sending.
+  app.use(express.static(distPath, { index: false }));
 
-  // fall through to index.html if the file doesn't exist
+  // Cache the built index.html once at startup, then stamp each response with
+  // the per-request nonce so inline scripts (e.g. Vite module-preload) are
+  // allowed by the CSP without needing 'unsafe-inline'.
+  const indexHtmlTemplate = fs.readFileSync(
+    path.resolve(distPath, "index.html"),
+    "utf-8",
+  );
+
   app.use("*", (_req, res) => {
-    res.sendFile(path.resolve(distPath, "index.html"));
+    const nonce = res.locals.nonce as string;
+    const html = indexHtmlTemplate.replace(/<script/g, `<script nonce="${nonce}"`);
+    res.status(200).set({ "Content-Type": "text/html" }).end(html);
   });
 }
