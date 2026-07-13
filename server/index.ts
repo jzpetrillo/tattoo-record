@@ -41,6 +41,7 @@ app.use(helmet({
         "https://res.cloudinary.com",
         "https://ui-avatars.com",
         "https://picsum.photos",
+        "https://fastly.picsum.photos",
         "https://api.dicebear.com",
         "https://commondatastorage.googleapis.com",
       ],
