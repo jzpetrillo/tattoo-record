@@ -1,4 +1,4 @@
-# Inktagram - Application Structure Map
+# Tattoo Record - Application Structure Map
 
 **Generated**: November 20, 2025  
 **Purpose**: Complete application structure, user roles, features, and routes

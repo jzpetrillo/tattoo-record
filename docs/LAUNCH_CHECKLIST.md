@@ -1,4 +1,4 @@
-# Inktagram — Production Launch Checklist
+# Tattoo Record — Production Launch Checklist
 
 Last updated: May 2026  
 Status: **READY TO DEPLOY** (all critical security issues resolved)
@@ -120,7 +120,7 @@ npm run start
 
 ## Admin Setup
 
-1. Login: `admin@inktagram.com` / `Test1234!`
+1. Login: `admin@tattoorecord.com` / `Test1234!`
 2. Navigate to `/admin`
 3. Review pending artist/studio verifications
 4. **Change the admin password before going public**
@@ -131,10 +131,10 @@ npm run start
 
 | Role | Email | Password |
 |------|-------|----------|
-| Admin | admin@inktagram.com | Test1234! |
-| Artist | artist1@inktagram.com | Test1234! |
-| Studio | studio1@inktagram.com | Test1234! |
-| Enthusiast | enthusiast1@inktagram.com | Test1234! |
+| Admin | admin@tattoorecord.com | Test1234! |
+| Artist | artist1@tattoorecord.com | Test1234! |
+| Studio | studio1@tattoorecord.com | Test1234! |
+| Enthusiast | enthusiast1@tattoorecord.com | Test1234! |
 
 ---
 

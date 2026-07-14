@@ -1,4 +1,4 @@
-# Inktagram - Application Map
+# Tattoo Record - Application Map
 
 ## Tech Stack
 - **Frontend**: React 18 + Vite + TypeScript

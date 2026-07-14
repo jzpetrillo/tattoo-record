@@ -1148,9 +1148,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete("/api/upload/:publicId(*)", requireAuth, async (req: AuthRequest, res) => {
     try {
       const publicId = req.params.publicId;
-      // Cloudinary IDs are namespaced as inktagram/<folder>/<userId>/...
+      // Cloudinary IDs are namespaced as tattoo-record/<folder>/<userId>/...
       // Accept both the namespaced form and the legacy bare form for the current user.
-      const isNamespaced = publicId.startsWith(`inktagram/`) && publicId.includes(`/${req.userId}/`);
+      const isNamespaced = publicId.startsWith(`tattoo-record/`) && publicId.includes(`/${req.userId}/`);
       const userFolderPrefixes = [
         `posts/${req.userId}/`,
         `stories/${req.userId}/`,

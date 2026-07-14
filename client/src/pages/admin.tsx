@@ -388,7 +388,7 @@ export default function AdminDashboard() {
       <div className="lg:ml-64 pb-20 lg:pb-8 pt-4">
         <div className="max-w-6xl mx-auto px-4">
           <div className="mb-6">
-            <h1 className="text-2xl font-bold mb-1" data-testid="admin-title">Admin Dashboard</h1>
+            <h1 className="press-nameplate text-2xl mb-1" data-testid="admin-title">Admin Dashboard</h1>
             <p className="text-sm text-muted-foreground">
               Manage and monitor your platform
             </p>

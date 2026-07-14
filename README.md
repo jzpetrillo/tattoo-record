@@ -1,4 +1,4 @@
-# Inktagram - Tattoo Social Community Platform
+# Tattoo Record - Tattoo Social Community Platform
 
 A production-ready, full-stack tattoo social community platform with real-time messaging, live streaming, portfolio management, and AI-powered recommendations.
 
@@ -91,10 +91,10 @@ This will create:
 
 **Test Credentials:**
 ```
-Admin:      admin@inktagram.com / Test1234!
-Studio:     studio1@inktagram.com / Test1234!
-Artist:     artist1@inktagram.com / Test1234!
-Enthusiast: enthusiast1@inktagram.com / Test1234!
+Admin:      admin@tattoorecord.com / Test1234!
+Studio:     studio1@tattoorecord.com / Test1234!
+Artist:     artist1@tattoorecord.com / Test1234!
+Enthusiast: enthusiast1@tattoorecord.com / Test1234!
 ```
 
 5. **Start the development server**

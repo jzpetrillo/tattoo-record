@@ -1,7 +1,7 @@
-# Inktagram - Intended Use & Features
+# Tattoo Record - Intended Use & Features
 
 ## Product Vision
-Inktagram is a production-ready social community platform for the tattoo industry, connecting artists, studios, and enthusiasts. It combines social media features (feeds, stories, messaging) with professional tools (portfolios, bookings, job boards).
+Tattoo Record is a production-ready social community platform for the tattoo industry, connecting artists, studios, and enthusiasts. It combines social media features (feeds, stories, messaging) with professional tools (portfolios, bookings, job boards).
 
 ---
 

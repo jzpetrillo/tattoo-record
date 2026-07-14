@@ -3,29 +3,32 @@
 @tailwind utilities;
 
 :root {
-  --background: hsl(0 0% 100%);
-  --foreground: hsl(0 0% 0%);
-  --card: hsl(0 0% 100%);
-  --card-foreground: hsl(0 0% 0%);
-  --popover: hsl(0 0% 100%);
-  --popover-foreground: hsl(0 0% 0%);
-  --primary: hsl(0 0% 0%);
-  --primary-foreground: hsl(0 0% 100%);
-  --secondary: hsl(0 0% 96%);
-  --secondary-foreground: hsl(0 0% 0%);
-  --muted: hsl(0 0% 96%);
-  --muted-foreground: hsl(0 0% 45%);
-  --accent: hsl(0 0% 96%);
-  --accent-foreground: hsl(0 0% 0%);
-  --destructive: hsl(0 84.2% 60.2%);
-  --destructive-foreground: hsl(0 0% 98%);
-  --border: hsl(0 0% 90%);
-  --input: hsl(0 0% 90%);
-  --ring: hsl(0 0% 0%);
-  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
-  --font-serif: Georgia, serif;
-  --font-mono: "Courier New", monospace;
-  --radius: 0.25rem;
+  --background: hsl(47 20% 91%);
+  --foreground: hsl(0 0% 7%);
+  --card: hsl(48 25% 94%);
+  --card-foreground: hsl(0 0% 7%);
+  --popover: hsl(48 25% 94%);
+  --popover-foreground: hsl(0 0% 7%);
+  --primary: hsl(0 0% 7%);
+  --primary-foreground: hsl(47 20% 91%);
+  --secondary: hsl(45 17% 86%);
+  --secondary-foreground: hsl(0 0% 7%);
+  --muted: hsl(45 17% 86%);
+  --muted-foreground: hsl(60 3% 40%);
+  --accent: hsl(45 17% 86%);
+  --accent-foreground: hsl(0 0% 7%);
+  --destructive: hsl(0 58% 41%);
+  --destructive-foreground: hsl(47 20% 91%);
+  --border: hsl(45 9% 73%);
+  --input: hsl(45 9% 73%);
+  --ring: hsl(236 91% 56%);
+  --cobalt: hsl(236 91% 56%);
+  --cobalt-foreground: hsl(0 0% 100%);
+  --flash: hsl(15 100% 56%);
+  --font-sans: 'Space Grotesk', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+  --font-serif: 'Space Grotesk', sans-serif;
+  --font-mono: 'Space Mono', 'Courier New', monospace;
+  --radius: 0rem;
 }
 
 @layer base {
@@ -59,7 +62,9 @@
   .editorial-title {
     font-size: clamp(2rem, 8vw, 6rem);
     line-height: 0.9;
-    letter-spacing: -0.02em;
+    letter-spacing: -0.04em;
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700;
   }
   
   .scrollbar-hide::-webkit-scrollbar {
@@ -117,6 +122,35 @@
     min-height: 44px;
     min-width: 44px;
   }
+
+  /* Press direction utilities */
+  .halftone {
+    background-color: #111;
+    background-image: radial-gradient(rgba(236,234,226,0.28) 1px, transparent 1.3px);
+    background-size: 7px 7px;
+  }
+
+  .press-nameplate {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: -0.04em;
+    line-height: 0.9;
+  }
+
+  .meta {
+    font-family: 'Space Mono', monospace;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: hsl(60 3% 40%);
+  }
+
+  .text-cobalt { color: hsl(236 91% 56%); }
+  .bg-cobalt { background-color: hsl(236 91% 56%); color: #fff; }
+  .border-cobalt { border-color: hsl(236 91% 56%); }
+  .text-flash { color: hsl(15 100% 56%); }
+  .bg-flash { background-color: hsl(15 100% 56%); color: #111; }
+  .border-ink { border-color: hsl(0 0% 7%); }
 }
 
 @supports (padding-bottom: env(safe-area-inset-bottom)) {

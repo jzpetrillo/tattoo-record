@@ -1,4 +1,4 @@
-# Inktagram - Pre-Launch Checklist Baseline
+# Tattoo Record - Pre-Launch Checklist Baseline
 
 ## Phase A: Discovery & Inventory
 - [x] Auto-detect tech stack
@@ -92,13 +92,13 @@ All users use password: `Test1234!`
 
 | Role | Email | Username |
 |------|-------|----------|
-| ADMIN | admin@inktagram.com | admin_inktagram |
-| ARTIST | artist1@inktagram.com | artist1 |
-| ARTIST | artist2@inktagram.com | artist2 |
-| STUDIO | studio1@inktagram.com | studio1 |
-| STUDIO | studio2@inktagram.com | studio2 |
-| ENTHUSIAST | enthusiast1@inktagram.com | enthusiast1 |
-| ENTHUSIAST | enthusiast2@inktagram.com | enthusiast2 |
+| ADMIN | admin@tattoorecord.com | admin_tattoorecord |
+| ARTIST | artist1@tattoorecord.com | artist1 |
+| ARTIST | artist2@tattoorecord.com | artist2 |
+| STUDIO | studio1@tattoorecord.com | studio1 |
+| STUDIO | studio2@tattoorecord.com | studio2 |
+| ENTHUSIAST | enthusiast1@tattoorecord.com | enthusiast1 |
+| ENTHUSIAST | enthusiast2@tattoorecord.com | enthusiast2 |
 
 ---
 

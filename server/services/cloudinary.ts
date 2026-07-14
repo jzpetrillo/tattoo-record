@@ -23,7 +23,7 @@ export async function uploadMedia(
   return new Promise((resolve, reject) => {
     const uploadStream = cloudinary.uploader.upload_stream(
       {
-        folder: `inktagram/${folder}`,
+        folder: `tattoo-record/${folder}`,
         resource_type: resourceType,
       },
       (error, result) => {

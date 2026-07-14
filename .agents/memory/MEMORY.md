@@ -1,0 +1,2 @@
+- [Press visual design tokens](press-design.md) — CSS :root tokens for paper bg, cobalt accent, ink grid gap, Space Grotesk/Mono; active state = bg-cobalt text-white; verified badge = cobalt star; stats = mono blocks with divide-border.
+- [Rename: Inktagram → Tattoo Record](rename-tattoo-record.md) — all source, docs, seed, and test files updated; Cloudinary folder stays as inktagram/ in storage (assets already uploaded there); test credentials use @tattoorecord.com.

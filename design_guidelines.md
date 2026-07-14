@@ -1,4 +1,4 @@
-# Inktagram Design Guidelines
+# Tattoo Record Design Guidelines
 
 ## Design Approach
 **Reference-Based**: Instagram social patterns + nestmag.online editorial minimalism. This creates a distinctive tattoo community platform that feels both familiar and elevated through editorial restraint.

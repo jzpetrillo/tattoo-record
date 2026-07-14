@@ -1,4 +1,4 @@
-# Inktagram - Application Structure Map
+# Tattoo Record - Application Structure Map
 
 ## User Roles & Permissions
 
@@ -43,7 +43,7 @@
   - All platform permissions
   - Approve/reject pending artists and studios
   - Manage users
-- **Test Credentials**: admin@inktagram.com / Admin1234!
+- **Test Credentials**: admin@tattoorecord.com / Admin1234!
 
 ---
 
@@ -287,7 +287,7 @@
 - Artists and Studios require admin approval
 - Enthusiasts activate immediately (no approval needed)
 - Approved users receive verified star badge
-- Admin credentials: admin@inktagram.com / Admin1234!
+- Admin credentials: admin@tattoorecord.com / Admin1234!
 
 ### 5. Real-time Messaging
 - One-on-one and group conversations
@@ -360,11 +360,11 @@
 ## Test Users
 
 ### Admin
-- Email: admin@inktagram.com
+- Email: admin@tattoorecord.com
 - Password: Admin1234!
 
 ### Seed Users
-- Pattern: seed_[type]_[number]@inktagram.com
+- Pattern: seed_[type]_[number]@tattoorecord.com
 - Password: Test1234!
 - 20 PENDING artists
 - 20 PENDING studios

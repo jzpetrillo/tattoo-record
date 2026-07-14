@@ -306,29 +306,28 @@ export default function Profile() {
           <div className={`flex gap-8 md:gap-16 mb-11 ${user?.bannerImageUrl ? '-mt-12 md:-mt-16' : 'pt-8'}`}>
           {/* Avatar */}
           <div className="flex-shrink-0">
-            <div className="w-20 h-20 md:w-36 md:h-36 rounded-full bg-gradient-to-tr from-yellow-400 via-pink-500 to-purple-500 p-0.5">
-              <div className="w-full h-full rounded-full bg-background p-1">
-                <div className="w-full h-full rounded-full bg-secondary flex items-center justify-center overflow-hidden">
-                  {user?.avatarUrl ? (
-                    <img src={user.avatarUrl} alt={user.username} className="w-full h-full object-cover" />
-                  ) : (
-                    <span className="text-2xl md:text-5xl font-bold">{user?.username?.[0]?.toUpperCase()}</span>
-                  )}
+            <div className="w-20 h-20 md:w-28 md:h-28 border border-border overflow-hidden">
+              {user?.avatarUrl ? (
+                <img src={user.avatarUrl} alt={user?.username} className="w-full h-full object-cover" />
+              ) : (
+                <div className="w-full h-full bg-secondary flex items-center justify-center">
+                  <span className="text-2xl md:text-4xl font-bold">{user?.username?.[0]?.toUpperCase()}</span>
                 </div>
-              </div>
+              )}
             </div>
           </div>
 
           {/* Profile Info */}
           <div className="flex-1 min-w-0">
-            {/* Username and Actions */}
-            <div className="flex items-center gap-4 mb-5">
-              <div className="flex items-center gap-2">
-                <h1 className="text-xl font-normal" data-testid="text-username">
-                  {user?.username}
-                </h1>
+            {/* Name headline */}
+            <div className="mb-3">
+              <h1 className="press-nameplate text-2xl md:text-4xl" data-testid="text-username">
+                {user?.displayName || user?.username}
+              </h1>
+              <div className="flex items-center gap-2 mt-1">
+                <span className="meta text-xs">@{user?.username}</span>
                 {user?.isVerified && (
-                  <Star className="w-4 h-4 fill-foreground text-foreground" data-testid="icon-verified" />
+                  <Star className="w-3.5 h-3.5 text-cobalt fill-current" data-testid="icon-verified" />
                 )}
               </div>
             </div>
@@ -423,19 +422,19 @@ export default function Profile() {
               )}
             </div>
 
-            {/* Stats Row */}
-            <div className="flex items-center gap-8 mb-5">
-              <div className="text-center" data-testid="stat-posts">
-                <span className="font-semibold">{userStats?.postsCount || 0}</span>
-                <span className="text-muted-foreground ml-1">posts</span>
+            {/* Stats Row — mono blocks */}
+            <div className="flex items-stretch gap-0 mb-5 border border-border divide-x divide-border">
+              <div className="flex flex-col items-center px-4 py-2" data-testid="stat-posts">
+                <span className="font-mono font-bold text-lg text-cobalt">{userStats?.postsCount || 0}</span>
+                <span className="meta text-xs">Posts</span>
               </div>
-              <div className="text-center" data-testid="stat-followers">
-                <span className="font-semibold">{userStats?.followersCount || 0}</span>
-                <span className="text-muted-foreground ml-1">followers</span>
+              <div className="flex flex-col items-center px-4 py-2" data-testid="stat-followers">
+                <span className="font-mono font-bold text-lg">{userStats?.followersCount || 0}</span>
+                <span className="meta text-xs">Followers</span>
               </div>
-              <div className="text-center" data-testid="stat-following">
-                <span className="font-semibold">{userStats?.followingCount || 0}</span>
-                <span className="text-muted-foreground ml-1">following</span>
+              <div className="flex flex-col items-center px-4 py-2" data-testid="stat-following">
+                <span className="font-mono font-bold text-lg">{userStats?.followingCount || 0}</span>
+                <span className="meta text-xs">Following</span>
               </div>
             </div>
 
@@ -568,27 +567,27 @@ export default function Profile() {
             <button 
               onClick={() => setActiveTab("POSTS")}
               className={`flex items-center gap-2 py-3 border-t-2 -mt-px transition-colors ${
-                activeTab === "POSTS" ? "border-foreground font-semibold" : "border-transparent text-muted-foreground hover:text-foreground"
+                activeTab === "POSTS" ? "bg-cobalt text-white font-semibold" : "text-muted-foreground hover:text-foreground hover:bg-secondary"
               }`}
               data-testid="tab-posts"
             >
               <ImageIcon className="w-4 h-4" />
-              <span className="text-xs uppercase tracking-widest">Posts</span>
+              <span className="meta text-xs">Posts</span>
             </button>
             <button 
               onClick={() => setActiveTab("VIDEOS")}
-              className={`flex items-center gap-2 py-3 border-t-2 -mt-px transition-colors ${
-                activeTab === "VIDEOS" ? "border-foreground font-semibold" : "border-transparent text-muted-foreground hover:text-foreground"
+              className={`flex items-center gap-2 px-4 py-3 transition-colors ${
+                activeTab === "VIDEOS" ? "bg-cobalt text-white font-semibold" : "text-muted-foreground hover:text-foreground hover:bg-secondary"
               }`}
               data-testid="tab-videos"
             >
               <Film className="w-4 h-4" />
-              <span className="text-xs uppercase tracking-widest">Videos</span>
+              <span className="meta text-xs">Videos</span>
             </button>
             <button 
               onClick={() => setActiveTab("PORTFOLIO")}
-              className={`flex items-center gap-2 py-3 border-t-2 -mt-px transition-colors ${
-                activeTab === "PORTFOLIO" ? "border-foreground font-semibold" : "border-transparent text-muted-foreground hover:text-foreground"
+              className={`flex items-center gap-2 px-4 py-3 transition-colors ${
+                activeTab === "PORTFOLIO" ? "bg-cobalt text-white font-semibold" : "text-muted-foreground hover:text-foreground hover:bg-secondary"
               }`}
               data-testid="tab-portfolio"
             >
@@ -597,7 +596,7 @@ export default function Profile() {
               ) : (
                 <Briefcase className="w-4 h-4" />
               )}
-              <span className="text-xs uppercase tracking-widest">{getPortfolioTabLabel()}</span>
+              <span className="meta text-xs">{getPortfolioTabLabel()}</span>
             </button>
           </div>
         </div>
@@ -605,9 +604,9 @@ export default function Profile() {
         {/* Posts/Videos Grid */}
         {activeTab !== "PORTFOLIO" && (
           <>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-0.5 mt-1">
-              {userPosts?.map((item: any) => (
-                <div key={item.post.id} className="aspect-[4/5] bg-black group cursor-pointer relative overflow-hidden" data-testid={`post-${item.post.id}`}>
+            <div className="grid grid-cols-3 gap-px bg-foreground mt-1">
+              {userPosts?.map((item: any, idx: number) => (
+                <div key={item.post.id} className="aspect-square bg-secondary group cursor-pointer relative overflow-hidden" data-testid={`post-${item.post.id}`}>
                   {item.post.media?.[0]?.url ? (
                     <img
                       src={item.post.media[0].url}
@@ -624,15 +623,17 @@ export default function Profile() {
                       <Film className="w-6 h-6 text-white drop-shadow-lg" />
                     </div>
                   )}
+                  {/* Index number */}
+                  <span className="absolute top-1 left-1.5 font-mono text-[10px] text-white/70 leading-none">{String(idx + 1).padStart(2, "0")}</span>
                   {/* Hover overlay with like/comment counts */}
-                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-6">
+                  <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-1">
                     <div className="flex items-center gap-1 text-white">
-                      <Heart className="w-5 h-5 fill-white" />
-                      <span className="font-semibold">{item.post.likeCount || 0}</span>
+                      <Heart className="w-4 h-4 fill-white" />
+                      <span className="font-mono text-sm font-bold">{item.post.likeCount || 0}</span>
                     </div>
                     <div className="flex items-center gap-1 text-white">
-                      <MessageCircle className="w-5 h-5 fill-white" />
-                      <span className="font-semibold">{item.post.commentCount || 0}</span>
+                      <MessageCircle className="w-4 h-4 fill-white" />
+                      <span className="font-mono text-sm font-bold">{item.post.commentCount || 0}</span>
                     </div>
                   </div>
                 </div>

@@ -17,7 +17,7 @@ async function generateTestData() {
   // Create Studios
   for (let i = 1; i <= STUDIOS; i++) {
     const username = `studio_${i}`;
-    const email = `studio${i}@inktagram.com`;
+    const email = `studio${i}@tattoorecord.com`;
     const hashedPassword = await bcrypt.hash("Test1234!", 10);
     
     const [user] = await db.insert(schema.users).values({
@@ -47,7 +47,7 @@ async function generateTestData() {
   // Create Artists
   for (let i = 1; i <= ARTISTS; i++) {
     const username = `artist_${i}`;
-    const email = `artist${i}@inktagram.com`;
+    const email = `artist${i}@tattoorecord.com`;
     const hashedPassword = await bcrypt.hash("Test1234!", 10);
     
     const [user] = await db.insert(schema.users).values({
@@ -77,7 +77,7 @@ async function generateTestData() {
   // Create Enthusiasts
   for (let i = 1; i <= ENTHUSIASTS; i++) {
     const username = `user_${i}`;
-    const email = `user${i}@inktagram.com`;
+    const email = `user${i}@tattoorecord.com`;
     const hashedPassword = await bcrypt.hash("Test1234!", 10);
     
     const [user] = await db.insert(schema.users).values({
@@ -208,7 +208,7 @@ async function generateTestData() {
         type: notificationType as "FOLLOW" | "LIKE" | "COMMENT" | "SYSTEM",
         payload: {
           actorId: actor.id,
-          message: notificationType === "SYSTEM" ? "Welcome to Inktagram!" : undefined,
+          message: notificationType === "SYSTEM" ? "Welcome to Tattoo Record!" : undefined,
         },
         isRead: Math.random() > 0.5,
       });

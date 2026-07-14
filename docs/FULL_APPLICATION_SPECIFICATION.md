@@ -1,4 +1,4 @@
-# Inktagram — Full Application Specification
+# Tattoo Record — Full Application Specification
 
 **Document version**: 1.0  
 **Date**: May 2026  
@@ -34,7 +34,7 @@
 
 ## What the Application Does
 
-Inktagram is a full-stack social community platform purpose-built for the tattoo industry. It connects three distinct user types — tattoo **artists**, tattoo **studios**, and tattoo **enthusiasts** — in a social-media-style environment that also supports professional workflows including booking appointments, posting flash sales, listing and applying for jobs, and watching live streams.
+Tattoo Record is a full-stack social community platform purpose-built for the tattoo industry. It connects three distinct user types — tattoo **artists**, tattoo **studios**, and tattoo **enthusiasts** — in a social-media-style environment that also supports professional workflows including booking appointments, posting flash sales, listing and applying for jobs, and watching live streams.
 
 The platform takes visual and UX cues from Instagram: a media-rich feed, stories, reels, profiles with follower counts, a direct messaging system, and an explore/discovery page. On top of the social layer sits a layer of business tooling not found on general social networks: appointment booking with payment status tracking, flash tattoo sales with countdown timers, a job board for studio-to-artist hiring, an AI recommendation engine for tattoo design ideas, and a comprehensive admin panel for content moderation and user verification.
 
@@ -447,7 +447,7 @@ The platform takes visual and UX cues from Instagram: a media-rich feed, stories
 - **ARTIST**: All nav items; Portfolio tab on own profile; Book Now CTA on others' profiles
 - **STUDIO**: All nav items; View Jobs CTA on profiles; can post jobs from Jobs page
 - **ENTHUSIAST**: All nav items except no special CTAs; cannot manage portfolio
-- **Public (unauthenticated)**: Sees only the Inktagram landing/splash page at `/`; redirected to `/auth` if attempting protected routes
+- **Public (unauthenticated)**: Sees only the Tattoo Record landing/splash page at `/`; redirected to `/auth` if attempting protected routes
 
 ## Data Visibility
 
@@ -849,7 +849,7 @@ client/src/components/
 - Uses Cloudinary v2 SDK
 - `uploadMedia(buffer, folder, resourceType)` → `{ publicId, url, type, width?, height?, duration? }`
 - `deleteMedia(publicId)` → void
-- All assets stored under `inktagram/` folder prefix
+- All assets stored under `tattoorecord/` folder prefix
 - Errors: generic message "Cloudinary upload failed"
 
 ### `server/services/openai.ts`
@@ -1455,7 +1455,7 @@ Artists manually update these after receiving payment through external channels 
 | Status | ✅ Fully functional |
 | Implementation | Server-side upload via `cloudinary.ts` service; client sends raw file to Express `/api/upload`, server pipes to Cloudinary |
 | Auth | API Key + Secret (`CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`, `CLOUDINARY_CLOUD_NAME`) |
-| Folder structure | `inktagram/{folder}/{filename}` |
+| Folder structure | `tattoorecord/{folder}/{filename}` |
 | Failure handling | Generic error message; no retry logic |
 | Missing | No image transformation (resizing/thumbnailing before storage); no video thumbnail generation; no CDN cache invalidation on delete |
 | Production readiness | ✅ Ready once secrets set |
@@ -1984,10 +1984,10 @@ No other cron jobs or scheduled tasks exist.
 
 | Role | Email | Password |
 |------|-------|----------|
-| Admin | admin@inktagram.com | Test1234! |
-| Artist | artist1@inktagram.com | Test1234! |
-| Studio | studio1@inktagram.com | Test1234! |
-| Enthusiast | enthusiast1@inktagram.com | Test1234! |
+| Admin | admin@tattoorecord.com | Test1234! |
+| Artist | artist1@tattoorecord.com | Test1234! |
+| Studio | studio1@tattoorecord.com | Test1234! |
+| Enthusiast | enthusiast1@tattoorecord.com | Test1234! |
 
 ## H. Known Dead / Unused Code
 

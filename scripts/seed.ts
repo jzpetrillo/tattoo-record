@@ -3,7 +3,7 @@ import { faker } from "@faker-js/faker";
 import bcrypt from "bcrypt";
 import * as schema from "../shared/schema";
 
-// COMPREHENSIVE DATABASE SEEDING SCRIPT FOR INKTAGRAM
+// COMPREHENSIVE DATABASE SEEDING SCRIPT FOR TATTOO RECORD
 // Creates realistic test data for ALL user-related features
 // Run with: npm run seed
 
@@ -96,8 +96,8 @@ async function seedUsers() {
   
   // Create 1 admin
   users.push({
-    email: "admin@inktagram.com",
-    username: "admin_inktagram",
+    email: "admin@tattoorecord.com",
+    username: "admin_tattoorecord",
     hashedPassword,
     role: "ADMIN" as const,
     firstName: "Admin",
@@ -114,7 +114,7 @@ async function seedUsers() {
     const studioDisplayName = `${faker.company.catchPhraseAdjective()} ${faker.helpers.arrayElement(["Ink", "Tattoo", "Studio", "Art"])}`;
     
     users.push({
-      email: `studio${i}@inktagram.com`,
+      email: `studio${i}@tattoorecord.com`,
       username: `studio${i}`,
       hashedPassword,
       role: "STUDIO" as const,
@@ -137,7 +137,7 @@ async function seedUsers() {
     const location = faker.helpers.arrayElement(CITIES);
     
     users.push({
-      email: `artist${i}@inktagram.com`,
+      email: `artist${i}@tattoorecord.com`,
       username: `artist${i}`,
       hashedPassword,
       role: "ARTIST" as const,
@@ -160,7 +160,7 @@ async function seedUsers() {
     const lastName = faker.person.lastName();
     
     users.push({
-      email: `enthusiast${i}@inktagram.com`,
+      email: `enthusiast${i}@tattoorecord.com`,
       username: `enthusiast${i}`,
       hashedPassword,
       role: "ENTHUSIAST" as const,
@@ -666,7 +666,7 @@ async function seedNotifications(users: typeof schema.users.$inferSelect[]) {
 }
 
 async function main() {
-  console.log("\n🌱 INKTAGRAM DATABASE SEEDING\n");
+  console.log("\n🌱 TATTOO RECORD DATABASE SEEDING\n");
   console.log("⚠️  WARNING: This will clear all existing data!\n");
   
   try {
@@ -692,10 +692,10 @@ async function main() {
     console.log(`   - Social interactions (likes, comments, follows) added`);
     console.log(`   - Portfolio items, jobs, messages, livestreams included\n`);
     console.log("🔑 Test Credentials:");
-    console.log("   - Admin: admin@inktagram.com / Test1234!");
-    console.log("   - Studio: studio1@inktagram.com / Test1234!");
-    console.log("   - Artist: artist1@inktagram.com / Test1234!");
-    console.log("   - Enthusiast: enthusiast1@inktagram.com / Test1234!\n");
+    console.log("   - Admin: admin@tattoorecord.com / Test1234!");
+    console.log("   - Studio: studio1@tattoorecord.com / Test1234!");
+    console.log("   - Artist: artist1@tattoorecord.com / Test1234!");
+    console.log("   - Enthusiast: enthusiast1@tattoorecord.com / Test1234!\n");
     
   } catch (error) {
     console.error("\n❌ Error during seeding:", error);

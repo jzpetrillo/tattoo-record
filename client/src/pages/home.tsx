@@ -20,10 +20,10 @@ import { Skeleton } from "@/components/ui/skeleton";
  * Password for all test accounts: Test1234!
  */
 const DEMO_ACCOUNTS = {
-  ARTIST: { email: "artist1@inktagram.com", password: "Test1234!" },
-  STUDIO: { email: "studio1@inktagram.com", password: "Test1234!" },
-  ENTHUSIAST: { email: "enthusiast1@inktagram.com", password: "Test1234!" },
-  ADMIN: { email: "admin@inktagram.com", password: "Test1234!" },
+  ARTIST: { email: "artist1@tattoorecord.com", password: "Test1234!" },
+  STUDIO: { email: "studio1@tattoorecord.com", password: "Test1234!" },
+  ENTHUSIAST: { email: "enthusiast1@tattoorecord.com", password: "Test1234!" },
+  ADMIN: { email: "admin@tattoorecord.com", password: "Test1234!" },
 } as const;
 
 export default function Home() {
@@ -90,7 +90,7 @@ export default function Home() {
       <div className="min-h-screen bg-background flex items-center justify-center px-6">
         <div className="text-center max-w-4xl">
           <h1 className="editorial-title mb-8">
-            INKTAG
+            TATTOO RECORD
           </h1>
           <p className="text-lg uppercase tracking-wide mb-8 opacity-60">
             A Platform for Tattoo Artists & Enthusiasts
@@ -155,7 +155,7 @@ export default function Home() {
       <main className="lg:ml-64 pb-20 lg:pb-8">
         {/* Mobile Header */}
         <div className="lg:hidden sticky top-0 z-40 bg-background border-b border-border px-4 py-3">
-          <h1 className="text-xl font-bold">Inktagram</h1>
+          <h1 className="press-nameplate text-lg">Tattoo Record</h1>
         </div>
 
         <div className="max-w-[630px] mx-auto lg:pt-8 px-4 lg:px-0">

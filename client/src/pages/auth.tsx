@@ -16,10 +16,10 @@ import { useToast } from "@/hooks/use-toast";
 import { Palette, Building2, Heart, Shield } from "lucide-react";
 
 const DEMO_ACCOUNTS = {
-  ARTIST: { email: "artist1@inktagram.com", password: "Test1234!" },
-  STUDIO: { email: "studio1@inktagram.com", password: "Test1234!" },
-  ENTHUSIAST: { email: "enthusiast1@inktagram.com", password: "Test1234!" },
-  ADMIN: { email: "admin@inktagram.com", password: "Test1234!" },
+  ARTIST: { email: "artist1@tattoorecord.com", password: "Test1234!" },
+  STUDIO: { email: "studio1@tattoorecord.com", password: "Test1234!" },
+  ENTHUSIAST: { email: "enthusiast1@tattoorecord.com", password: "Test1234!" },
+  ADMIN: { email: "admin@tattoorecord.com", password: "Test1234!" },
 } as const;
 
 const loginSchema = z.object({
@@ -80,7 +80,7 @@ export default function Auth() {
     onSuccess: (data) => {
       setAuth(data.user, data.token);
       setLocation("/");
-      toast({ title: "Welcome to Inktagram!", description: "Your account has been created." });
+      toast({ title: "Welcome to Tattoo Record!", description: "Your account has been created." });
     },
     onError: (error: Error) => {
       toast({ title: "Registration failed", description: error.message, variant: "destructive" });
@@ -120,7 +120,7 @@ export default function Auth() {
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <Card className="w-full max-w-md">
         <CardHeader>
-          <CardTitle className="text-2xl gradient-text">Inktagram</CardTitle>
+          <CardTitle className="text-2xl press-nameplate">Tattoo Record</CardTitle>
           <CardDescription>
             {isLogin ? "Sign in to your account" : "Create a new account"}
           </CardDescription>

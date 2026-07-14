@@ -1,7 +1,7 @@
-# Inktagram - Tattoo Social Community Platform
+# Tattoo Record - Tattoo Social Community Platform
 
 ## Overview
-Inktagram is a production-ready, full-stack tattoo social community platform for artists, studios, and enthusiasts. It facilitates connection, sharing of work, and collaboration through features like real-time messaging, live streaming, portfolio management, job postings, and AI-powered tattoo design recommendations. The platform aims to be a leading hub for the tattoo community, built with a modern monorepo architecture.
+Tattoo Record is a production-ready, full-stack tattoo social community platform for artists, studios, and enthusiasts. It facilitates connection, sharing of work, and collaboration through features like real-time messaging, live streaming, portfolio management, job postings, and AI-powered tattoo design recommendations. The platform aims to be a leading hub for the tattoo community, built with a modern monorepo architecture.
 
 ## User Preferences
 Preferred communication style: Simple, everyday language.

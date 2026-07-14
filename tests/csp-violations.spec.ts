@@ -1,13 +1,13 @@
 import { test, expect, type Page, type ConsoleMessage } from "@playwright/test";
 
-const TEST_EMAIL = "artist1@inktagram.com";
+const TEST_EMAIL = "artist1@tattoorecord.com";
 const TEST_PASSWORD = "Test1234!";
 const TEST_USERNAME = "artist1";
 
-const STUDIO_EMAIL = "studio1@inktagram.com";
+const STUDIO_EMAIL = "studio1@tattoorecord.com";
 const STUDIO_USERNAME = "studio1";
 
-const ENTHUSIAST_EMAIL = "enthusiast1@inktagram.com";
+const ENTHUSIAST_EMAIL = "enthusiast1@tattoorecord.com";
 const ENTHUSIAST_USERNAME = "enthusiast1";
 
 async function loginAs(page: Page, email: string, password = "Test1234!"): Promise<void> {

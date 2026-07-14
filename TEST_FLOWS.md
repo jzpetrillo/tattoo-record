@@ -1,4 +1,4 @@
-# Inktagram - Test Flows by User Role
+# Tattoo Record - Test Flows by User Role
 
 **Generated**: November 20, 2025  
 **Purpose**: Complete user flow documentation for end-to-end testing
