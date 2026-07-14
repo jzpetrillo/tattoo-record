@@ -1,0 +1,98 @@
+You are working on "Inktagram", a full-stack tattoo social app: React 18 + Vite + Wouter + TanStack Query + Zustand + shadcn/ui on the client; Express + Drizzle ORM + Postgres/Neon + JWT + ws WebSockets + Cloudinary + OpenAI on the server. Monorepo: client/, server/, shared/.
+
+A pre-launch audit found the issues below. Fix them ALL, in the phase order given (security first). Do NOT refactor unrelated code, do NOT change the working auth/like/booking-transaction logic. After each phase, run `npm run check` (tsc) and fix type errors you introduce. Preserve existing behavior that already works. Where a fix pattern already exists in the codebase (e.g. AlertDialog confirm in client/src/pages/job-detail.tsx, error toasts via useToast, queryClient.invalidateQueries), reuse that exact pattern for consistency.
+
+=========================
+PHASE 1 — SECURITY (blockers)
+=========================
+
+1. Password-hash & email disclosure. In server/storage.ts, many queries do `db.select().from(schema.users)` or embed the full `users` row in joins, so `hashedPassword` (and email) leak to clients — including via the PUBLIC `GET /api/search`.
+   - Fix at the source: create a reusable list of "public user columns" (id, username, role, firstName, lastName, bio, avatarUrl, bannerImageUrl, website, instagram, tiktok, twitter, location, isVerified, verificationStatus, createdAt) and use explicit column selection in EVERY query that returns user data to clients: searchUsers (~line 577), searchPosts author (~590), getPosts author (~210), getPost author (~184), getComments user (~253), getStories user (~340), getMessages sender (~427), getConversations json_agg (~413) — select explicit fields, NOT the whole row — getFollowers/getFollowing (~298/305), getFlashSales/getFlashSale artist, getBookings/getBooking artist+client, getJobs/getJobById studio, getStudioApprovalRequests artist+studio (~682), getLivestreamEvents host.
+   - NEVER return hashedPassword or email to clients except email only to the authenticated owner via /api/users/me. The admin queries already select explicit columns — copy that style.
+   - Verify: `grep -rn "hashedPassword" server/` and confirm it only appears in auth (bcrypt compare/hash) and the safeUser scrubber, never in a client response path.
+
+2. Studio-approval IDOR. server/routes.ts PUT /api/studio-approvals/:id/approve and /reject (~1125-1141) only check requireRole(["STUDIO"]). Before mutating, load the request and return 403 unless request.studioId === req.userId. Add a getStudioApprovalRequestById(id) to server/storage.ts if needed.
+
+3. Livestream start/end authorization. server/routes.ts POST /api/live-events/:eventId/start and /end (~944-966) have no ownership check. Load the event and return 403 unless event.hostId === req.userId (mirror the check already in PUT /api/livestream-events/:id at ~924).
+
+4. Media-delete authorization is broken and insecure. server/routes.ts DELETE /api/upload/:publicId (~1053-1076). The generic prefixes nullify per-user checks, and real Cloudinary IDs are namespaced `inktagram/...` so legitimate deletes 403. Replace the string-prefix logic with real ownership: require the publicId to start with `inktagram/<folder>/<req.userId>/` OR verify against a DB record that the asset belongs to the user. Update server/services/cloudinary.ts uploadMedia to place uploads under `inktagram/${folder}/${userId}/...` so ownership is encoded, and pass userId through from the /api/upload handler.
+
+5. Stop leaking internal error text. Across server/routes.ts handlers and the global handler in server/index.ts (~110-116): log the real error server-side, but return a generic message for 500s (keep specific 400/403/404 messages). Remove the `throw err;` after `res.status().json()` in index.ts (it throws after the response is sent).
+
+6. Add server-side Zod validation where missing:
+   - POST /api/flash-sales (~705): validate title, positive originalPriceCents/flashPriceCents (flash < original), availableSlots >= 1, expiresAt in the future.
+   - POST /api/bookings (~760): validate required fields, scheduledAt must be in the future, depositCents <= totalPriceCents, non-negative amounts.
+   - POST /api/jobs/:id/apply (~672): validate coverLetter; reject duplicate applications (same artistId+jobId) and applications to inactive jobs.
+   Put schemas in server/utils/validation.ts alongside the others.
+
+=========================
+PHASE 2 — BROKEN CORE FEATURES
+=========================
+
+7. Share-to-DM broken. client/src/components/posts/post-card.tsx:119 POSTs to non-existent `/api/messages`. Change to `POST /api/conversations/${conversationId}/messages` with body `{ body: message }` (server expects `body`, see routes.ts:495 + createMessageSchema). Also the share link at ~117 uses `/posts/${post.id}`, which has no route — either add a `/posts/:id` post-detail page/route in client/src/App.tsx (preferred; a GET /api/posts/:id already exists) or link to the author profile.
+
+8. Edit Profile dead-end. client/src/pages/profile.tsx:342 navigates to `/settings`, which doesn't exist. Create a Settings/Edit-Profile page (client/src/pages/settings.tsx), add the route to client/src/App.tsx wrapped in ProtectedRoute, and wire a form to `PUT /api/users/me` (fields already whitelisted in updateUserSchema: firstName,lastName,bio,avatarUrl,bannerUrl,location,website,socialHandles,specialties,styles,hourlyRateCents,address). NOTE: updateUserSchema (server/utils/validation.ts:89) accepts fields that don't exist as columns (bannerUrl vs bannerImageUrl, specialties, styles, hourlyRateCents, address) — reconcile schema and columns: either add the columns to shared/schema.ts users table + run db:push, or trim the schema to real columns. Pick one and make them consistent.
+
+9. Studio "Pending Requests" panel never loads. client/src/pages/profile.tsx:110 uses an object in the query key, which stringifies to `[object Object]`. Replace with a real querystring, e.g. queryKey `[`/api/studio-approvals?studioId=${user?.id}&status=PENDING`]` and a queryFn that fetches that URL (the default join-based fn won't work here).
+
+10. Studio-connection search dead. client/src/components/studio-connection-dialog.tsx:21 keys `["/api/search", term]` → `/api/search/<term>` with no `?q=`. Use a custom queryFn hitting `/api/search?q=${encodeURIComponent(searchQuery)}`, read `.users`, filter role==="STUDIO". Add loading + "no studios found" states.
+
+11. Messaging realtime delivery broken. The POST send handler never broadcasts. In server/routes.ts POST /api/conversations/:id/messages (~495-524), after creating the message, broadcast a NEW_MESSAGE frame to all conversation participants via the message WebSocket (server/services/websocket.ts — export a sendToUser/broadcastToConversation helper and call it here). Client already invalidates on send; ensure the recipient's chat-window refetches on receiving NEW_MESSAGE (client/src/lib/websocket.ts + chat-window.tsx). Also add reconnection with backoff and an onclose handler in client/src/lib/websocket.ts.
+
+12. AI Recommendations page crashes. client/src/pages/ai-recommendations.tsx:131,148,165 use `<SelectItem value="">` which Radix rejects. Replace each empty value with a sentinel like "any" and map "any" back to undefined before submit. Also guard the result render (~205-280): default arrays and null-check recommendation.styles/placement/colors/aftercareTips before .map.
+
+13. Search "Posts" section blank. client/src/pages/search.tsx:153-174 treats results as flat but `/api/search` returns `{post, author}`. Read `item.post.id/caption/media[0].url` and keep `item.author`. Fix key to `item.post.id`.
+
+=========================
+PHASE 3 — HALF-WIRED FEATURES & H0MISSING CONFIRMS
+=========================
+
+14. Reels shows all posts. `/api/posts?type=REEL` is ignored unless authorId is set (server/routes.ts:236-243 falls back to getPersonalizedFeed which ignores type). Add a REEL-filtered path: when `type` is provided without authorId, query posts filtered by type (reuse storage.getPosts with type) OR add a dedicated endpoint. Update client/src/pages/reels.tsx to use it. Also fix field names: use post.likeCount/commentCount (not likesCount/commentsCount) at ~114-118, and make the reel card open a player/detail (it currently has no onClick).
+
+15. Live streaming has no viewer/watch UI. Add an individual live-event route + watch page in client that joins the /ws/live socket (server/services/websocket-live.ts already supports JOIN/LIVE_COMMENT/LIVE_REACTION/VIEWER_UPDATE). Make client/src/components/live/live-stream-card.tsx navigate to it. Add host controls to actually call POST /api/live-events/:eventId/start and /end (currently orphaned) and PUT for edits, so a host can end a stream. Replace hardcoded "Started 2h ago" (live-stream-card.tsx:32) with a real relative time (date-fns is available) and label viewer count correctly (current vs peak).
+
+16. Job applicants invisible to studios. Add `GET /api/jobs/:jobId/applications` (requireRole STUDIO, only the owning studio) + storage.getJobApplications(jobId), and a client applicants list on client/src/pages/job-detail.tsx for the owning studio.
+
+17. Edit-Job blank form / data loss. client/src/pages/job-detail.tsx:72 — RHF defaultValues read undefined data. Add `useEffect(() => { if (jobData) editForm.reset({...}) }, [jobData])` before opening, and close the dialog on update success (~105). Do the same "close dialog on success" for the Apply dialog (~90) and prevent duplicate applies.
+
+18. Notifications for social activity are never created. In server/storage.ts, create a notification on followUser (type FOLLOW), likePost (type LIKE), and createComment (type COMMENT), each with payload including actorId and postId where relevant (getNotifications already left-joins actor via payload.actorId). Don't notify a user about their own action. Then client/src/pages/notifications.tsx: make LIKE/COMMENT "View post" route to the post detail (from fix #7), not "/". Add onError toasts to the three mutations (~53-78) and reflect follow-back state.
+
+19. Create Reel/Story open the Post tab. client/src/pages/create.tsx passes createType but client/src/components/posts/create-post-modal.tsx ignores it (hardcodes activeTab="post"). Pass `initialType` and initialize activeTab from it. Also wire the feed "Your story" affordance (client/src/components/stories/stories-bar.tsx:29) to open the create-story flow.
+
+20. Story viewer broken. client/src/components/stories/story-viewer.tsx uses FontAwesome `<i class="fas ...">` icons but FA is never loaded → invisible close/like/send. Replace with lucide-react icons (X, Heart, Send) used everywhere else. Make the progress bar animate with the 5s timer instead of hardcoded 45% (~42). Wire the reply input + send/heart buttons (or remove them if story replies aren't in scope). Replace hardcoded "2h ago" with real relative time.
+
+21. Saved-posts collection filter always empty. client/src/pages/saved-posts.tsx:44 reads item.collectionName; use item.savedPost.collectionName. Also pass real isLiked through instead of hardcoded false (~114) — have GET /api/saved-posts return isLiked (EXISTS subquery like the feed does).
+
+22. Hashtag/trending chips are dead. Trending chips (explore.tsx) and hashtag links (search.tsx:123) navigate to `/search?q=…` but search.tsx never reads `q`. In client/src/pages/search.tsx, seed searchQuery from the URL via Wouter's useSearch()/useSearchParams and keep it in sync. Also fix hashtag count display: use tag.uses not tag.count (search.tsx:133, explore.tsx:150).
+
+23. Add confirmation dialogs (reuse the AlertDialog pattern from job-detail.tsx:323) to ALL destructive actions currently firing on single click:
+   - client/src/pages/admin.tsx: Ban user (~685), Delete post (~873), Delete job (~946), Delete flash sale (~1085), Cancel booking (~1142).
+   - client/src/pages/bookings.tsx: Cancel (~617) and Reject (~565).
+   - client/src/pages/profile.tsx: Delete portfolio item (~696).
+
+24. Auth-guard gaps in client/src/App.tsx: wrap the bare `/profile` route (~61) in ProtectedRoute (keep /profile/:username and /u/:username public). On app load, validate the persisted session by calling GET /api/users/me and treat 401 as logged-out (don't trust persisted role/token for gating). Add a role-gated Admin link to the desktop sidebar (client/src/components/layout/sidebar-nav.tsx) — mobile already has one. Hide protected nav items when !token.
+
+=========================
+PHASE 4 — POLISH & CORRECTNESS
+=========================
+
+25. Add error states (isError branch + retry + toast) to queries that currently render failures as empty: admin.tsx (all 6 modules + stats), bookings.tsx, jobs.tsx, job-detail.tsx, reels.tsx, post-feed.tsx, notifications.tsx, explore.tsx, for-you-rail.tsx. A 500 must not look like "no data."
+26. Admin flash-sale list shows wrong price: admin.tsx:1064 reads non-existent discountPriceCents → use flashPriceCents. Remove the dead editSaleId state/Edit2 import or wire a real edit dialog (PUT /api/admin/flash-sales/:id exists).
+27. Flash-sales countdown is static (flash-sales.tsx:39): drive a 1-minute ticking state so timers/urgency update.
+28. Don't show email as a display fallback (search.tsx:102, anywhere): fall back to @username.
+29. Count drift in storage.ts: guard unlikePost/unsavePost so counts can't go negative; make like/follow idempotent (ignore duplicate unique-constraint) instead of 500; block self-follow.
+30. Bookings: add future-date min on the datetime-local input and Zod (bookings.tsx:294), and add REJECTED/CANCELLED status tabs (~459).
+31. Replace hardcoded "Online" presence in chat-window.tsx:114 with real presence (USER_ONLINE/OFFLINE are broadcast but unused) or remove the indicator. Call PUT /api/conversations/:id/read when a conversation opens so unread badges clear. Add onError toast to the send-message mutation.
+32. Fix small guards: suggested-users.tsx:37 "See All" no-op button (wire or remove), username[0] crashes (use ?.), encodeURIComponent on ui-avatars URLs.
+33. Fix README.md: it claims Next.js 14 + Prisma; the app is Vite + Wouter + Drizzle. Correct the stack section.
+34. Decide on orphaned schema tables with no code (consultationRequests, storyHighlights/highlightStories, postShares): either implement or remove from shared/schema.ts to avoid confusion. Ask me if unsure — default to leaving them but add a `// TODO: unimplemented` note.
+
+=========================
+FINAL VERIFICATION
+=========================
+- Run `npm run check` (tsc) — zero new type errors.
+- Run `npm run dev` and smoke-test: register → login → create post (post/reel/story tabs) → like/comment/save → edit profile (new settings page) → send a DM (recipient window updates) → studio connection search finds a studio → AI recommendations page opens without crashing → admin destructive actions prompt for confirm → logout.
+- Confirm `grep -rn "hashedPassword" server/` shows it only in auth + safeUser, never in a response path.
+- Do NOT weaken the working parts: auth validation, the optimistic like flow (post-card.tsx), the atomic flash-sale booking transaction (storage.ts:933), the nonce-based CSP (index.ts).
+
+Work phase by phase, keep changes minimal and consistent with existing patterns, and summarize what changed per file when done.
