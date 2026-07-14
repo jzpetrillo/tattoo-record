@@ -4,14 +4,24 @@ const TEST_EMAIL = "artist1@inktagram.com";
 const TEST_PASSWORD = "Test1234!";
 const TEST_USERNAME = "artist1";
 
-async function login(page: Page): Promise<void> {
+const STUDIO_EMAIL = "studio1@inktagram.com";
+const STUDIO_USERNAME = "studio1";
+
+const ENTHUSIAST_EMAIL = "enthusiast1@inktagram.com";
+const ENTHUSIAST_USERNAME = "enthusiast1";
+
+async function loginAs(page: Page, email: string, password = "Test1234!"): Promise<void> {
   await page.goto("/auth");
-  await page.getByLabel(/email/i).fill(TEST_EMAIL);
-  await page.getByLabel(/password/i).fill(TEST_PASSWORD);
+  await page.getByLabel(/email/i).fill(email);
+  await page.getByLabel(/password/i).fill(password);
   await page.getByRole("button", { name: /sign in|log in/i }).click();
   await page.waitForURL((url) => !url.pathname.includes("/auth"), {
     timeout: 15_000,
   });
+}
+
+async function login(page: Page): Promise<void> {
+  return loginAs(page, TEST_EMAIL);
 }
 
 /**
@@ -87,5 +97,75 @@ test.describe("CSP violations", () => {
     await page.waitForTimeout(2_000);
 
     expect(violations, `CSP violations on reels: ${violations.join("\n")}`).toHaveLength(0);
+  });
+});
+
+test.describe("CSP violations – studio role", () => {
+  test("feed page loads without CSP violations", async ({ page }) => {
+    const violations = collectCspViolations(page);
+    await loginAs(page, STUDIO_EMAIL);
+
+    await page.goto("/");
+    await page.waitForLoadState("networkidle");
+    await page.waitForTimeout(2_000);
+
+    expect(violations, `CSP violations on feed (studio): ${violations.join("\n")}`).toHaveLength(0);
+  });
+
+  test("explore page loads without CSP violations", async ({ page }) => {
+    const violations = collectCspViolations(page);
+    await loginAs(page, STUDIO_EMAIL);
+
+    await page.goto("/explore");
+    await page.waitForLoadState("networkidle");
+    await page.waitForTimeout(2_000);
+
+    expect(violations, `CSP violations on explore (studio): ${violations.join("\n")}`).toHaveLength(0);
+  });
+
+  test("studio profile page loads without CSP violations", async ({ page }) => {
+    const violations = collectCspViolations(page);
+    await loginAs(page, STUDIO_EMAIL);
+
+    await page.goto(`/profile/${STUDIO_USERNAME}`);
+    await page.waitForLoadState("networkidle");
+    await page.waitForTimeout(2_000);
+
+    expect(violations, `CSP violations on studio profile: ${violations.join("\n")}`).toHaveLength(0);
+  });
+});
+
+test.describe("CSP violations – enthusiast role", () => {
+  test("feed page loads without CSP violations", async ({ page }) => {
+    const violations = collectCspViolations(page);
+    await loginAs(page, ENTHUSIAST_EMAIL);
+
+    await page.goto("/");
+    await page.waitForLoadState("networkidle");
+    await page.waitForTimeout(2_000);
+
+    expect(violations, `CSP violations on feed (enthusiast): ${violations.join("\n")}`).toHaveLength(0);
+  });
+
+  test("explore page loads without CSP violations", async ({ page }) => {
+    const violations = collectCspViolations(page);
+    await loginAs(page, ENTHUSIAST_EMAIL);
+
+    await page.goto("/explore");
+    await page.waitForLoadState("networkidle");
+    await page.waitForTimeout(2_000);
+
+    expect(violations, `CSP violations on explore (enthusiast): ${violations.join("\n")}`).toHaveLength(0);
+  });
+
+  test("enthusiast profile page loads without CSP violations", async ({ page }) => {
+    const violations = collectCspViolations(page);
+    await loginAs(page, ENTHUSIAST_EMAIL);
+
+    await page.goto(`/profile/${ENTHUSIAST_USERNAME}`);
+    await page.waitForLoadState("networkidle");
+    await page.waitForTimeout(2_000);
+
+    expect(violations, `CSP violations on enthusiast profile: ${violations.join("\n")}`).toHaveLength(0);
   });
 });
