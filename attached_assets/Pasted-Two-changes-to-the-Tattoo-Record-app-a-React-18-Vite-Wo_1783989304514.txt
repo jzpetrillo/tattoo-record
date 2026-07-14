@@ -1,0 +1,101 @@
+Two changes to the "Tattoo Record" app (a React 18 + Vite + Wouter + TanStack Query + shadcn/ui client; Express + Drizzle server). Do BOTH parts. Keep changes minimal and consistent with existing patterns. Fonts (Space Grotesk + Space Mono) are ALREADY loaded in client/index.html — do not add font links. After each part run `npm run check` and fix any type errors you introduce. Do not touch the files in attached_assets/ (historical logs).
+
+=====================================================
+PART A — RENAME "Inktagram" → "Tattoo Record" everywhere
+=====================================================
+Replace the brand name in all user-facing and code locations. Use "Tattoo Record" for display text, "tattoo-record" for slugs/folders, "tattoorecord.com" for email domains.
+
+1. Wordmarks (display text):
+   - client/src/components/layout/sidebar-nav.tsx:51 — `<h1 ...>Inktagram</h1>` → `Tattoo Record`
+   - client/src/pages/home.tsx:158 — `<h1 ...>Inktagram</h1>` → `Tattoo Record`
+   - client/src/pages/auth.tsx:123 — `<CardTitle ...>Inktagram</CardTitle>` → `Tattoo Record`
+   - client/src/pages/auth.tsx:83 — toast title "Welcome to Inktagram!" → "Welcome to Tattoo Record!"
+   - client/src/pages/create.tsx and anywhere else a visible "Inktagram" string appears.
+
+2. Page title: in client/index.html add `<title>Tattoo Record</title>` inside <head> (there is currently no title).
+
+3. Cloudinary asset folder: server/services/cloudinary.ts:26 — change `inktagram/${folder}` → `tattoo-record/${folder}`. IMPORTANT: if you also implement the media-delete ownership fix, keep its folder prefix in sync (`tattoo-record/...`). Note in your summary that existing assets already uploaded under `inktagram/` will not move.
+
+4. Seed + test data email domain (keep passwords identical). Change `@inktagram.com` → `@tattoorecord.com` and any "Inktagram" strings in:
+   - scripts/seed.ts (lines ~99,100 admin email + username `admin_inktagram`→`admin_tattoorecord`, ~117,140,163 studio/artist/enthusiast emails, ~669 + ~695-698 console logs, and the header comment ~6)
+   - scripts/generate-test-data.ts (lines ~20,50,80 emails; ~211 "Welcome to Inktagram!" → "Welcome to Tattoo Record!")
+   - The demo-login constants that MUST match seed emails: client/src/pages/auth.tsx:19-22 and client/src/pages/home.tsx:23-26 (all four @inktagram.com → @tattoorecord.com).
+   This keeps the quick-login demo buttons working against a freshly seeded DB. Flag that an existing seeded database must be re-seeded for the new emails to work.
+
+5. Config + docs (brand + credential domains): .env.example (db name `inktagram`→`tattoo_record`, JWT_SECRET placeholder), README.md, replit.md, design_guidelines.md, and the docs/*.md + *_REPORT.md test-credential tables — update the displayed name to "Tattoo Record" and emails to @tattoorecord.com so docs match reality. (package.json "name" is "rest-express" — leave it.)
+
+Verify with a case-insensitive search that no "inktagram" remains outside attached_assets/: `grep -rin inktagram . --exclude-dir=node_modules --exclude-dir=attached_assets`.
+
+=====================================================
+PART B — REDESIGN: apply the "Press" visual direction
+=====================================================
+Direction = design-magazine brutalism: warm paper background, near-black ink, oversized Space Grotesk headlines, Space Mono for metadata/numbers, SHARP corners (0 radius), everything divided by hairline rules, one cobalt accent for "active/selected/verified", and safety-orange reserved ONLY for "flash". The app is single-theme (light paper) — do not add a dark variant.
+
+B1. Replace the `:root` block in client/src/index.css with these tokens (keep the existing `@tailwind` lines above it, and keep the same `hsl(...)`-wrapped value format the file already uses):
+
+  :root {
+    --background: hsl(47 20% 91%);          /* paper #ECEAE2 */
+    --foreground: hsl(0 0% 7%);             /* ink #111111 */
+    --card: hsl(48 25% 94%);
+    --card-foreground: hsl(0 0% 7%);
+    --popover: hsl(48 25% 94%);
+    --popover-foreground: hsl(0 0% 7%);
+    --primary: hsl(0 0% 7%);                /* ink buttons */
+    --primary-foreground: hsl(47 20% 91%);  /* paper */
+    --secondary: hsl(45 17% 86%);           /* paper2 */
+    --secondary-foreground: hsl(0 0% 7%);
+    --muted: hsl(45 17% 86%);
+    --muted-foreground: hsl(60 3% 40%);     /* grey */
+    --accent: hsl(45 17% 86%);
+    --accent-foreground: hsl(0 0% 7%);
+    --destructive: hsl(0 58% 41%);          /* #A32D2D — danger, kept distinct from cobalt */
+    --destructive-foreground: hsl(47 20% 91%);
+    --border: hsl(45 9% 73%);
+    --input: hsl(45 9% 73%);
+    --ring: hsl(236 91% 56%);               /* cobalt focus ring */
+    --cobalt: hsl(236 91% 56%);             /* accent: active / selected / verified */
+    --cobalt-foreground: hsl(0 0% 100%);
+    --flash: hsl(15 100% 56%);              /* reserved: flash sales ONLY */
+    --font-sans: 'Space Grotesk', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+    --font-serif: 'Space Grotesk', sans-serif;
+    --font-mono: 'Space Mono', 'Courier New', monospace;
+    --radius: 0rem;
+  }
+
+B2. In client/src/index.css `@layer utilities`, ADD these helpers (keep the existing utilities like .marquee, .scrollbar-hide, .grid-masonry, .bg-grid):
+
+  .halftone { background-color:#111; background-image:radial-gradient(rgba(236,234,226,0.28) 1px, transparent 1.3px); background-size:7px 7px; }
+  .press-nameplate { font-family:'Space Grotesk',sans-serif; font-weight:700; text-transform:uppercase; letter-spacing:-0.04em; line-height:0.9; }
+  .meta { font-family:'Space Mono',monospace; text-transform:uppercase; letter-spacing:0.06em; color:hsl(60 3% 40%); }
+  .text-cobalt{ color:hsl(236 91% 56%); }
+  .bg-cobalt{ background-color:hsl(236 91% 56%); color:#fff; }
+  .border-cobalt{ border-color:hsl(236 91% 56%); }
+  .text-flash{ color:hsl(15 100% 56%); }
+  .bg-flash{ background-color:hsl(15 100% 56%); color:#111; }
+  .border-ink{ border-color:hsl(0 0% 7%); }
+
+B3. Also update `.editorial-title` in index.css to feel like Press: keep the clamp, set `font-family:'Space Grotesk',sans-serif; font-weight:700; letter-spacing:-0.04em;`.
+
+That token+font+radius swap re-skins the whole app automatically (all shadcn `bg-*`/`text-*`/`border-*` classes read these vars). Then apply these targeted structural touches so it matches the direction — reuse the utilities above:
+
+B4. Wordmark (sidebar-nav.tsx, mobile-nav.tsx if present, home.tsx, auth.tsx): render "Tattoo Record" with `press-nameplate` at a small size (e.g. class `press-nameplate text-lg`). Remove any `gradient-text`/gradient classes (Press has no gradients) — auth.tsx:123 CardTitle should be plain ink `press-nameplate`.
+
+B5. Rules over shadows: give the top navbar, post cards (components/posts/post-card.tsx), and the profile header a 1px ink divider structure — prefer `border-b border-ink` / `border border-ink` and remove soft drop-shadows/large rounded corners on those surfaces (radius is already 0 globally). Keep it a system of ruled boxes.
+
+B6. Profile header (client/src/pages/profile.tsx): make the artist name a `press-nameplate` headline (drop the gradient-ring avatar in favor of the large type; a small avatar is fine but the name is the hero). Render the follower/works/following stats as three mono blocks (`.meta` labels + Space Mono numbers), with the highlighted stat in `text-cobalt`.
+
+B7. Tabs (profile tabs, admin tabs): style the ACTIVE tab as `bg-cobalt` (or ink underline + `text-cobalt`) and inactive as ink text; use `.meta` for the tab labels. Ensure the active state is distinguished by more than color (weight/background), for accessibility.
+
+B8. Content grids (profile grid, explore grid, saved/reels): use a 3-col grid with a 1px gap on an ink background (`gap-px bg-[hsl(0_0%_7%)]`) so tiles are separated by ink rules; keep image tiles square. Overlay a small Space Mono index number and mono like-count on each tile.
+
+B9. Badges/accents: verified check = `text-cobalt`; the "FLASH" tag on flash-sale cards/post headers = `bg-flash`. Do NOT use the flash orange anywhere except flash-sale context. Keep destructive/danger actions on `--destructive` red (already distinct).
+
+B10. Admin/dense screens (client/src/pages/admin.tsx) — restraint: keep table/data text in the default sans (not oversized), reserve `press-nameplate` for the page header and `.meta` for stat-tile labels only. This keeps dense data readable while staying on-brand.
+
+=====================================================
+VERIFICATION
+=====================================================
+- `npm run check` passes with no new type errors.
+- `npm run dev`, then confirm: the app reads "Tattoo Record" in the sidebar, mobile header, auth card, and browser tab; background is warm paper with ink text; buttons/cards have square corners; the active nav/tab and verified badge are cobalt; the demo-login buttons still authenticate against a freshly seeded DB (`npx tsx scripts/seed.ts`).
+- `grep -rin inktagram . --exclude-dir=node_modules --exclude-dir=attached_assets` returns nothing.
+Summarize what changed per file when done.
