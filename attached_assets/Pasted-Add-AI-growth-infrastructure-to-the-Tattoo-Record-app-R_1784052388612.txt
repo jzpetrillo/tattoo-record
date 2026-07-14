@@ -1,0 +1,87 @@
+Add AI growth infrastructure to the "Tattoo Record" app (React 18 + Vite + Wouter + TanStack Query + shadcn/ui client; Express + Drizzle + Postgres/Neon server; existing Cloudinary uploads and one legacy OpenAI call in server/services/openai.ts — leave that working). Build the phases IN ORDER; after each, run `npm run check` and fix type errors you introduce. Keep the existing patterns (Drizzle in server/storage.ts, routes in server/routes.ts, Zod in server/utils/validation.ts).
+
+GLOBAL GUARDRAILS (apply to every phase):
+- Never send user PII (emails, tokens, passwords) to any model — only image URLs and public text.
+- All admin-facing AI outputs are advisory: keep a human-override step.
+- Cache AI results (image tags by Cloudinary publicId; embeddings by content hash) and never re-run on unchanged input.
+- Run AI work ASYNC — never block an API response on an LLM/embedding call.
+- Add explicit cost ceilings/timeouts; default high-volume paths to the cheapest model.
+
+Env vars to add (server): ANTHROPIC_API_KEY, VOYAGE_API_KEY. Add both to .env.example with placeholder values.
+Install: `npm i @anthropic-ai/sdk`. (Voyage is called via REST fetch — no SDK needed.)
+
+Models: Haiku = "claude-haiku-4-5-20251001" (high-volume: tagging, digests), Sonnet = "claude-sonnet-5" (assistants), Opus = "claude-opus-4-8" (hardest reasoning). Embeddings: Voyage "voyage-3" (1024-dim) via https://api.voyageai.com/v1/embeddings.
+
+=====================================================
+PHASE 0 — FOUNDATIONS (provider wrapper + telemetry)
+=====================================================
+0.1 Provider wrapper — create server/services/ai/index.ts exposing three vendor-agnostic functions so features never hard-code a vendor:
+    - complete({ system, messages, model, maxTokens }) → text (Anthropic Messages API).
+    - completeStructured({ system, prompt, model, tool }) → validated JSON, implemented with a single Anthropic tool definition + tool_choice forcing that tool (robust structured output; parse tool_use input). 
+    - vision({ imageUrl, prompt, tool, model }) → structured JSON from an image using a content block { type: "image", source: { type: "url", url: imageUrl } }.
+    - embed(texts: string[]) → number[][] via Voyage REST (voyage-3), batched.
+    Centralize the Anthropic client + API key check here (throw a clear error if ANTHROPIC_API_KEY is missing, like server/middleware/auth.ts does for JWT). Add a simple in-memory LRU (or Map) cache keyed by a content hash for vision/embed.
+
+0.2 Telemetry — new table in shared/schema.ts: `events` (id uuid pk, userId uuid nullable, type varchar, entityId uuid nullable, payload jsonb default {}, createdAt timestamp default now, index on (type, createdAt) and (userId, createdAt)). Add storage.logEvent(...) in server/storage.ts. Fire logEvent on: post_view, post_like, post_save, search_performed, ai_recommendation_served, ai_feedback. This is the substrate for later ranking/A-B work — keep it lightweight and non-blocking.
+
+0.3 Feature flags — a tiny server/config/flags.ts reading booleans from env (AI_AUTOTAG, AI_DIGEST, AI_SEMANTIC_SEARCH) so each feature can be toggled/rolled out independently. Default all to true in dev.
+
+=====================================================
+PHASE 1 — AUTO-TAGGING PIPELINE  (Rec A — the keystone)
+=====================================================
+Goal: every uploaded tattoo image gets structured tags that fill posts.styles (currently never populated) and power search/filters/feed.
+
+1.1 Schema (shared/schema.ts, `posts` table): add
+    - subjects: jsonb().$type<string[]>().default([])
+    - aiTags: jsonb().$type<{ styles:string[]; subjects:string[]; colorProfile:string; placement:string }>()
+    - aiTaggedAt: timestamp()
+    Then `npm run db:push`.
+
+1.2 Service: server/services/ai/vision.ts → `tagTattooImage(imageUrl)` calls ai.vision() with a forced tool whose input_schema is { styles:string[] (from a fixed enum: Traditional, Neo-Traditional, Blackwork, Fine Line, Realism, Japanese, Geometric, Watercolor, Tribal, Lettering, Dotwork, Illustrative), subjects:string[], colorProfile: "color"|"black-and-grey", placement:string }. Use Haiku. Cache by publicId.
+
+1.3 Hook: server/routes.ts `POST /api/posts` (~line 263) — after storage.createPost returns, kick off tagging ASYNC (do NOT await before res.json). On completion, write aiTags + set posts.styles/subjects via a new storage.updatePostTags(postId, tags). Guard with flags.AI_AUTOTAG. Only tag posts that have image media.
+
+1.4 Backfill script: scripts/backfill-tags.ts — iterate existing posts with media and no aiTaggedAt, tag them (throttled). Add to README.
+
+Verify: create a post with an image → within a few seconds the row has aiTags/styles populated; Explore style filter now returns it.
+
+=====================================================
+PHASE 2 — NOTIFICATIONS ENGINE + WEEKLY DIGEST  (Rec C)
+=====================================================
+Goal: fix the dead notifications feature AND add an AI retention loop.
+
+2.1 Wire real notifications (server/storage.ts): call this.createNotification(...) inside:
+    - followUser (~line 287) → type "FOLLOW", payload { actorId: followerId }
+    - likePost (~line 233) → type "LIKE", payload { actorId: userId, postId }
+    - createComment (~line 263) → type "COMMENT", payload { actorId: comment.userId, postId }
+    Skip self-actions (don't notify a user about their own action). getNotifications (~line 617) already joins actorId — this makes that join meaningful.
+
+2.2 Digest service: server/services/digest.ts → for each active user (has session/activity in last N days), gather the week's activity (new followers, likes on their work, new posts from artists they follow, flash sales matching their style tags from Phase 1), and summarize into one short blurb with Haiku (ai.complete). Deliver as a SYSTEM notification now (email later). Never put PII in the prompt — pass counts and titles only.
+
+2.3 Scheduler: register a weekly job next to startStoryCleanupScheduler() in server/routes.ts (~line 51), mirroring server/services/story-cleanup.ts. Guard with flags.AI_DIGEST. Also flag in your summary that booking reminders (routes.ts ~851) currently need a manual admin trigger — consider scheduling those here too.
+
+Verify: like/follow/comment as user A on user B → B gets a notification; run the digest job manually → active users receive a summarized SYSTEM notification.
+
+=====================================================
+PHASE 3 — SEMANTIC SEARCH MVP  (Rec F)
+=====================================================
+Goal: replace ILIKE substring search with hybrid keyword+vector search; these embeddings are reused later by feed ranking.
+
+3.1 Infra: enable pgvector on Neon (`CREATE EXTENSION IF NOT EXISTS vector;` — run via a migration/db call). Add `embedding vector(1024)` to `posts` (and an artist-style `embedding vector(1024)` to `users`) — use a Drizzle custom column type or raw SQL DDL; store 1024-dim Voyage vectors.
+
+3.2 Service: server/services/ai/embeddings.ts → embed post text (caption + aiTags.styles + subjects) via ai.embed(); embed artist profiles (bio + styles). Populate on post-create (alongside Phase 1 tagging) and add scripts/backfill-embeddings.ts.
+
+3.3 Endpoint + storage: `GET /api/search/semantic?q=` — embed the query, rank by cosine distance using raw SQL (`embedding <=> $queryVec`), and blend with the existing keyword match for a hybrid result. Refactor storage.searchPosts/searchUsers (server/storage.ts ~577-615) into this hybrid path. IMPORTANT: while here, fix the existing search result shape the client mis-reads (return { post, author } consistently) and DO NOT select hashedPassword into results.
+
+3.4 Client: update pages/search.tsx to call the semantic endpoint and read the correct { post, author } shape (also fixes the blank-results bug), and point the studio-connection dialog search at the working endpoint with `?q=` + encodeURIComponent.
+
+Verify: search "small floral fine line forearm" returns semantically relevant posts even without exact keyword matches; results render (not blank); no password hashes in the response.
+
+=====================================================
+FINAL VERIFICATION
+=====================================================
+- `npm run check` passes.
+- ANTHROPIC_API_KEY / VOYAGE_API_KEY documented in .env.example; features no-op gracefully (flags off) when keys are absent.
+- Confirm async: creating a post returns immediately even while tagging/embedding run.
+- Confirm caching: re-tagging the same image / re-embedding unchanged text does not call the API again.
+- Summarize per-file what changed, and list any new env vars and DB columns added.

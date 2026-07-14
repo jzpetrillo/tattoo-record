@@ -301,168 +301,125 @@ export default function Profile() {
           </div>
         )}
         
-        <div className="max-w-4xl mx-auto px-4">
-          {/* Profile Header */}
-          <div className={`flex gap-8 md:gap-16 mb-11 ${user?.bannerImageUrl ? '-mt-12 md:-mt-16' : 'pt-8'}`}>
-          {/* Avatar */}
-          <div className="flex-shrink-0">
-            <div className="w-20 h-20 md:w-28 md:h-28 border border-border overflow-hidden">
-              {user?.avatarUrl ? (
-                <img src={user.avatarUrl} alt={user?.username} className="w-full h-full object-cover" />
-              ) : (
-                <div className="w-full h-full bg-secondary flex items-center justify-center">
-                  <span className="text-2xl md:text-4xl font-bold">{user?.username?.[0]?.toUpperCase()}</span>
-                </div>
+        <div className="max-w-5xl mx-auto"><div className="border border-border mx-4 mt-6">
+
+          {/* Identity row */}
+          <div className="px-6 py-6 border-b border-border">
+            <p className="meta text-xs mb-2">{user?.role}</p>
+            <h1 className="press-nameplate text-4xl md:text-6xl" data-testid="text-username">
+              {(user?.firstName && user?.lastName) ? `${user.firstName} ${user.lastName}` : user?.username}
+            </h1>
+            <div className="flex items-center gap-2 mt-2">
+              <span className="meta text-xs">@{user?.username}</span>
+              {user?.isVerified && (
+                <Star className="w-3.5 h-3.5 text-cobalt fill-current" data-testid="icon-verified" />
               )}
             </div>
           </div>
 
-          {/* Profile Info */}
-          <div className="flex-1 min-w-0">
-            {/* Name headline */}
-            <div className="mb-3">
-              <h1 className="press-nameplate text-2xl md:text-4xl" data-testid="text-username">
-                {(user?.firstName && user?.lastName) ? `${user.firstName} ${user.lastName}` : user?.username}
-              </h1>
-              <div className="flex items-center gap-2 mt-1">
-                <span className="meta text-xs">@{user?.username}</span>
-                {user?.isVerified && (
-                  <Star className="w-3.5 h-3.5 text-cobalt fill-current" data-testid="icon-verified" />
-                )}
-              </div>
+          {/* Stats row — three equal ruled columns */}
+          <div className="grid grid-cols-3 divide-x divide-border border-b border-border">
+            <div className="flex flex-col items-center py-4" data-testid="stat-posts">
+              <span className="font-mono font-bold text-2xl text-cobalt">{userStats?.postsCount || 0}</span>
+              <span className="meta text-xs mt-1">Posts</span>
             </div>
-            
-            {/* Action Buttons */}
-            <div className="flex flex-wrap items-center gap-2 mb-5">
+            <div className="flex flex-col items-center py-4" data-testid="stat-followers">
+              <span className="font-mono font-bold text-2xl">{userStats?.followersCount || 0}</span>
+              <span className="meta text-xs mt-1">Followers</span>
+            </div>
+            <div className="flex flex-col items-center py-4" data-testid="stat-following">
+              <span className="font-mono font-bold text-2xl">{userStats?.followingCount || 0}</span>
+              <span className="meta text-xs mt-1">Following</span>
+            </div>
+          </div>
+
+          {/* Bio + Actions row */}
+          <div className="px-6 py-5 border-b border-border">
+            <div className="flex flex-wrap items-center gap-2 mb-4">
               {isOwnProfile ? (
-                <Button 
-                  variant="outline" 
+                <Button
                   size="sm"
                   onClick={() => navigate("/settings")}
                   data-testid="button-edit-profile"
+                  className="border border-border bg-background hover:bg-secondary text-foreground"
                 >
-                  Edit Profile
+                  <span className="meta text-xs">Edit Profile</span>
                 </Button>
               ) : (
                 <>
-                  {/* Follow/Unfollow Button */}
                   {followStatus?.isFollowing ? (
-                    <Button 
-                      variant="outline" 
+                    <Button
                       size="sm"
                       onClick={() => unfollowMutation.mutate()}
                       disabled={unfollowMutation.isPending}
                       data-testid="button-unfollow"
-                      className="min-w-[100px]"
+                      className="min-w-[100px] border border-border bg-background hover:bg-secondary text-foreground"
                     >
                       {unfollowMutation.isPending ? (
                         <Loader2 className="w-4 h-4 animate-spin" />
                       ) : (
-                        <>
-                          <UserMinus className="w-4 h-4 mr-1" />
-                          Following
-                        </>
+                        <><UserMinus className="w-4 h-4 mr-1" /><span className="meta text-xs">Following</span></>
                       )}
                     </Button>
                   ) : (
-                    <Button 
+                    <Button
                       size="sm"
                       onClick={() => followMutation.mutate()}
                       disabled={followMutation.isPending}
                       data-testid="button-follow"
-                      className="min-w-[100px] bg-black text-white hover:bg-black/90 dark:bg-white dark:text-black dark:hover:bg-white/90"
+                      className="min-w-[100px] bg-primary text-primary-foreground hover:bg-primary/90"
                     >
                       {followMutation.isPending ? (
                         <Loader2 className="w-4 h-4 animate-spin" />
                       ) : (
-                        <>
-                          <UserPlus className="w-4 h-4 mr-1" />
-                          Follow
-                        </>
+                        <><UserPlus className="w-4 h-4 mr-1" /><span className="meta text-xs">Follow</span></>
                       )}
                     </Button>
                   )}
-
-                  {/* Message Button */}
-                  <Button 
-                    variant="outline" 
+                  <Button
                     size="sm"
                     onClick={() => navigate(`/messages?user=${user?.id}`)}
                     data-testid="button-message"
+                    className="border border-border bg-background hover:bg-secondary text-foreground"
                   >
                     <MessageCircle className="w-4 h-4 mr-1" />
-                    Message
+                    <span className="meta text-xs">Message</span>
                   </Button>
-
-                  {/* Role-specific CTAs */}
                   {user?.role === "ARTIST" && (
-                    <Button 
+                    <Button
                       size="sm"
                       onClick={() => navigate(`/bookings?artist=${user?.id}`)}
                       data-testid="button-book-artist"
-                      className="bg-black text-white hover:bg-black/90 dark:bg-white dark:text-black dark:hover:bg-white/90"
+                      className="bg-primary text-primary-foreground hover:bg-primary/90"
                     >
                       <Calendar className="w-4 h-4 mr-1" />
-                      Book Now
+                      <span className="meta text-xs">Book Now</span>
                     </Button>
                   )}
-
                   {user?.role === "STUDIO" && (
-                    <Button 
-                      variant="outline"
+                    <Button
                       size="sm"
                       onClick={() => navigate(`/jobs?studio=${user?.id}`)}
                       data-testid="button-view-jobs"
+                      className="border border-border bg-background hover:bg-secondary text-foreground"
                     >
                       <Briefcase className="w-4 h-4 mr-1" />
-                      View Jobs
+                      <span className="meta text-xs">View Jobs</span>
                     </Button>
                   )}
                 </>
               )}
             </div>
-
-            {/* Stats Row — mono blocks */}
-            <div className="flex items-stretch gap-0 mb-5 border border-border divide-x divide-border">
-              <div className="flex flex-col items-center px-4 py-2" data-testid="stat-posts">
-                <span className="font-mono font-bold text-lg text-cobalt">{userStats?.postsCount || 0}</span>
-                <span className="meta text-xs">Posts</span>
-              </div>
-              <div className="flex flex-col items-center px-4 py-2" data-testid="stat-followers">
-                <span className="font-mono font-bold text-lg">{userStats?.followersCount || 0}</span>
-                <span className="meta text-xs">Followers</span>
-              </div>
-              <div className="flex flex-col items-center px-4 py-2" data-testid="stat-following">
-                <span className="font-mono font-bold text-lg">{userStats?.followingCount || 0}</span>
-                <span className="meta text-xs">Following</span>
-              </div>
-            </div>
-
-            {/* Bio & Details */}
-            <div className="space-y-2">
-              {(user?.firstName || user?.lastName) && (
-                <p className="font-semibold">{user?.firstName} {user?.lastName}</p>
-              )}
-              {user?.bio && (
-                <p className="text-sm text-muted-foreground whitespace-pre-wrap">{user?.bio}</p>
-              )}
-              
-              {/* Role Badge */}
-              <div className="flex items-center gap-2 mt-2">
-                <span className="px-2 py-0.5 border border-border text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                  {user?.role}
-                </span>
-              </div>
-
-              {/* Location */}
+            {user?.bio && (
+              <p className="text-sm text-muted-foreground whitespace-pre-wrap mb-3">{user?.bio}</p>
+            )}
+            <div className="flex flex-wrap gap-4">
               {user?.location?.city && (
                 <div className="flex items-center gap-1 text-sm text-muted-foreground">
                   <MapPin className="w-3 h-3" />
                   <span>{user.location.city}, {user.location.country}</span>
                 </div>
               )}
-
-              {/* Website */}
               {user?.website && (
                 <div className="flex items-center gap-1 text-sm">
                   <Globe className="w-3 h-3" />
@@ -473,11 +430,10 @@ export default function Profile() {
               )}
             </div>
           </div>
-        </div>
 
         {/* Artist's Studio Connection */}
         {user?.role === "ARTIST" && studioConnection && (
-          <div className="mb-6 p-4 border border-border rounded-lg bg-card">
+          <div className="border-b border-border px-6 py-4 bg-card">
             <div className="flex items-center gap-3">
               <Building2 className="w-5 h-5 text-muted-foreground" />
               <div>
@@ -497,17 +453,17 @@ export default function Profile() {
 
         {/* Pending Requests (for Studios) */}
         {user?.role === "STUDIO" && isOwnProfile && pendingRequests && pendingRequests.length > 0 && (
-          <div className="mb-6 p-4 border border-border rounded-lg bg-card">
-            <h3 className="font-semibold mb-4 flex items-center gap-2">
-              <Building2 className="w-5 h-5" />
+          <div className="border-b border-border px-6 py-4">
+            <h3 className="meta text-xs mb-4 flex items-center gap-2">
+              <Building2 className="w-4 h-4" />
               Pending Artist Requests ({pendingRequests.length})
             </h3>
-            <div className="space-y-3">
+            <div className="space-y-2">
               {pendingRequests.map((item: any) => (
-                <div key={item.request.id} className="flex items-center justify-between p-3 bg-secondary rounded-lg" data-testid={`pending-request-${item.request.id}`}>
+                <div key={item.request.id} className="flex items-center justify-between p-3 bg-secondary border border-border" data-testid={`pending-request-${item.request.id}`}>
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-background flex items-center justify-center">
-                      <span className="font-semibold">{item.artist.username[0].toUpperCase()}</span>
+                    <div className="w-8 h-8 bg-background border border-border flex items-center justify-center">
+                      <span className="font-mono text-xs font-bold">{item.artist.username[0].toUpperCase()}</span>
                     </div>
                     <div>
                       <p className="font-medium">{item.artist.username}</p>
@@ -541,20 +497,23 @@ export default function Profile() {
           </div>
         )}
 
-        {/* Connected Artists Highlights (for Studios) */}
+        {/* Connected Artists (for Studios) */}
         {user?.role === "STUDIO" && connectedArtists && connectedArtists.length > 0 && (
-          <div className="mb-8">
-            <div className="flex items-center gap-4 overflow-x-auto pb-2 px-1 scrollbar-hide">
+          <div className="border-b border-border px-6 py-4">
+            <p className="meta text-xs mb-3">Artists</p>
+            <div className="grid grid-cols-5 gap-px bg-border">
               {connectedArtists.slice(0, 10).map((item: any) => (
-                <div key={item.artist.id} className="flex flex-col items-center flex-shrink-0" data-testid={`connected-artist-${item.artist.id}`}>
-                  <div className="w-16 h-16 rounded-full bg-gradient-to-tr from-yellow-400 via-pink-500 to-purple-500 p-0.5 mb-1">
-                    <div className="w-full h-full rounded-full bg-background p-0.5">
-                      <div className="w-full h-full rounded-full bg-secondary flex items-center justify-center">
-                        <span className="text-sm font-bold">{item.artist.username[0].toUpperCase()}</span>
+                <div key={item.artist.id} className="flex flex-col items-center bg-background p-2" data-testid={`connected-artist-${item.artist.id}`}>
+                  <div className="w-full aspect-square bg-secondary border border-border overflow-hidden mb-1">
+                    {item.artist.avatarUrl ? (
+                      <img src={item.artist.avatarUrl} alt={item.artist.username} className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center">
+                        <span className="font-mono text-sm font-bold">{item.artist.username[0].toUpperCase()}</span>
                       </div>
-                    </div>
+                    )}
                   </div>
-                  <span className="text-xs truncate max-w-[70px]">{item.artist.username}</span>
+                  <span className="meta text-[9px] truncate w-full text-center">{item.artist.username}</span>
                 </div>
               ))}
             </div>
@@ -562,11 +521,11 @@ export default function Profile() {
         )}
 
         {/* Tabs - Posts, Videos, Portfolio */}
-        <div className="border-t border-border">
-          <div className="flex items-center justify-center gap-8 md:gap-12">
-            <button 
+        <div className="border-b border-border">
+          <div className="flex items-center justify-center gap-0">
+            <button
               onClick={() => setActiveTab("POSTS")}
-              className={`flex items-center gap-2 py-3 border-t-2 -mt-px transition-colors ${
+              className={`flex items-center gap-2 px-6 py-3 transition-colors ${
                 activeTab === "POSTS" ? "bg-cobalt text-white font-semibold" : "text-muted-foreground hover:text-foreground hover:bg-secondary"
               }`}
               data-testid="tab-posts"
@@ -778,7 +737,7 @@ export default function Profile() {
             )}
           </>
         )}
-        </div>
+        </div></div>
       </main>
       <MobileNav />
 

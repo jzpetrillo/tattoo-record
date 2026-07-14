@@ -156,8 +156,8 @@ export default function PostCard({ post, author, isLiked = false, isSaved = fals
       <div className="p-4 flex items-center gap-3">
         <Link href={`/u/${author.username}`} data-testid={`link-author-${post.id}`}>
           <div className="flex items-center gap-3 cursor-pointer hover:opacity-80">
-            <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center">
-              <span className="text-sm font-semibold">{author.username[0].toUpperCase()}</span>
+            <div className="w-10 h-10 bg-secondary border border-border flex items-center justify-center">
+              <span className="font-mono text-sm font-bold">{author.username[0].toUpperCase()}</span>
             </div>
             <div>
               <h3 className="font-semibold text-sm" data-testid={`text-author-${post.id}`}>
@@ -251,8 +251,8 @@ export default function PostCard({ post, author, isLiked = false, isSaved = fals
               <div className="space-y-4">
                 {comments?.map((item: any) => (
                   <div key={item.comment.id} className="flex gap-3">
-                    <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center flex-shrink-0">
-                      <span className="text-xs font-semibold">{item.user.username[0].toUpperCase()}</span>
+                    <div className="w-8 h-8 bg-secondary border border-border flex items-center justify-center flex-shrink-0">
+                      <span className="font-mono text-xs font-bold">{item.user.username[0].toUpperCase()}</span>
                     </div>
                     <div className="flex-1">
                       <p className="text-sm">

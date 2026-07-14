@@ -1,0 +1,54 @@
+The "Tattoo Record" Press theme is rendering messy: background is white (should be warm paper), borders are hard black (should be soft warm-grey), the profile avatar is a red block, followed-artist avatars are pink/orange gradient circles, and the profile layout is loosely spaced. Fix all of it to match the intended Press look (warm paper #ECEAE2 background, ink text, hairline rules, one cobalt accent, sharp corners, no gradients). Run `npm run check` after. 
+
+=== FIX 1 (ROOT CAUSE — do this first, it fixes the background + borders globally) ===
+tailwind.config.ts wraps tokens as `hsl(var(--x))`, so the CSS variables in client/src/index.css must be RAW HSL TRIPLETS, NOT wrapped in hsl(). They are currently wrapped (e.g. `--background: hsl(47 20% 91%)`), which produces invalid `hsl(hsl(...))` and falls back to white/black. Replace the whole :root block in client/src/index.css with raw triplets:
+
+  :root {
+    --background: 47 20% 91%;
+    --foreground: 0 0% 7%;
+    --card: 48 25% 94%;
+    --card-foreground: 0 0% 7%;
+    --popover: 48 25% 94%;
+    --popover-foreground: 0 0% 7%;
+    --primary: 0 0% 7%;
+    --primary-foreground: 47 20% 91%;
+    --secondary: 45 17% 86%;
+    --secondary-foreground: 0 0% 7%;
+    --muted: 45 17% 86%;
+    --muted-foreground: 60 3% 40%;
+    --accent: 45 17% 86%;
+    --accent-foreground: 0 0% 7%;
+    --destructive: 0 58% 41%;
+    --destructive-foreground: 47 20% 91%;
+    --border: 45 9% 73%;
+    --input: 45 9% 73%;
+    --ring: 236 91% 56%;
+    --radius: 0rem;
+    --font-sans: 'Space Grotesk', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+    --font-serif: 'Space Grotesk', sans-serif;
+    --font-mono: 'Space Mono', 'Courier New', monospace;
+  }
+
+Keep the @layer utilities helpers (.halftone, .press-nameplate, .meta, .text-cobalt/.bg-cobalt/.border-cobalt, .text-flash/.bg-flash, .border-ink) as-is — they use literal colors and already work. Confirm `body { @apply bg-background text-foreground; }` now renders warm paper.
+
+=== FIX 2 — Avatar (the red block) ===
+In client/src/pages/profile.tsx, the profile avatar/initials block is rendering on a solid red (and other username-hashed colors). Remove any colored/gradient/hashed background. Make it a clean square: `border border-ink bg-secondary`, sharp corners, initials in Space Grotesk ink (`text-foreground`). Do the same for ALL avatar fallbacks app-wide (components/ui/avatar usage, suggested-users, conversation-list, post-card): neutral paper/secondary fill + ink initials + thin ink border. No red, no gradients.
+
+=== FIX 3 — Followed-artist circles (pink/orange gradient) ===
+The approved-artists row shows pink→orange gradient circles. Remove the gradient entirely. Render each as a small SQUARE thumbnail (aspect-square, `border border-ink`, halftone/secondary fill or the artist image), with the username below in `.meta` (Space Mono, uppercase, muted). Match the grid-tile style.
+
+=== FIX 4 — Profile layout (tighten to the Press sample) ===
+In client/src/pages/profile.tsx:
+- Constrain the whole profile to a centered container: wrap content in `max-w-5xl mx-auto` with consistent horizontal padding, and remove the large right-side empty gutter (content and the image grid must share the same width/edges).
+- Structure it as ONE ruled card: `border border-ink` around the header block, with `border-b border-ink` dividers between (a) identity row, (b) stats row, (c) bio/actions, (d) tabs, (e) grid. Even internal padding (e.g. px-6 py-5).
+- Identity: make the studio/artist name the hero — `press-nameplate` large (text-4xl+), with a small `.meta` kicker line above (e.g. "Nº 01 — STUDIO") and the @handle + verified check (cobalt) in `.meta` below. Keep the small square avatar to the left OR drop it in favor of the nameplate (prefer dropping it for the cleaner sample look).
+- Stats: render POSTS / FOLLOWERS / FOLLOWING as three equal ruled columns (divided by `border-l border-ink`), numbers in Space Mono bold, labels in `.meta`; highlight one stat in `text-cobalt`.
+- Move the approved-artists row (Fix 3) into its own ruled section with a `.meta` heading ("ARTISTS"), not floating in whitespace.
+- Buttons (Follow/Message/View Jobs): sharp corners, Follow = `bg-primary text-primary-foreground` (ink), others = `border border-ink` outline; labels in `.meta`.
+- Content grid: 3 columns, `gap-px` on an ink background so tiles are separated by hairline rules; keep the small Space Mono index number overlay.
+
+=== VERIFY ===
+- Background is warm paper (not white); borders are soft warm-grey hairlines (not hard black).
+- No red avatar, no gradient circles anywhere.
+- Profile is centered, evenly spaced, and reads as one ruled magazine-style card matching the Press mockup.
+Summarize what changed per file.
