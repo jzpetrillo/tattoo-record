@@ -193,6 +193,81 @@ test.describe("CSP violations – enthusiast role", () => {
 });
 
 /**
+ * Collects all uncaught JS errors that are NOT CSP violations.
+ * Used alongside collectCspViolations to give full error coverage.
+ */
+function collectJsErrors(page: Page): string[] {
+  const errors: string[] = [];
+  page.on("pageerror", (err: Error) => {
+    if (!CSP_PATTERN.test(err.message)) {
+      errors.push(err.message);
+    }
+  });
+  return errors;
+}
+
+test.describe("Reels empty state (no video posts)", () => {
+  /**
+   * The /reels page fetches all public reels from /api/posts?type=REEL —
+   * it is not scoped to the logged-in user. To reliably test the empty state
+   * path (which only renders when that API returns []) we intercept and stub
+   * the response. This exercises the same React branch a fresh database would
+   * trigger, without depending on database state.
+   */
+  test("reels page renders empty state without CSP violations or JS errors when no reels exist", async ({ page }) => {
+    const cspViolations = collectCspViolations(page);
+    const jsErrors = collectJsErrors(page);
+
+    await login(page);
+
+    // Stub the reels API to return an empty array before navigating.
+    await page.route("**/api/posts?type=REEL", (route) => {
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify([]),
+      });
+    });
+
+    await page.goto("/reels");
+    await page.waitForLoadState("networkidle");
+    await page.waitForTimeout(2_000);
+
+    // Empty state must be visible.
+    const emptyStateVisible = await page
+      .getByText(/no reels yet/i)
+      .isVisible()
+      .catch(() => false);
+    expect(
+      emptyStateVisible,
+      "Expected the 'No reels yet' empty state to be visible, but it was not."
+    ).toBe(true);
+
+    // No reels grid should be rendered.
+    const gridVisible = await page
+      .locator('[data-testid="reels-grid"]')
+      .isVisible()
+      .catch(() => false);
+    expect(
+      gridVisible,
+      "The reels grid should not be rendered when there are no reels."
+    ).toBe(false);
+
+    // No CSP violations.
+    expect(
+      cspViolations,
+      `CSP violations on reels empty state:\n${cspViolations.join("\n")}`
+    ).toHaveLength(0);
+
+    // No uncaught JS errors.
+    expect(
+      jsErrors,
+      `Uncaught JS errors on reels empty state:\n${jsErrors.join("\n")}`
+    ).toHaveLength(0);
+  });
+});
+
+/**
  * DYNAMIC-URL BLIND SPOT — why static analysis and the tests above are not enough
  * ─────────────────────────────────────────────────────────────────────────────────
  * The CSP domain check script (`scripts/check-csp-domains.ts`) scans source files
