@@ -134,6 +134,12 @@ export interface IStorage {
   getAllFlashSalesAdmin(): Promise<any[]>;
   deleteFlashSale(saleId: string): Promise<void>;
   getAllBookingsAdmin(): Promise<any[]>;
+
+  // AI operations
+  updatePostTags(postId: string, tags: { subjects?: string[]; aiTags?: string[] }): Promise<void>;
+  updatePostEmbedding(postId: string, embedding: number[]): Promise<void>;
+  semanticSearchPosts(queryEmbedding: number[], limit?: number): Promise<any[]>;
+  logEvent(event: { userId?: string; type: string; entityId?: string; entityType?: string; payload?: Record<string, any> }): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -676,6 +682,83 @@ export class DatabaseStorage implements IStorage {
       .values(notification)
       .returning();
     return created;
+  }
+
+  async updatePostTags(postId: string, tags: { subjects?: string[]; aiTags?: string[] }) {
+    const updates: any = { aiTaggedAt: new Date(), updatedAt: new Date() };
+    if (tags.subjects !== undefined) updates.subjects = tags.subjects;
+    if (tags.aiTags !== undefined) updates.aiTags = tags.aiTags;
+    await db.update(schema.posts).set(updates).where(eq(schema.posts.id, postId));
+  }
+
+  async updatePostEmbedding(postId: string, embedding: number[]) {
+    const { pool } = await import("./db");
+    const vecStr = `[${embedding.join(",")}]`;
+    await pool.query("UPDATE posts SET embedding = $1::vector WHERE id = $2", [vecStr, postId]);
+  }
+
+  async semanticSearchPosts(queryEmbedding: number[], limit = 20) {
+    const { pool } = await import("./db");
+    const vecStr = `[${queryEmbedding.join(",")}]`;
+    const result = await pool.query(
+      `SELECT
+         p.id, p.author_id, p.type, p.caption, p.media, p.like_count, p.comment_count,
+         p.save_count, p.location, p.styles, p.subjects, p.ai_tags, p.ai_tagged_at,
+         p.is_featured, p.visibility, p.created_at, p.updated_at,
+         u.id as u_id, u.username, u.role, u.first_name, u.last_name,
+         u.bio, u.avatar_url, u.banner_image_url, u.is_verified,
+         u.verification_status,
+         1 - (p.embedding <=> $1::vector) as similarity
+       FROM posts p
+       JOIN users u ON p.author_id = u.id
+       WHERE p.deleted_at IS NULL AND p.embedding IS NOT NULL
+       ORDER BY p.embedding <=> $1::vector
+       LIMIT $2`,
+      [vecStr, limit]
+    );
+    return result.rows.map((row: any) => ({
+      post: {
+        id: row.id,
+        authorId: row.author_id,
+        type: row.type,
+        caption: row.caption,
+        media: row.media,
+        likeCount: row.like_count,
+        commentCount: row.comment_count,
+        saveCount: row.save_count,
+        location: row.location,
+        styles: row.styles,
+        subjects: row.subjects,
+        aiTags: row.ai_tags,
+        isFeatured: row.is_featured,
+        visibility: row.visibility,
+        createdAt: row.created_at,
+        updatedAt: row.updated_at,
+      },
+      author: {
+        id: row.u_id,
+        username: row.username,
+        role: row.role,
+        firstName: row.first_name,
+        lastName: row.last_name,
+        bio: row.bio,
+        avatarUrl: row.avatar_url,
+        bannerImageUrl: row.banner_image_url,
+        isVerified: row.is_verified,
+        verificationStatus: row.verification_status,
+      },
+      similarity: row.similarity,
+    }));
+  }
+
+  async logEvent(event: { userId?: string; type: string; entityId?: string; entityType?: string; payload?: Record<string, any> }) {
+    await db.insert(schema.events).values({
+      userId: event.userId,
+      type: event.type,
+      entityId: event.entityId,
+      entityType: event.entityType,
+      payload: event.payload ?? {},
+    });
   }
 
   async createStudioApprovalRequest(request: schema.InsertStudioApprovalRequest) {

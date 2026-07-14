@@ -55,6 +55,7 @@ app.use(helmet({
         "'self'",
         "ws:",
         "wss:",
+        "https://api.voyageai.com",
       ],
       frameAncestors: ["'none'"],
     },

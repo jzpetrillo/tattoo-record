@@ -151,7 +151,10 @@ export const posts = pgTable("posts", {
   visibility: visibilityEnum("visibility").notNull().default("PUBLIC"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
-  deletedAt: timestamp("deleted_at")
+  deletedAt: timestamp("deleted_at"),
+  subjects: jsonb("subjects").$type<string[]>().default([]),
+  aiTags: jsonb("ai_tags").$type<string[]>().default([]),
+  aiTaggedAt: timestamp("ai_tagged_at")
 }, (table) => ({
   authorIdx: index("posts_author_idx").on(table.authorId),
   typeIdx: index("posts_type_idx").on(table.type),
@@ -513,6 +516,20 @@ export const bookings = pgTable("bookings", {
   paymentStatusIdx: index("bookings_payment_status_idx").on(table.paymentStatus)
 }));
 
+// AI Telemetry Events
+export const events = pgTable("events", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: uuid("user_id").references(() => users.id, { onDelete: "set null" }),
+  type: varchar("type", { length: 100 }).notNull(),
+  entityId: uuid("entity_id"),
+  entityType: varchar("entity_type", { length: 50 }),
+  payload: jsonb("payload").$type<Record<string, any>>().default({}),
+  createdAt: timestamp("created_at").notNull().defaultNow()
+}, (table) => ({
+  typeIdx: index("events_type_idx").on(table.type),
+  userIdx: index("events_user_idx").on(table.userId)
+}));
+
 // Relations
 export const usersRelations = relations(users, ({ many, one }) => ({
   posts: many(posts),
@@ -665,3 +682,7 @@ export type InsertFlashSale = z.infer<typeof insertFlashSaleSchema>;
 export type Booking = typeof bookings.$inferSelect;
 export type InsertBooking = z.infer<typeof insertBookingSchema>;
 export type Hashtag = typeof hashtags.$inferSelect;
+
+export const insertEventSchema = createInsertSchema(events).omit({ id: true, createdAt: true });
+export type Event = typeof events.$inferSelect;
+export type InsertEvent = z.infer<typeof insertEventSchema>;

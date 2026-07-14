@@ -15,6 +15,12 @@ import { setupLiveWebSocket } from "./services/websocket-live";
 import { startStoryCleanupScheduler } from "./services/story-cleanup";
 import { getPersonalizedFeed, getTrendingPosts, getFeaturedPosts, getForYouRecommendations } from "./services/feed-algorithm";
 import * as validation from "./utils/validation";
+import { flags } from "./config/flags";
+import { tagTattooImage } from "./services/ai/vision";
+import { embedPost, isVoyageEnabled } from "./services/ai/embeddings";
+import { embed } from "./services/ai/index";
+import { startDigestScheduler } from "./services/digest";
+import { initDatabase } from "./db-init";
 
 // Strip password hash before sending user objects to clients
 function safeUser<T extends { hashedPassword?: string }>(user: T): Omit<T, "hashedPassword"> {
@@ -47,8 +53,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   setupMessageWebSocket(httpServer);
   setupLiveWebSocket(httpServer);
 
+  // Initialise DB extensions & AI infrastructure
+  await initDatabase();
+
   // Start background jobs
   startStoryCleanupScheduler();
+  if (flags.aiDigest) startDigestScheduler();
 
   // Authentication Routes
   app.post("/api/auth/register", authLimiter, async (req, res) => {
@@ -302,6 +312,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
         authorId: req.userId!
       });
       res.json(post);
+
+      // Fire-and-forget AI enrichment after response is sent
+      const imageMedia = (post.media as any[] || []).find((m: any) => m.type === "image");
+      if (flags.aiAutotag && imageMedia?.url) {
+        tagTattooImage(imageMedia.url)
+          .then((tags) => {
+            if (tags && tags.confidence >= 0.3) {
+              return storage.updatePostTags(post.id, {
+                subjects: tags.subjects,
+                aiTags: [...tags.styles, ...tags.colors, tags.mood].filter(Boolean),
+              });
+            }
+          })
+          .catch((err) => console.error("[ai-tag]", err));
+      }
+      if (flags.aiSemanticSearch && isVoyageEnabled()) {
+        embedPost({ caption: post.caption, styles: post.styles as any })
+          .then((vec) => storage.updatePostEmbedding(post.id, vec))
+          .catch((err) => console.error("[embed]", err));
+      }
+      storage.logEvent({
+        userId: req.userId,
+        type: "post.created",
+        entityId: post.id,
+        entityType: "post",
+      }).catch(() => {});
     } catch (error: any) {
       res.status(400).json({ message: error.message });
     }
@@ -1072,6 +1108,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ users, posts, hashtags });
     } catch (error: any) {
       res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Semantic search (Phase 3 — requires VOYAGE_API_KEY + pgvector)
+  app.get("/api/search/semantic", async (req, res) => {
+    try {
+      const query = (req.query.q as string || "").trim();
+      const limit = Math.min(parseInt(req.query.limit as string) || 20, 50);
+      if (!query) return res.json({ posts: [], available: false });
+      if (!flags.aiSemanticSearch || !isVoyageEnabled()) {
+        return res.json({ posts: [], available: false });
+      }
+      const queryEmbedding = await embed(query);
+      const posts = await storage.semanticSearchPosts(queryEmbedding, limit);
+      res.json({ posts, available: true });
+    } catch (error: any) {
+      console.error("[semantic-search]", error.message);
+      res.json({ posts: [], available: false });
     }
   });
 
