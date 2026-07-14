@@ -322,7 +322,7 @@ export default function Profile() {
             {/* Name headline */}
             <div className="mb-3">
               <h1 className="press-nameplate text-2xl md:text-4xl" data-testid="text-username">
-                {user?.displayName || user?.username}
+                {(user?.firstName && user?.lastName) ? `${user.firstName} ${user.lastName}` : user?.username}
               </h1>
               <div className="flex items-center gap-2 mt-1">
                 <span className="meta text-xs">@{user?.username}</span>

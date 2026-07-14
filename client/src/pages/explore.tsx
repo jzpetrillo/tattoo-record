@@ -280,72 +280,46 @@ export default function Explore() {
             <p className="text-sm text-muted-foreground mb-4">
               {filteredUsers.length} {filteredUsers.length === 1 ? "result" : "results"}
             </p>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredUsers.map((user) => (
+            <div className="grid grid-cols-3 gap-px bg-foreground">
+              {filteredUsers.map((user, idx) => (
                 <Link 
                   key={user.id} 
                   href={`/u/${user.username}`}
                   data-testid={`user-card-${user.id}`}
                 >
-                  <div className="group bg-background border border-border hover:border-foreground transition-colors cursor-pointer">
-                    <div className="aspect-square w-full overflow-hidden bg-secondary relative">
-                      {user.avatarUrl ? (
-                        <img
-                          src={user.avatarUrl}
-                          alt={user.username}
-                          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                          loading="lazy"
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-secondary to-background">
-                          <span className="text-6xl font-bold text-muted-foreground/50">
-                            {user.username?.[0]?.toUpperCase()}
-                          </span>
-                        </div>
-                      )}
-                      {user.isVerified && (
-                        <div className="absolute top-3 right-3 bg-black text-white p-1.5">
-                          <Star className="w-4 h-4 fill-current" />
-                        </div>
-                      )}
-                      <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-4 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <div className="flex items-center gap-2 text-white">
-                          {getRoleIcon(user.role)}
-                          <span className="text-sm font-medium">{user.role}</span>
-                          {user.location?.city && (
-                            <>
-                              <span className="text-white/50">|</span>
-                              <MapPin className="w-3 h-3" />
-                              <span className="text-sm">{user.location.city}</span>
-                            </>
-                          )}
-                        </div>
+                  <div className="group bg-background cursor-pointer relative overflow-hidden aspect-square">
+                    {user.avatarUrl ? (
+                      <img
+                        src={user.avatarUrl}
+                        alt={user.username}
+                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                        loading="lazy"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center bg-secondary">
+                        <span className="text-6xl font-bold text-muted-foreground/50">
+                          {user.username?.[0]?.toUpperCase()}
+                        </span>
                       </div>
-                    </div>
-                    <div className="p-4">
-                      <div className="flex items-center justify-between mb-2">
-                        <h3 className="font-bold text-lg" data-testid={`text-username-${user.id}`}>
-                          {user.username}
-                        </h3>
-                        <div className="flex items-center gap-1 px-2 py-0.5 border border-border text-xs">
-                          {getRoleIcon(user.role)}
-                          <span>{user.role.toLowerCase()}</span>
-                        </div>
+                    )}
+                    {/* index */}
+                    <span className="absolute top-1 left-1.5 font-mono text-[10px] text-white/70 leading-none">{String(idx + 1).padStart(2, "0")}</span>
+                    {/* verified */}
+                    {user.isVerified && (
+                      <div className="absolute top-2 right-2 bg-cobalt p-1">
+                        <Star className="w-3 h-3 text-white fill-current" />
                       </div>
-                      {(user.firstName || user.lastName) && (
-                        <p className="text-sm text-muted-foreground mb-2">
-                          {user.firstName} {user.lastName}
-                        </p>
-                      )}
-                      {user.bio && (
-                        <p className="text-sm text-muted-foreground line-clamp-2">{user.bio}</p>
-                      )}
-                      {user.location?.city && (
-                        <div className="flex items-center gap-1 text-xs text-muted-foreground mt-3 pt-3 border-t border-border">
-                          <MapPin className="w-3 h-3" />
-                          <span>{user.location.city}, {user.location.country}</span>
-                        </div>
-                      )}
+                    )}
+                    {/* hover overlay */}
+                    <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-end p-3">
+                      <p className="font-mono text-xs text-white font-bold uppercase tracking-widest line-clamp-1" data-testid={`text-username-${user.id}`}>{user.username}</p>
+                      <div className="flex items-center gap-1 text-white/70 mt-0.5">
+                        {getRoleIcon(user.role)}
+                        <span className="font-mono text-[10px] uppercase">{user.role}</span>
+                        {user.location?.city && (
+                          <span className="font-mono text-[10px] text-white/50 ml-1">{user.location.city}</span>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </Link>

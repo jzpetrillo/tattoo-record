@@ -26,14 +26,14 @@ export default function Reels() {
       <main className="lg:ml-64 pb-20 lg:pb-8 pt-4">
         <div className="max-w-7xl mx-auto px-4">
           <div className="mb-6">
-            <h1 className="text-2xl font-bold mb-1" data-testid="page-title">Reels</h1>
+            <h1 className="press-nameplate text-2xl mb-1" data-testid="page-title">Reels</h1>
             <p className="text-sm text-muted-foreground">Short-form video content from artists</p>
           </div>
 
           {isLoading ? (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-1">
+            <div className="grid grid-cols-3 gap-px bg-foreground">
               {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
-                <Skeleton key={i} className="aspect-[9/16] w-full" />
+                <Skeleton key={i} className="aspect-square w-full" />
               ))}
             </div>
           ) : reels.length === 0 ? (
@@ -43,15 +43,15 @@ export default function Reels() {
               description="Short-form videos will appear here once artists start posting reels."
             />
           ) : (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-1" data-testid="reels-grid">
-              {reels.map((item: any) => {
+            <div className="grid grid-cols-3 gap-px bg-foreground" data-testid="reels-grid">
+              {reels.map((item: any, idx: number) => {
                 const post = item.post || item;
                 const author = item.author || {};
 
                 return (
                   <div
                     key={post.id}
-                    className="relative aspect-[9/16] bg-secondary overflow-hidden group cursor-pointer"
+                    className="relative aspect-square bg-secondary overflow-hidden group cursor-pointer"
                     data-testid={`reel-card-${post.id}`}
                   >
                     {post.media && post.media.length > 0 ? (

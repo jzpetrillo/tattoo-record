@@ -89,14 +89,14 @@ export default function FlashSalesPage() {
             description="Check back soon for limited-time tattoo deals from artists."
           />
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-3 gap-px bg-foreground">
             {flashSales.map((sale) => (
               <Link
                 key={sale.id}
                 href={`/u/${sale.artist?.username || ''}`}
                 data-testid={`flash-sale-${sale.id}`}
               >
-                <Card className="p-0 overflow-hidden hover:shadow-lg hover:-translate-y-0.5 transition-all cursor-pointer border-border group">
+                <Card className="p-0 overflow-hidden transition-all cursor-pointer border border-border group">
                   <div className="aspect-square bg-secondary relative overflow-hidden">
                     {sale.media && sale.media.length > 0 ? (
                       <>
@@ -105,9 +105,9 @@ export default function FlashSalesPage() {
                           alt={sale.title}
                           className="w-full h-full object-cover group-hover:scale-105 transition-transform"
                         />
-                        <div className="absolute top-3 right-3 bg-black px-3 py-1 flex items-center gap-1">
-                          <Zap className="w-4 h-4 text-white fill-current" />
-                          <span className="text-white text-sm font-bold">FLASH</span>
+                        <div className="absolute top-3 right-3 bg-flash px-3 py-1 flex items-center gap-1">
+                          <Zap className="w-4 h-4 text-[#111] fill-current" />
+                          <span className="text-[#111] text-sm font-mono font-bold tracking-widest">FLASH</span>
                         </div>
                       </>
                     ) : (

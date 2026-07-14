@@ -395,19 +395,21 @@ export default function AdminDashboard() {
           </div>
 
           {/* Admin Navigation */}
-          <div className="flex flex-wrap gap-2 mb-8 border-b pb-4">
+          <div className="flex flex-wrap gap-px mb-8 border border-border bg-foreground">
             {adminNavItems.map((item) => (
-              <Button
+              <button
                 key={item.id}
-                variant={activeSection === item.id ? "default" : "outline"}
-                size="sm"
                 onClick={() => setActiveSection(item.id as AdminSection)}
-                className="flex items-center gap-2"
+                className={`flex items-center gap-2 px-3 py-2 text-sm transition-colors ${
+                  activeSection === item.id
+                    ? "bg-cobalt text-white font-semibold"
+                    : "bg-background text-foreground hover:bg-secondary"
+                }`}
                 data-testid={`nav-${item.id}`}
               >
                 <item.icon className="w-4 h-4" />
-                {item.label}
-              </Button>
+                <span className="meta text-xs">{item.label}</span>
+              </button>
             ))}
           </div>
 
