@@ -14,6 +14,19 @@ interface WSMessage {
   payload?: any;
 }
 
+let _wss: WebSocketServer | null = null;
+
+export async function broadcastNewMessage(conversationId: string, message: any) {
+  if (!_wss) return;
+  const participants = await db
+    .select()
+    .from(conversationParticipants)
+    .where(eq(conversationParticipants.conversationId, conversationId));
+  participants.forEach((p) => {
+    sendToUser(_wss!, p.userId, { type: "NEW_MESSAGE", payload: message });
+  });
+}
+
 export function setupMessageWebSocket(server: Server) {
   const wss = new WebSocketServer({ 
     server, 
@@ -93,6 +106,7 @@ export function setupMessageWebSocket(server: Server) {
     clearInterval(interval);
   });
 
+  _wss = wss;
   return wss;
 }
 

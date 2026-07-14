@@ -99,7 +99,7 @@ export default function Search() {
                             <p className="text-sm text-muted-foreground truncate">
                               {user.firstName && user.lastName
                                 ? `${user.firstName} ${user.lastName}`
-                                : user.email}
+                                : `@${user.username}`}
                             </p>
                           </div>
                           <Badge variant="outline" className="text-xs flex-shrink-0">
@@ -130,9 +130,9 @@ export default function Search() {
                           </div>
                           <div className="flex-1 min-w-0">
                             <p className="font-semibold">#{tag.tag}</p>
-                            {tag.count != null && (
+                            {(tag.uses ?? tag.count) != null && (
                               <p className="text-sm text-muted-foreground">
-                                {tag.count.toLocaleString()} {tag.count === 1 ? "post" : "posts"}
+                                {(tag.uses ?? tag.count).toLocaleString()} {(tag.uses ?? tag.count) === 1 ? "post" : "posts"}
                               </p>
                             )}
                           </div>
@@ -150,32 +150,36 @@ export default function Search() {
                     Posts
                   </h2>
                   <div className="space-y-1">
-                    {posts.map((post: any) => (
-                      <Link key={post.id} href={`/profile/${post.author?.username}`}>
-                        <div
-                          className="flex items-center gap-3 p-3 border border-border hover:bg-secondary transition-colors cursor-pointer"
-                          data-testid={`post-result-${post.id}`}
-                        >
-                          <div className="w-12 h-12 bg-secondary flex items-center justify-center flex-shrink-0 overflow-hidden">
-                            {post.mediaUrls?.[0] ? (
-                              <img
-                                src={post.mediaUrls[0]}
-                                alt="Post"
-                                className="w-full h-full object-cover"
-                              />
-                            ) : (
-                              <FileImage className="w-5 h-5 text-muted-foreground" />
-                            )}
+                    {posts.map((item: any) => {
+                      const post = item.post ?? item;
+                      const author = item.author ?? {};
+                      return (
+                        <Link key={post.id} href={`/u/${author.username}`}>
+                          <div
+                            className="flex items-center gap-3 p-3 border border-border hover:bg-secondary transition-colors cursor-pointer"
+                            data-testid={`post-result-${post.id}`}
+                          >
+                            <div className="w-12 h-12 bg-secondary flex items-center justify-center flex-shrink-0 overflow-hidden">
+                              {post.media?.[0]?.url ? (
+                                <img
+                                  src={post.media[0].url}
+                                  alt="Post"
+                                  className="w-full h-full object-cover"
+                                />
+                              ) : (
+                                <FileImage className="w-5 h-5 text-muted-foreground" />
+                              )}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm line-clamp-1">{post.caption}</p>
+                              <p className="text-xs text-muted-foreground mt-0.5">
+                                by {author.username}
+                              </p>
+                            </div>
                           </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm line-clamp-1">{post.content}</p>
-                            <p className="text-xs text-muted-foreground mt-0.5">
-                              by {post.author?.username}
-                            </p>
-                          </div>
-                        </div>
-                      </Link>
-                    ))}
+                        </Link>
+                      );
+                    })}
                   </div>
                 </section>
               )}

@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useState, useEffect } from "react";
+import { X, Heart, Send } from "lucide-react";
 
 interface StoryViewerProps {
   userId: string;
@@ -58,7 +59,7 @@ export default function StoryViewer({ userId, onClose }: StoryViewerProps) {
             </div>
           </div>
           <button onClick={onClose} className="text-white hover:text-white/80" data-testid="button-close-story">
-            <i className="fas fa-times text-2xl"></i>
+            <X className="w-6 h-6" />
           </button>
         </div>
 
@@ -94,10 +95,10 @@ export default function StoryViewer({ userId, onClose }: StoryViewerProps) {
               data-testid="input-story-reply"
             />
             <button className="text-white hover:text-white/80">
-              <i className="far fa-heart text-2xl"></i>
+              <Heart className="w-6 h-6" />
             </button>
             <button className="text-white hover:text-white/80">
-              <i className="far fa-paper-plane text-2xl"></i>
+              <Send className="w-6 h-6" />
             </button>
           </div>
         </div>

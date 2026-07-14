@@ -77,7 +77,12 @@ export default function AIRecommendations() {
       const response = await apiRequest(
         "POST",
         "/api/ai/tattoo-recommendations",
-        { description, style, placement, size },
+        {
+          description,
+          style: style === "any" ? undefined : style,
+          placement: placement === "any" ? undefined : placement,
+          size: size === "any" ? undefined : size,
+        },
         token!
       );
       return response.json();
@@ -128,7 +133,7 @@ export default function AIRecommendations() {
                       <SelectValue placeholder="Select a style" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">Open to suggestions</SelectItem>
+                      <SelectItem value="any">Open to suggestions</SelectItem>
                       {TATTOO_STYLES.map((s) => (
                         <SelectItem key={s} value={s}>{s}</SelectItem>
                       ))}
@@ -145,7 +150,7 @@ export default function AIRecommendations() {
                       <SelectValue placeholder="Select placement" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">Open to suggestions</SelectItem>
+                      <SelectItem value="any">Open to suggestions</SelectItem>
                       {PLACEMENTS.map((p) => (
                         <SelectItem key={p} value={p}>{p}</SelectItem>
                       ))}
@@ -162,7 +167,7 @@ export default function AIRecommendations() {
                       <SelectValue placeholder="Select size" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">Open to suggestions</SelectItem>
+                      <SelectItem value="any">Open to suggestions</SelectItem>
                       {SIZES.map((s) => (
                         <SelectItem key={s} value={s}>{s}</SelectItem>
                       ))}

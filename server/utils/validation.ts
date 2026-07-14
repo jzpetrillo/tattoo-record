@@ -77,6 +77,38 @@ export const createJobSchema = z.object({
   salaryMaxCents: z.number().int().positive().optional()
 });
 
+export const createFlashSaleSchema = z.object({
+  title: z.string().min(1, "Title is required").max(255),
+  description: z.string().optional(),
+  originalPriceCents: z.number().int().positive("Original price must be positive"),
+  flashPriceCents: z.number().int().positive("Flash price must be positive"),
+  availableSlots: z.number().int().min(1, "Must have at least 1 slot"),
+  expiresAt: z.string().refine(v => new Date(v) > new Date(), { message: "Expiry must be in the future" }),
+  media: z.array(z.object({ publicId: z.string(), url: z.string(), type: z.string() })).optional(),
+  styles: z.array(z.string()).optional(),
+}).refine(d => d.flashPriceCents < d.originalPriceCents, {
+  message: "Flash price must be less than original price",
+  path: ["flashPriceCents"],
+});
+
+export const createBookingSchema = z.object({
+  artistId: z.string().uuid("Invalid artist ID"),
+  scheduledAt: z.string().refine(v => new Date(v) > new Date(), { message: "Appointment must be in the future" }),
+  totalPriceCents: z.number().int().nonnegative().optional(),
+  depositCents: z.number().int().nonnegative().optional(),
+  description: z.string().optional(),
+  tattooStyle: z.string().optional(),
+  tattooSize: z.string().optional(),
+  flashSaleId: z.string().uuid().optional(),
+}).refine(d => d.depositCents == null || d.totalPriceCents == null || d.depositCents <= d.totalPriceCents, {
+  message: "Deposit cannot exceed total price",
+  path: ["depositCents"],
+});
+
+export const jobApplySchema = z.object({
+  coverLetter: z.string().min(10, "Cover letter must be at least 10 characters").max(5000),
+});
+
 export const aiRecommendationSchema = z.object({
   description: z.string().optional(),
   style: z.string().optional(),

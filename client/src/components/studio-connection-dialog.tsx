@@ -21,6 +21,7 @@ export function StudioConnectionDialog() {
   const { data: searchResults } = useQuery<{ users: any[]; posts: any[]; hashtags: any[] }>({
     queryKey: ["/api/search", searchQuery],
     enabled: searchQuery.length > 2,
+    queryFn: () => fetch(`/api/search?q=${encodeURIComponent(searchQuery)}`).then(r => r.json()),
   });
 
   const studios = (searchResults?.users ?? []).filter((u: any) => u.role === "STUDIO");

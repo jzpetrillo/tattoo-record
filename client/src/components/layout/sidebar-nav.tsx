@@ -100,6 +100,24 @@ export default function SidebarNav() {
             <Bookmark className="w-4 h-4 mr-2" />
             Saved
           </DropdownMenuItem>
+          <DropdownMenuItem 
+            className="cursor-pointer"
+            onClick={() => setLocation("/settings")}
+            data-testid="menu-settings"
+          >
+            <Settings className="w-4 h-4 mr-2" />
+            Settings
+          </DropdownMenuItem>
+          {user?.role === "ADMIN" && (
+            <DropdownMenuItem
+              className="cursor-pointer"
+              onClick={() => setLocation("/admin")}
+              data-testid="menu-admin"
+            >
+              <Settings className="w-4 h-4 mr-2" />
+              Admin Dashboard
+            </DropdownMenuItem>
+          )}
           <DropdownMenuSeparator />
           <DropdownMenuItem 
             className="cursor-pointer text-destructive focus:text-destructive"

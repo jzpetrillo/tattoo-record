@@ -12,18 +12,20 @@ import { cn } from "@/lib/utils";
 interface SavedPostItem {
   post: {
     id: string;
-    content: string;
-    mediaUrls?: string[];
+    caption?: string;
+    media?: { url: string; type: string }[];
     createdAt: string;
-    likesCount: number;
-    commentsCount: number;
+    likeCount: number;
+    commentCount: number;
   };
   author: {
     id: string;
     username: string;
     avatarUrl?: string;
   };
-  collectionName?: string;
+  savedPost?: {
+    collectionName?: string;
+  };
 }
 
 export default function SavedPostsPage() {
@@ -41,7 +43,7 @@ export default function SavedPostsPage() {
   });
 
   const filteredPosts = selectedCollection
-    ? savedPosts.filter((item) => item.collectionName === selectedCollection)
+    ? savedPosts.filter((item) => item.savedPost?.collectionName === selectedCollection)
     : savedPosts;
 
   return (

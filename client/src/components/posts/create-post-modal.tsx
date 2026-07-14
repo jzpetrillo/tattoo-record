@@ -18,16 +18,17 @@ import { ImageIcon, VideoIcon, Clock } from "lucide-react";
 interface CreatePostModalProps {
   open: boolean;
   onClose: () => void;
+  defaultTab?: "post" | "story" | "reel";
 }
 
-export default function CreatePostModal({ open, onClose }: CreatePostModalProps) {
+export default function CreatePostModal({ open, onClose, defaultTab = "post" }: CreatePostModalProps) {
   const { token } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [caption, setCaption] = useState("");
   const [files, setFiles] = useState<File[]>([]);
   const [visibility, setVisibility] = useState<"PUBLIC" | "FOLLOWERS">("PUBLIC");
-  const [activeTab, setActiveTab] = useState<"post" | "story" | "reel">("post");
+  const [activeTab, setActiveTab] = useState<"post" | "story" | "reel">(defaultTab);
 
   const createPostMutation = useMutation({
     mutationFn: async () => {

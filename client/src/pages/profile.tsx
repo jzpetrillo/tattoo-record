@@ -108,7 +108,7 @@ export default function Profile() {
   });
 
   const { data: pendingRequests } = useQuery<any[]>({
-    queryKey: ["/api/studio-approvals", { studioId: user?.id, status: "PENDING" }],
+    queryKey: [`/api/studio-approvals?studioId=${user?.id}&status=PENDING`],
     enabled: !!token && !!user && user?.role === "STUDIO" && isOwnProfile,
   });
 

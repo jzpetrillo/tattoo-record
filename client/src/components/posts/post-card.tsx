@@ -116,7 +116,7 @@ export default function PostCard({ post, author, isLiked = false, isSaved = fals
     mutationFn: async (conversationId: string) => {
       const shareUrl = `${window.location.origin}/posts/${post.id}`;
       const message = `Check out this post: ${shareUrl}`;
-      await apiRequest("POST", `/api/messages`, { conversationId, content: message }, token!);
+      await apiRequest("POST", `/api/conversations/${conversationId}/messages`, { body: message }, token!);
     },
     onSuccess: () => {
       toast({ title: "Post shared successfully!" });

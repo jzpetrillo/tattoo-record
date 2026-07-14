@@ -6,6 +6,7 @@ import { queryClient, apiRequest } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -615,17 +616,38 @@ export default function BookingsPage() {
                       )}
 
                       {isClient && ["PENDING", "APPROVED"].includes(booking.status) && (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="border-black dark:border-white text-black dark:text-white"
-                          onClick={() => deleteMutation.mutate(booking.id)}
-                          disabled={deleteMutation.isPending}
-                          data-testid={`button-cancel-${booking.id}`}
-                        >
-                          <XCircle className="w-4 h-4 mr-1" />
-                          Cancel Booking
-                        </Button>
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="border-black dark:border-white text-black dark:text-white"
+                              disabled={deleteMutation.isPending}
+                              data-testid={`button-cancel-${booking.id}`}
+                            >
+                              <XCircle className="w-4 h-4 mr-1" />
+                              Cancel Booking
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Cancel Booking</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Are you sure you want to cancel this booking? This action cannot be undone.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Keep Booking</AlertDialogCancel>
+                              <AlertDialogAction
+                                onClick={() => deleteMutation.mutate(booking.id)}
+                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                data-testid={`button-confirm-cancel-${booking.id}`}
+                              >
+                                Yes, Cancel
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
                       )}
                     </div>
                   </Card>

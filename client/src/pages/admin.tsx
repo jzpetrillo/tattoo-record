@@ -1061,7 +1061,7 @@ export default function AdminDashboard() {
                                 </Badge>
                               </div>
                               <p className="text-sm text-muted-foreground">
-                                By {sale.artist?.username || "Unknown"} - ${((sale.discountPriceCents || sale.originalPriceCents) / 100).toFixed(2)}
+                                By {sale.artist?.username || "Unknown"} - ${((sale.flashPriceCents ?? sale.originalPriceCents ?? 0) / 100).toFixed(2)}
                               </p>
                               <p className="text-xs text-muted-foreground mt-1">
                                 {sale.availableSlots} slots available

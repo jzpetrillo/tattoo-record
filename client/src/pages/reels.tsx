@@ -111,11 +111,11 @@ export default function Reels() {
                       <div className="flex items-center gap-3 text-xs">
                         <div className="flex items-center gap-1" data-testid={`reel-likes-${post.id}`}>
                           <Heart className="w-3 h-3 fill-white" />
-                          <span>{post.likesCount || 0}</span>
+                          <span>{post.likeCount || 0}</span>
                         </div>
                         <div className="flex items-center gap-1" data-testid={`reel-comments-${post.id}`}>
                           <MessageCircle className="w-3 h-3" />
-                          <span>{post.commentsCount || 0}</span>
+                          <span>{post.commentCount || 0}</span>
                         </div>
                       </div>
                     </div>

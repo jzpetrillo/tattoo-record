@@ -23,6 +23,7 @@ import SavedPosts from "@/pages/saved-posts";
 import FlashSales from "@/pages/flash-sales";
 import Bookings from "@/pages/bookings";
 import AIRecommendations from "@/pages/ai-recommendations";
+import Settings from "@/pages/settings";
 
 function AdminRoute() {
   const { user, token } = useAuth();
@@ -58,7 +59,7 @@ function Router() {
       <Route path="/explore" component={Explore} />
       <Route path="/messages">{() => <ProtectedRoute component={Messages} />}</Route>
       <Route path="/notifications">{() => <ProtectedRoute component={Notifications} />}</Route>
-      <Route path="/profile" component={Profile} />
+      <Route path="/profile">{() => <ProtectedRoute component={Profile} />}</Route>
       <Route path="/profile/:username" component={Profile} />
       <Route path="/u/:username" component={Profile} />
       <Route path="/live-events" component={LiveEvents} />
@@ -71,6 +72,7 @@ function Router() {
       <Route path="/flash-sales" component={FlashSales} />
       <Route path="/bookings">{() => <ProtectedRoute component={Bookings} />}</Route>
       <Route path="/ai-recommendations">{() => <ProtectedRoute component={AIRecommendations} />}</Route>
+      <Route path="/settings">{() => <ProtectedRoute component={Settings} />}</Route>
       <Route path="/auth" component={Auth} />
       <Route path="/admin">{() => <AdminRoute />}</Route>
       <Route component={NotFound} />

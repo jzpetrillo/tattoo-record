@@ -3,6 +3,27 @@ import * as schema from "@shared/schema";
 import { eq, and, desc, asc, isNull, isNotNull, sql, or, ilike, inArray, lte, gte } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 
+// Public user columns — never includes hashedPassword or email.
+// Use this in every query that returns user data to clients.
+const publicUserColumns = {
+  id: schema.users.id,
+  username: schema.users.username,
+  role: schema.users.role,
+  firstName: schema.users.firstName,
+  lastName: schema.users.lastName,
+  bio: schema.users.bio,
+  avatarUrl: schema.users.avatarUrl,
+  bannerImageUrl: schema.users.bannerImageUrl,
+  website: schema.users.website,
+  instagram: schema.users.instagram,
+  tiktok: schema.users.tiktok,
+  twitter: schema.users.twitter,
+  location: schema.users.location,
+  isVerified: schema.users.isVerified,
+  verificationStatus: schema.users.verificationStatus,
+  createdAt: schema.users.createdAt,
+};
+
 export interface IStorage {
   // User operations
   getUser(id: string): Promise<schema.User | undefined>;
@@ -80,6 +101,7 @@ export interface IStorage {
   // Studio approval operations
   createStudioApprovalRequest(request: schema.InsertStudioApprovalRequest): Promise<schema.StudioApprovalRequest>;
   getStudioApprovalRequests(filters: { studioId?: string; artistId?: string; status?: string }): Promise<any[]>;
+  getStudioApprovalRequestById(id: string): Promise<any>;
   updateStudioApprovalStatus(id: string, status: string): Promise<void>;
   getApprovedArtists(studioId: string): Promise<any[]>;
   getArtistStudio(artistId: string): Promise<any>;
@@ -185,7 +207,7 @@ export class DatabaseStorage implements IStorage {
     const [result] = await db
       .select({
         post: schema.posts,
-        author: schema.users
+        author: publicUserColumns
       })
       .from(schema.posts)
       .innerJoin(schema.users, eq(schema.posts.authorId, schema.users.id))
@@ -208,7 +230,7 @@ export class DatabaseStorage implements IStorage {
     return db
       .select({
         post: schema.posts,
-        author: schema.users
+        author: publicUserColumns
       })
       .from(schema.posts)
       .innerJoin(schema.users, eq(schema.posts.authorId, schema.users.id))
@@ -252,7 +274,7 @@ export class DatabaseStorage implements IStorage {
     return db
       .select({
         comment: schema.comments,
-        user: schema.users
+        user: publicUserColumns
       })
       .from(schema.comments)
       .innerJoin(schema.users, eq(schema.comments.userId, schema.users.id))
@@ -296,7 +318,7 @@ export class DatabaseStorage implements IStorage {
 
   async getFollowers(userId: string) {
     return db
-      .select({ user: schema.users })
+      .select({ user: publicUserColumns })
       .from(schema.follows)
       .innerJoin(schema.users, eq(schema.follows.followerId, schema.users.id))
       .where(eq(schema.follows.followingId, userId));
@@ -304,7 +326,7 @@ export class DatabaseStorage implements IStorage {
 
   async getFollowing(userId: string) {
     return db
-      .select({ user: schema.users })
+      .select({ user: publicUserColumns })
       .from(schema.follows)
       .innerJoin(schema.users, eq(schema.follows.followingId, schema.users.id))
       .where(eq(schema.follows.followerId, userId));
@@ -339,7 +361,7 @@ export class DatabaseStorage implements IStorage {
     return db
       .select({
         story: schema.stories,
-        user: schema.users
+        user: publicUserColumns
       })
       .from(schema.stories)
       .innerJoin(schema.users, eq(schema.stories.userId, schema.users.id))
@@ -425,7 +447,7 @@ export class DatabaseStorage implements IStorage {
     return db
       .select({
         message: schema.messages,
-        sender: schema.users
+        sender: publicUserColumns
       })
       .from(schema.messages)
       .innerJoin(schema.users, eq(schema.messages.senderId, schema.users.id))
@@ -553,7 +575,7 @@ export class DatabaseStorage implements IStorage {
     const baseQuery = db
       .select({
         event: schema.livestreamEvents,
-        host: schema.users
+        host: publicUserColumns
       })
       .from(schema.livestreamEvents)
       .innerJoin(schema.users, eq(schema.livestreamEvents.hostId, schema.users.id));
@@ -576,14 +598,9 @@ export class DatabaseStorage implements IStorage {
 
   async searchUsers(query: string) {
     return db
-      .select()
+      .select(publicUserColumns)
       .from(schema.users)
-      .where(
-        or(
-          ilike(schema.users.username, `%${query}%`),
-          ilike(schema.users.email, `%${query}%`)
-        )
-      )
+      .where(ilike(schema.users.username, `%${query}%`))
       .limit(20);
   }
 
@@ -591,7 +608,7 @@ export class DatabaseStorage implements IStorage {
     return db
       .select({
         post: schema.posts,
-        author: schema.users
+        author: publicUserColumns
       })
       .from(schema.posts)
       .innerJoin(schema.users, eq(schema.posts.authorId, schema.users.id))
@@ -618,7 +635,7 @@ export class DatabaseStorage implements IStorage {
     return db
       .select({
         notification: schema.notifications,
-        actor: schema.users
+        actor: publicUserColumns
       })
       .from(schema.notifications)
       .leftJoin(
@@ -628,6 +645,15 @@ export class DatabaseStorage implements IStorage {
       .where(eq(schema.notifications.userId, userId))
       .orderBy(desc(schema.notifications.createdAt))
       .limit(limit);
+  }
+
+  async getStudioApprovalRequestById(id: string) {
+    const [result] = await db
+      .select()
+      .from(schema.studioApprovalRequests)
+      .where(eq(schema.studioApprovalRequests.id, id))
+      .limit(1);
+    return result;
   }
 
   async markNotificationAsRead(id: string) {
@@ -673,21 +699,42 @@ export class DatabaseStorage implements IStorage {
       conditions.push(eq(schema.studioApprovalRequests.status, filters.status as any));
     }
 
-    const requests = await db
-      .select()
+    const artistAlias = alias(schema.users, "artist");
+    const studioAlias = alias(schema.users, "studio");
+
+    const enriched = await db
+      .select({
+        request: schema.studioApprovalRequests,
+        artist: {
+          id: artistAlias.id,
+          username: artistAlias.username,
+          role: artistAlias.role,
+          firstName: artistAlias.firstName,
+          lastName: artistAlias.lastName,
+          avatarUrl: artistAlias.avatarUrl,
+          isVerified: artistAlias.isVerified,
+          verificationStatus: artistAlias.verificationStatus,
+          createdAt: artistAlias.createdAt,
+        },
+        studio: {
+          id: studioAlias.id,
+          username: studioAlias.username,
+          role: studioAlias.role,
+          firstName: studioAlias.firstName,
+          lastName: studioAlias.lastName,
+          avatarUrl: studioAlias.avatarUrl,
+          isVerified: studioAlias.isVerified,
+          verificationStatus: studioAlias.verificationStatus,
+          createdAt: studioAlias.createdAt,
+        },
+      })
       .from(schema.studioApprovalRequests)
+      .innerJoin(artistAlias, eq(schema.studioApprovalRequests.artistId, artistAlias.id))
+      .innerJoin(studioAlias, eq(schema.studioApprovalRequests.studioId, studioAlias.id))
       .where(conditions.length > 0 ? and(...conditions) : undefined)
       .orderBy(desc(schema.studioApprovalRequests.createdAt));
 
-    const enrichedRequests = await Promise.all(
-      requests.map(async (request) => {
-        const [artist] = await db.select().from(schema.users).where(eq(schema.users.id, request.artistId)).limit(1);
-        const [studio] = await db.select().from(schema.users).where(eq(schema.users.id, request.studioId)).limit(1);
-        return { request, artist, studio };
-      })
-    );
-
-    return enrichedRequests;
+    return enriched;
   }
 
   async updateStudioApprovalStatus(id: string, status: string) {
@@ -701,7 +748,7 @@ export class DatabaseStorage implements IStorage {
     return db
       .select({
         request: schema.studioApprovalRequests,
-        artist: schema.users
+        artist: publicUserColumns
       })
       .from(schema.studioApprovalRequests)
       .innerJoin(
@@ -721,7 +768,7 @@ export class DatabaseStorage implements IStorage {
     const [result] = await db
       .select({
         request: schema.studioApprovalRequests,
-        studio: schema.users
+        studio: publicUserColumns
       })
       .from(schema.studioApprovalRequests)
       .innerJoin(
@@ -812,7 +859,7 @@ export class DatabaseStorage implements IStorage {
       .select({
         savedPost: schema.savedPosts,
         post: schema.posts,
-        author: schema.users
+        author: publicUserColumns
       })
       .from(schema.savedPosts)
       .innerJoin(schema.posts, eq(schema.savedPosts.postId, schema.posts.id))
@@ -877,7 +924,7 @@ export class DatabaseStorage implements IStorage {
     const results = await db
       .select({
         flashSale: schema.flashSales,
-        artist: schema.users
+        artist: publicUserColumns
       })
       .from(schema.flashSales)
       .innerJoin(schema.users, eq(schema.flashSales.artistId, schema.users.id))
@@ -899,7 +946,7 @@ export class DatabaseStorage implements IStorage {
     const [result] = await db
       .select({
         flashSale: schema.flashSales,
-        artist: schema.users
+        artist: publicUserColumns
       })
       .from(schema.flashSales)
       .innerJoin(schema.users, eq(schema.flashSales.artistId, schema.users.id))
@@ -977,12 +1024,14 @@ export class DatabaseStorage implements IStorage {
     
     const artistUser = alias(schema.users, "artist");
     const clientUser = alias(schema.users, "client");
+    const artistCols = { id: artistUser.id, username: artistUser.username, role: artistUser.role, firstName: artistUser.firstName, lastName: artistUser.lastName, avatarUrl: artistUser.avatarUrl, isVerified: artistUser.isVerified };
+    const clientCols = { id: clientUser.id, username: clientUser.username, role: clientUser.role, firstName: clientUser.firstName, lastName: clientUser.lastName, avatarUrl: clientUser.avatarUrl, isVerified: clientUser.isVerified };
     
     const results = await db
       .select({
         booking: schema.bookings,
-        artist: artistUser,
-        client: clientUser
+        artist: artistCols,
+        client: clientCols
       })
       .from(schema.bookings)
       .leftJoin(artistUser, eq(schema.bookings.artistId, artistUser.id))
@@ -1000,12 +1049,14 @@ export class DatabaseStorage implements IStorage {
   async getBooking(id: string) {
     const artistUser = alias(schema.users, "artist");
     const clientUser = alias(schema.users, "client");
+    const artistCols = { id: artistUser.id, username: artistUser.username, role: artistUser.role, firstName: artistUser.firstName, lastName: artistUser.lastName, avatarUrl: artistUser.avatarUrl, isVerified: artistUser.isVerified };
+    const clientCols = { id: clientUser.id, username: clientUser.username, role: clientUser.role, firstName: clientUser.firstName, lastName: clientUser.lastName, avatarUrl: clientUser.avatarUrl, isVerified: clientUser.isVerified };
     
     const [result] = await db
       .select({
         booking: schema.bookings,
-        artist: artistUser,
-        client: clientUser
+        artist: artistCols,
+        client: clientCols
       })
       .from(schema.bookings)
       .leftJoin(artistUser, eq(schema.bookings.artistId, artistUser.id))

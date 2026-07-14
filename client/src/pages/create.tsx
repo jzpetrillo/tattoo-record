@@ -110,6 +110,7 @@ export default function Create() {
       <CreatePostModal 
         open={showCreateModal} 
         onClose={() => setShowCreateModal(false)}
+        defaultTab={createType}
       />
     </div>
   );

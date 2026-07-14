@@ -1,4 +1,5 @@
 import { useParams, useLocation } from "wouter";
+import { useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -17,7 +18,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { ArrowLeft, MapPin, DollarSign, Briefcase, Building2, Edit, Trash2 } from "lucide-react";
+import { ArrowLeft, MapPin, DollarSign, Briefcase, Building2, Edit, Trash2, Users, FileText } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Link } from "wouter";
@@ -61,6 +62,20 @@ export default function JobDetail() {
     enabled: !!token && !!id,
   });
 
+  const isOwner = user?.id === jobData?.job?.studioId;
+
+  const { data: applications = [] } = useQuery<any[]>({
+    queryKey: ["/api/jobs", id, "applications"],
+    queryFn: async () => {
+      const res = await fetch(`/api/jobs/${id}/applications`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) return [];
+      return res.json();
+    },
+    enabled: !!token && !!id && isOwner,
+  });
+
   const applyForm = useForm({
     resolver: zodResolver(applyJobSchema),
     defaultValues: {
@@ -80,6 +95,20 @@ export default function JobDetail() {
       salaryMaxCents: jobData?.job?.salaryMaxCents ? String(jobData.job.salaryMaxCents / 100) : "",
     },
   });
+
+  // Reset edit form when job data loads
+  useEffect(() => {
+    if (jobData?.job) {
+      editForm.reset({
+        title: jobData.job.title || "",
+        type: jobData.job.type || "FULL_TIME",
+        description: jobData.job.description || "",
+        location: jobData.job.location || "",
+        salaryMinCents: jobData.job.salaryMinCents ? String(jobData.job.salaryMinCents / 100) : "",
+        salaryMaxCents: jobData.job.salaryMaxCents ? String(jobData.job.salaryMaxCents / 100) : "",
+      });
+    }
+  }, [jobData]);
 
   const applyMutation = useMutation({
     mutationFn: async (data: any) => {
@@ -167,7 +196,6 @@ export default function JobDetail() {
   }
 
   const { job, studio } = jobData;
-  const isOwner = user?.id === job.studioId;
   const canApply = user?.role === "ARTIST" && !isOwner;
 
   return (
@@ -432,6 +460,56 @@ export default function JobDetail() {
                       </Form>
                     </DialogContent>
                   </Dialog>
+                </div>
+              )}
+
+              {isOwner && applications.length > 0 && (
+                <div className="pt-4 border-t">
+                  <h3 className="font-semibold mb-3 flex items-center gap-2" data-testid="text-applicants-heading">
+                    <Users className="w-4 h-4" />
+                    Applicants ({applications.length})
+                  </h3>
+                  <div className="space-y-3">
+                    {applications.map((app: any) => (
+                      <Card key={app.id} className="p-4" data-testid={`card-applicant-${app.id}`}>
+                        <div className="flex items-start gap-3">
+                          <img
+                            src={app.artistAvatar || `https://ui-avatars.com/api/?name=${app.artistUsername}&background=000&color=fff`}
+                            alt={app.artistUsername}
+                            className="w-10 h-10 rounded-full object-cover flex-shrink-0"
+                            data-testid={`img-applicant-avatar-${app.id}`}
+                          />
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center justify-between mb-1">
+                              <Link href={`/u/${app.artistUsername}`}>
+                                <span className="font-medium hover:underline cursor-pointer" data-testid={`link-applicant-${app.id}`}>
+                                  {app.artistDisplayName || app.artistUsername}
+                                </span>
+                              </Link>
+                              <Badge variant="outline" data-testid={`badge-applicant-status-${app.id}`}>{app.status}</Badge>
+                            </div>
+                            {app.coverLetter && (
+                              <p className="text-sm text-muted-foreground line-clamp-2" data-testid={`text-cover-letter-${app.id}`}>
+                                {app.coverLetter}
+                              </p>
+                            )}
+                            <p className="text-xs text-muted-foreground mt-1">
+                              Applied {new Date(app.createdAt).toLocaleDateString()}
+                            </p>
+                          </div>
+                        </div>
+                      </Card>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {isOwner && applications.length === 0 && (
+                <div className="pt-4 border-t">
+                  <p className="text-sm text-muted-foreground flex items-center gap-2" data-testid="text-no-applicants">
+                    <FileText className="w-4 h-4" />
+                    No applications yet
+                  </p>
                 </div>
               )}
 

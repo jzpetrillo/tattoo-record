@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import SidebarNav from "@/components/layout/sidebar-nav";
 import MobileNav from "@/components/layout/mobile-nav";
@@ -13,11 +14,11 @@ interface FlashSale {
   id: string;
   title: string;
   description?: string;
-  discountedPrice: number | null;
-  originalPrice: number | null;
-  endDate: string;
-  spotsAvailable: number | null;
-  imageUrl: string | null;
+  flashPriceCents: number | null;
+  originalPriceCents: number | null;
+  expiresAt: string;
+  availableSlots: number | null;
+  media?: { url: string; type: string }[];
   artist?: {
     id: string;
     username: string;
@@ -28,36 +29,35 @@ interface FlashSale {
   };
 }
 
+function useCountdown() {
+  const [tick, setTick] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => setTick((t) => t + 1), 60_000);
+    return () => clearInterval(id);
+  }, []);
+  return tick;
+}
+
 export default function FlashSalesPage() {
   const { token } = useAuth();
+  useCountdown(); // triggers a re-render every minute so timers stay live
 
   const { data: flashSales = [], isLoading } = useQuery<FlashSale[]>({
     queryKey: ["/api/flash-sales?active=true"],
     enabled: !!token,
   });
 
-  const getRemainingTime = (endDate: string) => {
-    const now = new Date().getTime();
-    const end = new Date(endDate).getTime();
-    const diff = end - now;
-
+  const getRemainingTime = (expiresAt: string) => {
+    const diff = new Date(expiresAt).getTime() - Date.now();
     if (diff <= 0) return "Expired";
-
     const hours = Math.floor(diff / (1000 * 60 * 60));
     const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-
-    if (hours > 24) {
-      const days = Math.floor(hours / 24);
-      return `${days}d ${hours % 24}h`;
-    }
+    if (hours > 24) return `${Math.floor(hours / 24)}d ${hours % 24}h`;
     return `${hours}h ${minutes}m`;
   };
 
-  const getUrgencyClass = (endDate: string) => {
-    const now = new Date().getTime();
-    const end = new Date(endDate).getTime();
-    const hoursRemaining = (end - now) / (1000 * 60 * 60);
-
+  const getUrgencyClass = (expiresAt: string) => {
+    const hoursRemaining = (new Date(expiresAt).getTime() - Date.now()) / (1000 * 60 * 60);
     if (hoursRemaining <= 2) return "font-bold text-foreground";
     if (hoursRemaining <= 6) return "font-medium text-foreground";
     return "text-muted-foreground";
@@ -98,10 +98,10 @@ export default function FlashSalesPage() {
               >
                 <Card className="p-0 overflow-hidden hover:shadow-lg hover:-translate-y-0.5 transition-all cursor-pointer border-border group">
                   <div className="aspect-square bg-secondary relative overflow-hidden">
-                    {sale.imageUrl ? (
+                    {sale.media && sale.media.length > 0 ? (
                       <>
                         <img
-                          src={sale.imageUrl}
+                          src={sale.media[0].url}
                           alt={sale.title}
                           className="w-full h-full object-cover group-hover:scale-105 transition-transform"
                         />
@@ -131,26 +131,26 @@ export default function FlashSalesPage() {
                       </p>
                     )}
                     <div className="flex items-center gap-3">
-                      <span className="font-bold text-lg">${sale.discountedPrice ?? 0}</span>
-                      {sale.originalPrice && sale.discountedPrice && sale.originalPrice > sale.discountedPrice && (
+                      <span className="font-bold text-lg">${((sale.flashPriceCents ?? 0) / 100).toFixed(2)}</span>
+                      {sale.originalPriceCents && sale.flashPriceCents && sale.originalPriceCents > sale.flashPriceCents && (
                         <div className="flex items-center gap-2">
                           <span className="text-sm text-muted-foreground line-through">
-                            ${sale.originalPrice}
+                            ${(sale.originalPriceCents / 100).toFixed(2)}
                           </span>
                           <Badge variant="secondary" className="text-xs">
-                            {Math.round((1 - sale.discountedPrice / sale.originalPrice) * 100)}% OFF
+                            {Math.round((1 - sale.flashPriceCents / sale.originalPriceCents) * 100)}% OFF
                           </Badge>
                         </div>
                       )}
                     </div>
                     <div className="flex items-center justify-between pt-2 border-t border-border">
-                      <div className={`flex items-center gap-1.5 text-sm ${getUrgencyClass(sale.endDate)}`}>
+                      <div className={`flex items-center gap-1.5 text-sm ${getUrgencyClass(sale.expiresAt)}`}>
                         <Clock className="w-4 h-4" />
-                        <span>{getRemainingTime(sale.endDate)}</span>
+                        <span>{getRemainingTime(sale.expiresAt)}</span>
                       </div>
-                      {sale.spotsAvailable && (
+                      {sale.availableSlots != null && (
                         <div className="text-sm text-muted-foreground">
-                          {sale.spotsAvailable} {sale.spotsAvailable === 1 ? 'spot' : 'spots'} left
+                          {sale.availableSlots} {sale.availableSlots === 1 ? 'spot' : 'spots'} left
                         </div>
                       )}
                     </div>
