@@ -23,13 +23,15 @@ const CSP_FILE = path.join(ROOT, "server", "index.ts");
 const SCAN_GLOBS = [
   "client/src/**/*.{ts,tsx}",
   "server/**/*.ts",
+  "scripts/**/*.ts",
 ];
 
 const EXCLUDE_FILES = [
   "server/index.ts",
+  "scripts/check-csp-domains.ts",
 ];
 
-const URL_RE = /https?:\/\/([a-zA-Z0-9.\-]+)/g;
+const URL_RE = /https?:\/\/([a-zA-Z0-9.\-]+\.[a-zA-Z]{2,})/g;
 
 function parseCspDomains(source: string): Set<string> {
   const domains = new Set<string>();
