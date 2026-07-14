@@ -36,6 +36,10 @@ args = "Start application"
 task = "workflow.run"
 args = "check-csp-domains"
 
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "check:csp"
+
 [[workflows.workflow]]
 name = "Start application"
 author = "agent"
@@ -52,6 +56,17 @@ author = "agent"
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "npx tsx scripts/check-csp-domains.ts"
+
+[workflows.workflow.metadata]
+isValidation = true
+
+[[workflows.workflow]]
+name = "check:csp"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "npm run check:csp"
 
 [workflows.workflow.metadata]
 isValidation = true
