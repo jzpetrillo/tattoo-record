@@ -24,6 +24,8 @@ const SCAN_GLOBS = [
   "client/src/**/*.{ts,tsx}",
   "server/**/*.ts",
   "scripts/**/*.ts",
+  "shared/**/*.ts",
+  "migrations/**/*.ts",
 ];
 
 const EXCLUDE_FILES = [
