@@ -133,6 +133,17 @@ test.describe("CSP violations – studio role", () => {
 
     expect(violations, `CSP violations on studio profile: ${violations.join("\n")}`).toHaveLength(0);
   });
+
+  test("reels page loads without CSP violations", async ({ page }) => {
+    const violations = collectCspViolations(page);
+    await loginAs(page, STUDIO_EMAIL);
+
+    await page.goto("/reels");
+    await page.waitForLoadState("networkidle");
+    await page.waitForTimeout(2_000);
+
+    expect(violations, `CSP violations on reels (studio): ${violations.join("\n")}`).toHaveLength(0);
+  });
 });
 
 test.describe("CSP violations – enthusiast role", () => {
@@ -167,6 +178,17 @@ test.describe("CSP violations – enthusiast role", () => {
     await page.waitForTimeout(2_000);
 
     expect(violations, `CSP violations on enthusiast profile: ${violations.join("\n")}`).toHaveLength(0);
+  });
+
+  test("reels page loads without CSP violations", async ({ page }) => {
+    const violations = collectCspViolations(page);
+    await loginAs(page, ENTHUSIAST_EMAIL);
+
+    await page.goto("/reels");
+    await page.waitForLoadState("networkidle");
+    await page.waitForTimeout(2_000);
+
+    expect(violations, `CSP violations on reels (enthusiast): ${violations.join("\n")}`).toHaveLength(0);
   });
 });
 
