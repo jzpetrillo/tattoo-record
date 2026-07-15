@@ -1,0 +1,33 @@
+Six small hardening fixes to the "Tattoo Record" app's AI layer and one missing confirmation. Keep changes surgical; don't touch unrelated code. Run `npm run check` after and fix any type errors. Files: server/services/ai/index.ts, server/services/ai/vision.ts, server/services/ai/embeddings.ts, server/routes.ts, server/storage.ts, shared/schema.ts, client/src/pages/profile.tsx.
+
+1) FIX MODEL ID (server/services/ai/index.ts:5)
+Change `const SONNET = "claude-sonnet-4-5";` → `const SONNET = "claude-sonnet-5";` (latest Sonnet). Leave HAIKU = "claude-haiku-4-5-20251001" as-is (correct).
+
+2) HARDEN STRUCTURED OUTPUT (server/services/ai/index.ts)
+The current completeJSON() greps text with a regex and vision() returns raw text — both are fragile. Add forced tool-use helpers and use them everywhere structured JSON is needed:
+- Add `completeStructured<T>({ prompt, system, tool, model })` — calls anthropic.messages.create with `tools: [tool]`, `tool_choice: { type: "tool", name: tool.name }`, then finds the `tool_use` content block and returns `block.input as T`. `tool` = `{ name, description, input_schema }` (a JSON Schema).
+- Add `visionStructured<T>({ imageUrl, prompt, tool, model })` — same, but the user message content is `[{ type: "image", source: { type: "url", url: imageUrl } }, { type: "text", text: prompt }]`, and it also forces `tool_choice`. Keep the existing _visionCache keyed by hash(model+imageUrl+tool.name).
+- Keep the old complete()/completeJSON()/vision() for backward-compat, but route tagTattooImage and the AI-recommendations JSON through the new *Structured helpers.
+
+3) RICHER TAGS (shared/schema.ts + vision.ts + storage.ts)
+- shared/schema.ts (posts table, ~line 156): change `aiTags` from `jsonb().$type<string[]>()` to a structured object: `jsonb("ai_tags").$type<{ styles: string[]; subjects: string[]; colorProfile: string; placement: string }>()`. Add `aiTaggedAt: timestamp("ai_tagged_at")` if not present. Run `npm run db:push`.
+- server/services/ai/vision.ts `tagTattooImage`: use visionStructured with a tool whose input_schema returns `{ styles: string[] (enum: Traditional, Neo-Traditional, Blackwork, Fine Line, Realism, Japanese, Geometric, Watercolor, Tribal, Lettering, Dotwork, Illustrative), subjects: string[], colorProfile: "color" | "black-and-grey", placement: string }`. Return that object (or null on failure).
+- Where tags are persisted (the async block in server/routes.ts ~line 319 that calls tagTattooImage): write the full object to posts.aiTags, set posts.styles = aiTags.styles and posts.subjects = aiTags.subjects (keep these two flat columns as the queryable/filterable fields), and set aiTaggedAt = now.
+- Update scripts/backfill-tags.ts to write the new shape and re-tag rows where aiTaggedAt IS NULL (existing rows had the old flat array).
+
+4) DON'T SWALLOW NOTIFICATION ERRORS (server/routes.ts ~lines 211, 356, 426)
+The three `storage.createNotification({...})` calls (follow/like/comment) are fire-and-forget with no error handling → unhandled promise rejections. Append `.catch((e) => console.error("notification failed:", e))` to each (keep them non-blocking — do not await before responding).
+
+5) WIRE TELEMETRY (server/storage.ts + server/routes.ts)
+The `events` table exists but nothing writes to it. Add `async logEvent({ userId, type, entityId, payload })` to storage (insert into events; never throw — wrap the insert so a telemetry failure can't break a request). Then fire it (non-blocking, `.catch`) at: post like (routes ~line 356 area) type "post_like"; post save type "post_save"; the semantic + keyword search handlers type "search_performed" with `payload.query`; the AI recommendations handler type "ai_recommendation_served". Never put PII in payload — ids and query text only.
+
+6) ADD PORTFOLIO-DELETE CONFIRMATION (client/src/pages/profile.tsx)
+The "delete portfolio item" trash action currently calls deletePortfolioMutation.mutate(item.id) directly on click with no confirm. Wrap it in an AlertDialog confirm using the SAME pattern as client/src/pages/job-detail.tsx (AlertDialog + AlertDialogTrigger on the trash button, AlertDialogAction runs the mutation). Match the Press styling already in the file.
+
+VERIFY:
+- `npm run check` passes.
+- Creating a post with an image stores a structured aiTags object plus flat posts.styles/subjects; Explore style filter still works.
+- tagTattooImage and AI recommendations use tool-use (no regex JSON parsing on those paths).
+- A row appears in `events` after a like/save/search.
+- Deleting a portfolio item now prompts for confirmation.
+- Summarize per-file what changed and note the aiTags column type change (existing rows need re-tagging via scripts/backfill-tags.ts).

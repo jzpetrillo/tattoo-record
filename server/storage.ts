@@ -136,7 +136,7 @@ export interface IStorage {
   getAllBookingsAdmin(): Promise<any[]>;
 
   // AI operations
-  updatePostTags(postId: string, tags: { subjects?: string[]; aiTags?: string[] }): Promise<void>;
+  updatePostTags(postId: string, tags: { subjects?: string[]; styles?: string[]; aiTags?: { styles: string[]; subjects: string[]; colorProfile: string; placement: string } | null }): Promise<void>;
   updatePostEmbedding(postId: string, embedding: number[]): Promise<void>;
   semanticSearchPosts(queryEmbedding: number[], limit?: number): Promise<any[]>;
   logEvent(event: { userId?: string; type: string; entityId?: string; entityType?: string; payload?: Record<string, any> }): Promise<void>;
@@ -684,9 +684,10 @@ export class DatabaseStorage implements IStorage {
     return created;
   }
 
-  async updatePostTags(postId: string, tags: { subjects?: string[]; aiTags?: string[] }) {
+  async updatePostTags(postId: string, tags: { subjects?: string[]; styles?: string[]; aiTags?: { styles: string[]; subjects: string[]; colorProfile: string; placement: string } | null }) {
     const updates: any = { aiTaggedAt: new Date(), updatedAt: new Date() };
     if (tags.subjects !== undefined) updates.subjects = tags.subjects;
+    if (tags.styles !== undefined) updates.styles = tags.styles;
     if (tags.aiTags !== undefined) updates.aiTags = tags.aiTags;
     await db.update(schema.posts).set(updates).where(eq(schema.posts.id, postId));
   }
@@ -752,13 +753,17 @@ export class DatabaseStorage implements IStorage {
   }
 
   async logEvent(event: { userId?: string; type: string; entityId?: string; entityType?: string; payload?: Record<string, any> }) {
-    await db.insert(schema.events).values({
-      userId: event.userId,
-      type: event.type,
-      entityId: event.entityId,
-      entityType: event.entityType,
-      payload: event.payload ?? {},
-    });
+    try {
+      await db.insert(schema.events).values({
+        userId: event.userId,
+        type: event.type,
+        entityId: event.entityId,
+        entityType: event.entityType,
+        payload: event.payload ?? {},
+      });
+    } catch (err) {
+      console.warn("[telemetry] logEvent failed silently:", err instanceof Error ? err.message : err);
+    }
   }
 
   async createStudioApprovalRequest(request: schema.InsertStudioApprovalRequest) {

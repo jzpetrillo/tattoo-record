@@ -5,7 +5,6 @@
 import "dotenv/config";
 import { db } from "../server/db";
 import { sql } from "drizzle-orm";
-import * as schema from "../shared/schema";
 import { tagTattooImage } from "../server/services/ai/vision";
 import { isAnthropicEnabled } from "../server/services/ai/index";
 
@@ -41,19 +40,20 @@ async function main() {
     if (!imageMedia) { skipped++; continue; }
 
     const tags = await tagTattooImage(imageMedia.url);
-    if (!tags || tags.confidence < 0.3) { skipped++; continue; }
+    if (!tags) { skipped++; continue; }
 
     if (!dryRun) {
       await db.execute(sql`
         UPDATE posts
         SET
+          styles   = ${JSON.stringify(tags.styles)}::jsonb,
           subjects = ${JSON.stringify(tags.subjects)}::jsonb,
-          ai_tags = ${JSON.stringify([...tags.styles, ...tags.colors, tags.mood].filter(Boolean))}::jsonb,
+          ai_tags  = ${JSON.stringify(tags)}::jsonb,
           ai_tagged_at = NOW()
         WHERE id = ${row.id}
       `);
     } else {
-      console.log(`[dry-run] Post ${row.id}: styles=${tags.styles.join(",")}, subjects=${tags.subjects.join(",")}`);
+      console.log(`[dry-run] Post ${row.id}: styles=${tags.styles.join(",")}, subjects=${tags.subjects.join(",")}, colorProfile=${tags.colorProfile}, placement=${tags.placement}`);
     }
 
     tagged++;

@@ -212,7 +212,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           userId: req.params.id,
           type: "FOLLOW",
           payload: { actorId: req.userId },
-        }).catch(() => {});
+        }).catch((e) => console.error("notification failed:", e));
       }
       res.json({ message: "Followed successfully" });
     } catch (error: any) {
@@ -318,10 +318,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (flags.aiAutotag && imageMedia?.url) {
         tagTattooImage(imageMedia.url)
           .then((tags) => {
-            if (tags && tags.confidence >= 0.3) {
+            if (tags) {
               return storage.updatePostTags(post.id, {
+                aiTags: tags,
+                styles: tags.styles,
                 subjects: tags.subjects,
-                aiTags: [...tags.styles, ...tags.colors, tags.mood].filter(Boolean),
               });
             }
           })
@@ -357,8 +358,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
             userId: postResult.post.authorId,
             type: "LIKE",
             payload: { actorId: req.userId, postId: req.params.id },
-          }).catch(() => {});
+          }).catch((e) => console.error("notification failed:", e));
         }
+        storage.logEvent({
+          userId: req.userId,
+          type: "post_like",
+          entityId: req.params.id,
+          entityType: "post",
+        }).catch(() => {});
       }
       res.json({ message: "Post liked" });
     } catch (error: any) {
@@ -427,7 +434,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             userId: postResult.post.authorId,
             type: "COMMENT",
             payload: { actorId: req.userId, postId: req.params.postId, commentId: comment.id },
-          }).catch(() => {});
+          }).catch((e) => console.error("notification failed:", e));
         }
       }).catch(() => {});
       res.json(comment);
@@ -463,6 +470,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { postId, collectionName } = req.body;
       const saved = await storage.savePost(req.userId!, postId, collectionName);
       res.json(saved);
+      storage.logEvent({
+        userId: req.userId,
+        type: "post_save",
+        entityId: postId,
+        entityType: "post",
+      }).catch(() => {});
     } catch (error: any) {
       res.status(400).json({ message: error.message });
     }
@@ -1106,6 +1119,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         storage.searchHashtags(query)
       ]);
       res.json({ users, posts, hashtags });
+      if (query) {
+        storage.logEvent({
+          type: "search_performed",
+          payload: { query },
+        }).catch(() => {});
+      }
     } catch (error: any) {
       res.status(500).json({ message: "Internal server error" });
     }
@@ -1123,6 +1142,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const queryEmbedding = await embed(query);
       const posts = await storage.semanticSearchPosts(queryEmbedding, limit);
       res.json({ posts, available: true });
+      storage.logEvent({
+        type: "search_performed",
+        payload: { query, semantic: true },
+      }).catch(() => {});
     } catch (error: any) {
       console.error("[semantic-search]", error.message);
       res.json({ posts: [], available: false });
@@ -1230,6 +1253,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const validated = validation.aiRecommendationSchema.parse(req.body);
       const recommendations = await generateTattooRecommendations(validated);
       res.json(recommendations);
+      storage.logEvent({
+        userId: req.userId,
+        type: "ai_recommendation_served",
+        entityType: "recommendations",
+      }).catch(() => {});
     } catch (error: any) {
       res.status(400).json({ message: error.message });
     }

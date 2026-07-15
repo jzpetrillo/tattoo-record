@@ -153,7 +153,7 @@ export const posts = pgTable("posts", {
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
   deletedAt: timestamp("deleted_at"),
   subjects: jsonb("subjects").$type<string[]>().default([]),
-  aiTags: jsonb("ai_tags").$type<string[]>().default([]),
+  aiTags: jsonb("ai_tags").$type<{ styles: string[]; subjects: string[]; colorProfile: string; placement: string }>(),
   aiTaggedAt: timestamp("ai_tagged_at")
 }, (table) => ({
   authorIdx: index("posts_author_idx").on(table.authorId),

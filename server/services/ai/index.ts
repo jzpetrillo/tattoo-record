@@ -2,7 +2,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import crypto from "crypto";
 
 const HAIKU = "claude-haiku-4-5-20251001";
-const SONNET = "claude-sonnet-4-5";
+const SONNET = "claude-sonnet-5";
 
 let anthropic: Anthropic | null = null;
 
@@ -29,6 +29,16 @@ function _pruneCache(cache: Map<string, any>) {
 
 function _hash(s: string) {
   return crypto.createHash("sha256").update(s).digest("hex").slice(0, 16);
+}
+
+export interface AiTool {
+  name: string;
+  description: string;
+  input_schema: {
+    type: "object";
+    properties: Record<string, any>;
+    required?: string[];
+  };
 }
 
 export function isAnthropicEnabled() {
@@ -67,6 +77,27 @@ export async function completeJSON<T>(
   return JSON.parse(match[0]) as T;
 }
 
+export async function completeStructured<T>(opts: {
+  prompt: string;
+  system?: string;
+  tool: AiTool;
+  model?: string;
+}): Promise<T> {
+  const { prompt, system = "You are a helpful assistant.", tool, model = HAIKU } = opts;
+  if (!anthropic) throw new Error("Anthropic not configured");
+  const response = await anthropic.messages.create({
+    model,
+    max_tokens: 1024,
+    system,
+    tools: [tool as any],
+    tool_choice: { type: "tool", name: tool.name },
+    messages: [{ role: "user", content: prompt }],
+  });
+  const block = response.content.find((b) => b.type === "tool_use");
+  if (!block || block.type !== "tool_use") throw new Error("No tool_use block in response");
+  return block.input as T;
+}
+
 export async function vision(imageUrl: string, prompt: string, model = HAIKU): Promise<string> {
   if (!anthropic) throw new Error("Anthropic not configured");
   const cacheKey = _hash(`${model}:${imageUrl}:${prompt}`);
@@ -90,6 +121,39 @@ export async function vision(imageUrl: string, prompt: string, model = HAIKU): P
   _pruneCache(_visionCache);
   _visionCache.set(cacheKey, block.text);
   return block.text;
+}
+
+export async function visionStructured<T>(opts: {
+  imageUrl: string;
+  prompt: string;
+  tool: AiTool;
+  model?: string;
+}): Promise<T> {
+  const { imageUrl, prompt, tool, model = HAIKU } = opts;
+  if (!anthropic) throw new Error("Anthropic not configured");
+  const cacheKey = _hash(`${model}:${imageUrl}:${tool.name}`);
+  if (_visionCache.has(cacheKey)) return JSON.parse(_visionCache.get(cacheKey)!) as T;
+
+  const response = await anthropic.messages.create({
+    model,
+    max_tokens: 1024,
+    tools: [tool as any],
+    tool_choice: { type: "tool", name: tool.name },
+    messages: [
+      {
+        role: "user",
+        content: [
+          { type: "image", source: { type: "url", url: imageUrl } },
+          { type: "text", text: prompt },
+        ],
+      },
+    ],
+  });
+  const block = response.content.find((b) => b.type === "tool_use");
+  if (!block || block.type !== "tool_use") throw new Error("No tool_use block in vision response");
+  _pruneCache(_visionCache);
+  _visionCache.set(cacheKey, JSON.stringify(block.input));
+  return block.input as T;
 }
 
 export async function embed(text: string): Promise<number[]> {
