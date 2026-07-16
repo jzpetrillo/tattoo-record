@@ -1,0 +1,62 @@
+Fix issues found in live E2E testing of "Tattoo Record" (Express + Drizzle + Postgres server; React client). Do the phases IN ORDER (security first). After each, run `npm run check`. Verify each fix with the curl-style checks noted. Reuse the existing `publicUserColumns` projection already defined in server/storage.ts — do NOT reinvent it.
+
+=====================================================
+PHASE 1 — CRITICAL: password-hash + email leak (partial fix — finish it)
+=====================================================
+The publicUserColumns fix was only applied to search. These endpoints still return hashedPassword and/or email for all users. Confirmed leaking: /api/posts (main feed), /api/for-you, /api/discovery/trending, /api/jobs. Email-only leak: /api/users, /api/conversations.
+
+1.1 server/services/feed-algorithm.ts — every query here selects the FULL users row and embeds it as `author`/suggestedUsers. Fix ALL of them to select only public columns (id, username, role, firstName, lastName, bio, avatarUrl, bannerImageUrl, isVerified, verificationStatus — NEVER hashedPassword or email):
+   - getPersonalizedFeed (author join)
+   - getPublicFeed (author join)
+   - getForYouRecommendations: the step-3 and step-4 `db.select().from(users)` calls, AND the final return where `suggestedUsers.map(s => ({ ...s.user, ... }))` spreads the whole user (this is the source of the hashedPassword in /api/for-you) — spread only public fields; and the recommendedPosts `author: users` join.
+   Import/share the same public column list used in storage.ts.
+
+1.2 server/storage.ts getJobs + getJobById — the `studio: schema.users` join returns the full row → /api/jobs leak. Select public columns for the studio (mirror getAllJobsAdmin, which already selects a subset).
+
+1.3 server/storage.ts getUsers (~line 159) — it explicitly selects `email`. Remove `email` from this public listing (used by /api/users).
+
+1.4 server/storage.ts getConversations — the `json_agg(${schema.users})` aggregates full user rows (leaks email). Replace with a json_build_object of only public columns, or aggregate a subselect of public columns.
+
+1.5 Grep the whole server for any remaining `.from(schema.users)` / `.from(users)` or `author: schema.users` / `sender: schema.users` / `host: schema.users` / `artist:`/`client:` joins that select the whole row and are returned to clients (stories, messages, bookings, flash-sales, livestream, studio-approvals). Apply the public projection to each.
+
+VERIFY: as a logged-in demo user, `GET /api/posts`, `/api/for-you`, `/api/discovery/trending`, `/api/jobs`, `/api/users`, `/api/conversations` — none of the response bodies may contain the string `hashedPassword` or any `"email":"...@..."`. 
+
+=====================================================
+PHASE 2 — user-visible bugs
+=====================================================
+2.1 Job applicants 500. `GET /api/jobs/:jobId/applications` currently throws "Internal server error" (route exists, handler crashes). In server/routes.ts + server/storage.ts:
+   - Ensure storage.getJobApplications(jobId) exists and joins job_applications → users(applicant) selecting PUBLIC columns only (no hash/email).
+   - In the route, verify ownership: load the job, return 403 unless job.studioId === req.userId (STUDIO role). Return the applicants array.
+   - Add a console.error(error) in the catch so the real cause is logged; fix whatever it surfaces (likely a missing storage method, a bad column ref, or an undefined join). 
+   VERIFY: as studio1, GET /api/jobs/<own job id>/applications returns 200 with an array (may be empty); as a different studio → 403.
+
+2.2 Profile always shows "0 POSTS". `GET /api/users/:id/stats` returns only followersCount + followingCount — there is no postsCount, so the profile hardcodes 0 (artist1 actually has 24 posts). 
+   - Add postsCount to the stats response: count posts where authorId = user.id AND deletedAt IS NULL. Add a storage.getPostCount(userId) or compute inline.
+   - Update client/src/pages/profile.tsx to read stats.postsCount for the POSTS stat.
+   VERIFY: artist1's profile shows a non-zero POSTS count matching the grid.
+
+=====================================================
+PHASE 3 — AI recommendations: migrate off dead OpenAI + sanitize errors
+=====================================================
+The AI Recommendations page fails with `400: {"message":"OpenAI API key not configured..."}` — it still uses the legacy server/services/openai.ts, and that raw message (incl. the env-var name) is rendered verbatim to the user.
+
+3.1 Migrate the recommender to the Anthropic wrapper. Replace the body of generateTattooRecommendations (or add server/services/ai/recommendations.ts) to call the ai/index.ts `completeStructured` (Claude Haiku) with a tool/JSON schema returning the SAME shape the client expects: { styles: string[], placement: string[], size: string, colors: string[], description: string, aftercareTips: string[] }. Point the /api/ai/tattoo-recommendations route at it.
+3.2 Graceful + safe errors: if ANTHROPIC_API_KEY is absent or the call fails, return `res.status(503).json({ message: "AI recommendations are temporarily unavailable. Please try again later." })` — never leak provider/env details.
+3.3 client/src/pages/ai-recommendations.tsx: render a friendly error string, not the raw `error.message` (which today prints the "400: {...}" JSON). Show the server's message or a generic fallback.
+   VERIFY (with ANTHROPIC_API_KEY set): submitting a description returns real recommendations; with the key unset, the page shows the friendly unavailable message (no env-var names).
+
+=====================================================
+PHASE 4 — activate the dormant AI + backfill (ops + data)
+=====================================================
+On the live deployment, none of the new AI features do anything: semantic search returns {"available":false} (no VOYAGE_API_KEY), and 0 of 909 seed posts have aiTags/styles/embeddings (tagging only runs on NEW posts; no backfill has run).
+4.1 Add ANTHROPIC_API_KEY and VOYAGE_API_KEY to Replit Secrets (document this in README + .env.example — the app can't set these itself).
+4.2 Run the backfills against the seeded DB: `npx tsx scripts/backfill-tags.ts` and `npx tsx scripts/backfill-embeddings.ts`. Ensure both scripts (a) skip already-processed rows, (b) throttle to respect rate limits, and (c) log progress. If a backfill-embeddings script doesn't exist yet, create it (embed caption + styles/subjects via ai.embed, write via storage.updatePostEmbedding).
+4.3 Confirm the createPost path still fires tagging+embedding async for new posts.
+   VERIFY: after backfill, GET /api/admin/posts shows aiTags/styles populated; GET /api/search/semantic?q=fine%20line returns ranked posts with available:true.
+
+=====================================================
+OPTIONAL (nice-to-have, flagged in testing)
+=====================================================
+- Seed currently creates 0 flash sales and 0 bookings, so those user flows and the admin Flash Sales / Bookings modules are empty. Add a handful of seed flash sales (active, future expiry) and seed bookings across statuses so those paths are testable out of the box.
+
+Summarize per-file what changed, and confirm the Phase 1 grep is clean (no hashedPassword/email in any client response).

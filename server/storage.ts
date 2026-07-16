@@ -5,7 +5,7 @@ import { alias } from "drizzle-orm/pg-core";
 
 // Public user columns — never includes hashedPassword or email.
 // Use this in every query that returns user data to clients.
-const publicUserColumns = {
+export const publicUserColumns = {
   id: schema.users.id,
   username: schema.users.username,
   role: schema.users.role,
@@ -36,6 +36,7 @@ export interface IStorage {
   // Post operations
   getPost(id: string): Promise<any>;
   getPosts(options: { limit?: number; offset?: number; authorId?: string; type?: string }): Promise<any[]>;
+  getPostCount(userId: string): Promise<number>;
   createPost(post: schema.InsertPost): Promise<schema.Post>;
   deletePost(id: string): Promise<void>;
   likePost(postId: string, userId: string): Promise<void>;
@@ -80,6 +81,7 @@ export interface IStorage {
   updateJob(id: string, updates: Partial<schema.JobPosting>): Promise<void>;
   deleteJob(id: string): Promise<void>;
   applyToJob(jobId: string, artistId: string, data: any): Promise<void>;
+  getJobApplications(jobId: string): Promise<any[]>;
   
   // Livestream operations
   createLivestreamEvent(event: schema.InsertLivestreamEvent): Promise<schema.LivestreamEvent>;
@@ -184,7 +186,6 @@ export class DatabaseStorage implements IStorage {
       .select({
         id: schema.users.id,
         username: schema.users.username,
-        email: schema.users.email,
         role: schema.users.role,
         firstName: schema.users.firstName,
         lastName: schema.users.lastName,
@@ -244,6 +245,14 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(schema.posts.createdAt))
       .limit(limit)
       .offset(offset);
+  }
+
+  async getPostCount(userId: string): Promise<number> {
+    const [result] = await db
+      .select({ count: sql<number>`COUNT(*)` })
+      .from(schema.posts)
+      .where(and(eq(schema.posts.authorId, userId), isNull(schema.posts.deletedAt)));
+    return Number(result?.count || 0);
   }
 
   async createPost(post: schema.InsertPost) {
@@ -438,7 +447,18 @@ export class DatabaseStorage implements IStorage {
     const result: any = await db
       .select({
         conversation: schema.conversations,
-        participants: sql`json_agg(${schema.users})`.as("participants")
+        participants: sql`json_agg(json_build_object(
+          'id', ${schema.users.id},
+          'username', ${schema.users.username},
+          'role', ${schema.users.role},
+          'firstName', ${schema.users.firstName},
+          'lastName', ${schema.users.lastName},
+          'bio', ${schema.users.bio},
+          'avatarUrl', ${schema.users.avatarUrl},
+          'bannerImageUrl', ${schema.users.bannerImageUrl},
+          'isVerified', ${schema.users.isVerified},
+          'verificationStatus', ${schema.users.verificationStatus}
+        ))`.as("participants"),
       })
       .from(schema.conversationParticipants)
       .innerJoin(schema.conversations, eq(schema.conversationParticipants.conversationId, schema.conversations.id))
@@ -519,29 +539,44 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getJobs(filters: any = {}) {
-    let query = db
+    return db
       .select({
         job: schema.jobPostings,
-        studio: schema.users
+        studio: publicUserColumns,
       })
       .from(schema.jobPostings)
       .innerJoin(schema.users, eq(schema.jobPostings.studioId, schema.users.id))
-      .where(eq(schema.jobPostings.isActive, true));
-
-    return query.orderBy(desc(schema.jobPostings.createdAt));
+      .where(eq(schema.jobPostings.isActive, true))
+      .orderBy(desc(schema.jobPostings.createdAt));
   }
 
   async getJobById(id: string) {
     const [result] = await db
       .select({
         job: schema.jobPostings,
-        studio: schema.users
+        studio: publicUserColumns,
       })
       .from(schema.jobPostings)
       .innerJoin(schema.users, eq(schema.jobPostings.studioId, schema.users.id))
       .where(eq(schema.jobPostings.id, id));
-    
     return result;
+  }
+
+  async getJobApplications(jobId: string) {
+    return db
+      .select({
+        id: schema.jobApplications.id,
+        status: schema.jobApplications.status,
+        coverLetter: schema.jobApplications.coverLetter,
+        portfolioSnapshot: schema.jobApplications.portfolioSnapshot,
+        createdAt: schema.jobApplications.createdAt,
+        artistId: schema.jobApplications.artistId,
+        artist: publicUserColumns,
+      })
+      .from(schema.jobApplications)
+      .innerJoin(schema.users, eq(schema.users.id, schema.jobApplications.artistId))
+      .where(eq(schema.jobApplications.jobId, jobId))
+      .orderBy(desc(schema.jobApplications.createdAt));
   }
 
   async createJob(job: schema.InsertJobPosting) {

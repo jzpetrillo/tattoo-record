@@ -200,8 +200,17 @@ export default function AIRecommendations() {
               {generateMutation.isError && (
                 <Card className="border-destructive bg-destructive/10 mb-4">
                   <CardContent className="pt-6">
-                    <p className="text-destructive text-sm">
-                      {generateMutation.error?.message || "Failed to generate recommendations. Please try again."}
+                    <p className="text-destructive text-sm" data-testid="error-message">
+                      {(() => {
+                        try {
+                          const raw = (generateMutation.error as Error)?.message || "";
+                          const m = raw.match(/\{[\s\S]*\}/);
+                          if (m) return JSON.parse(m[0]).message || raw;
+                          return raw || "Failed to generate recommendations. Please try again.";
+                        } catch {
+                          return "Failed to generate recommendations. Please try again.";
+                        }
+                      })()}
                     </p>
                   </CardContent>
                 </Card>

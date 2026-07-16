@@ -9,7 +9,7 @@ import * as schema from "@shared/schema";
 import { storage } from "./storage";
 import { requireAuth, requireRole, generateToken, type AuthRequest } from "./middleware/auth";
 import { uploadMedia, deleteMedia } from "./services/cloudinary";
-import { generateTattooRecommendations } from "./services/openai";
+import { generateTattooRecommendations } from "./services/ai/recommendations";
 import { setupMessageWebSocket, broadcastNewMessage } from "./services/websocket";
 import { setupLiveWebSocket } from "./services/websocket-live";
 import { startStoryCleanupScheduler } from "./services/story-cleanup";
@@ -253,12 +253,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "User not found" });
       }
       
-      const followers = await storage.getFollowers(user.id);
-      const following = await storage.getFollowing(user.id);
-      
+      const [followers, following, postsCount] = await Promise.all([
+        storage.getFollowers(user.id),
+        storage.getFollowing(user.id),
+        storage.getPostCount(user.id),
+      ]);
+
       res.json({
         followersCount: followers.length,
-        followingCount: following.length
+        followingCount: following.length,
+        postsCount,
       });
     } catch (error: any) {
       res.status(500).json({ message: "Internal server error" });
@@ -798,24 +802,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (job.job.studioId !== req.userId && req.userRole !== "ADMIN") {
         return res.status(403).json({ message: "Not authorized" });
       }
-      const applications = await db
-        .select({
-          id: schema.jobApplications.id,
-          status: schema.jobApplications.status,
-          coverLetter: schema.jobApplications.coverLetter,
-          portfolioSnapshot: schema.jobApplications.portfolioSnapshot,
-          createdAt: schema.jobApplications.createdAt,
-          artistId: schema.jobApplications.artistId,
-          artistUsername: schema.users.username,
-          artistDisplayName: schema.users.displayName,
-          artistAvatar: schema.users.avatar,
-        })
-        .from(schema.jobApplications)
-        .innerJoin(schema.users, eq(schema.users.id, schema.jobApplications.artistId))
-        .where(eq(schema.jobApplications.jobId, req.params.jobId))
-        .orderBy(desc(schema.jobApplications.createdAt));
+      const applications = await storage.getJobApplications(req.params.jobId);
       res.json(applications);
     } catch (error: any) {
+      console.error("[jobs/applications]", error);
       res.status(500).json({ message: "Internal server error" });
     }
   });
@@ -1259,7 +1249,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         entityType: "recommendations",
       }).catch(() => {});
     } catch (error: any) {
-      res.status(400).json({ message: error.message });
+      console.error("[ai-recs]", error);
+      res.status(503).json({ message: "AI recommendations are temporarily unavailable. Please try again later." });
     }
   });
 

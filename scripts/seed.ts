@@ -638,6 +638,94 @@ async function seedLivestreams(users: typeof schema.users.$inferSelect[]) {
   console.log(`✅ Created ${events.length} livestream events`);
 }
 
+async function seedFlashSales(users: typeof schema.users.$inferSelect[]) {
+  console.log("⚡ Creating flash sales...");
+
+  const artists = users.filter(u => u.role === "ARTIST" && u.isVerified);
+  const flashSales: typeof schema.flashSales.$inferInsert[] = [];
+
+  for (const artist of artists.slice(0, 10)) {
+    const numSales = faker.number.int({ min: 1, max: 3 });
+    for (let i = 0; i < numSales; i++) {
+      const originalCents = faker.number.int({ min: 20000, max: 80000 });
+      const flashCents = Math.round(originalCents * faker.number.float({ min: 0.4, max: 0.7 }));
+      flashSales.push({
+        artistId: artist.id,
+        title: `${faker.helpers.arrayElement(["Flash ", "Limited ", "Special "])}${faker.helpers.arrayElement(["Traditional Rose", "Geometric Lion", "Japanese Koi", "Fine Line Script", "Blackwork Mandala", "Neo-Trad Skull"])}`,
+        description: faker.lorem.sentences(2),
+        media: [],
+        originalPriceCents: originalCents,
+        flashPriceCents: flashCents,
+        availableSlots: faker.number.int({ min: 1, max: 5 }),
+        bookedSlots: faker.number.int({ min: 0, max: 2 }),
+        expiresAt: faker.date.soon({ days: faker.number.int({ min: 1, max: 14 }) }),
+        isActive: true,
+      });
+    }
+  }
+
+  const inserted = await db.insert(schema.flashSales).values(flashSales).returning();
+  console.log(`✅ Created ${inserted.length} flash sales`);
+  return inserted;
+}
+
+async function seedBookings(
+  users: typeof schema.users.$inferSelect[],
+  flashSales: typeof schema.flashSales.$inferSelect[]
+) {
+  console.log("📅 Creating bookings...");
+
+  const artists = users.filter(u => u.role === "ARTIST" && u.isVerified);
+  const clients = users.filter(u => u.role === "ENTHUSIAST" || u.role === "ARTIST");
+  const bookings: typeof schema.bookings.$inferInsert[] = [];
+
+  const statuses = ["PENDING", "APPROVED", "REJECTED", "COMPLETED", "CANCELLED"] as const;
+  const paymentStatuses = ["UNPAID", "DEPOSIT_PAID", "PAID"] as const;
+
+  for (const artist of artists.slice(0, 12)) {
+    const numBookings = faker.number.int({ min: 3, max: 8 });
+    for (let i = 0; i < numBookings; i++) {
+      const client = faker.helpers.arrayElement(clients.filter(c => c.id !== artist.id));
+      const status = faker.helpers.arrayElement(statuses);
+      const paymentStatus = status === "COMPLETED"
+        ? "PAID"
+        : status === "APPROVED"
+        ? faker.helpers.arrayElement(["UNPAID", "DEPOSIT_PAID"])
+        : "UNPAID";
+      const useFlashSale = flashSales.length > 0 && faker.datatype.boolean(0.3);
+      const flashSale = useFlashSale ? faker.helpers.arrayElement(flashSales.filter(f => f.artistId === artist.id)) : null;
+
+      bookings.push({
+        artistId: artist.id,
+        clientId: client.id,
+        flashSaleId: flashSale?.id ?? null,
+        title: faker.helpers.arrayElement([
+          "Half sleeve consultation",
+          "Custom chest piece",
+          "Small wrist tattoo",
+          "Back piece session",
+          "Touch-up appointment",
+          "Cover-up tattoo",
+          "Minimalist finger tattoos",
+          "Portrait session",
+        ]),
+        description: faker.lorem.sentences(2),
+        referenceImages: [],
+        scheduledAt: faker.date.between({ from: new Date(Date.now() - 60 * 86400000), to: new Date(Date.now() + 60 * 86400000) }),
+        durationMinutes: faker.helpers.arrayElement([60, 90, 120, 180, 240]),
+        depositCents: faker.number.int({ min: 5000, max: 15000 }),
+        totalPriceCents: flashSale ? flashSale.flashPriceCents : faker.number.int({ min: 20000, max: 80000 }),
+        status: status as any,
+        paymentStatus: paymentStatus as any,
+        reminderPreference: faker.helpers.arrayElement(["DAY_BEFORE", "WEEK_BEFORE", "NONE"]) as any,
+      });
+    }
+  }
+
+  await db.insert(schema.bookings).values(bookings);
+  console.log(`✅ Created ${bookings.length} bookings`);
+}
+
 async function seedNotifications(users: typeof schema.users.$inferSelect[]) {
   console.log("🔔 Creating notifications...");
   
@@ -682,6 +770,8 @@ async function main() {
     await seedStudioConnections(users);
     await seedMessaging(users);
     await seedLivestreams(users);
+    const flashSales = await seedFlashSales(users);
+    await seedBookings(users, flashSales);
     await seedNotifications(users);
     
     console.log("\n✅ SEEDING COMPLETE!\n");
