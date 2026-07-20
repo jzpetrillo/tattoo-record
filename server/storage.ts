@@ -39,7 +39,7 @@ export interface IStorage {
   getPostCount(userId: string): Promise<number>;
   createPost(post: schema.InsertPost): Promise<schema.Post>;
   deletePost(id: string): Promise<void>;
-  likePost(postId: string, userId: string): Promise<void>;
+  likePost(postId: string, userId: string): Promise<boolean>;
   unlikePost(postId: string, userId: string): Promise<void>;
   
   // Comment operations
@@ -267,22 +267,33 @@ export class DatabaseStorage implements IStorage {
       .where(eq(schema.posts.id, id));
   }
 
-  async likePost(postId: string, userId: string) {
-    await db.insert(schema.postLikes).values({ postId, userId });
-    await db
-      .update(schema.posts)
-      .set({ likeCount: sql`${schema.posts.likeCount} + 1` })
-      .where(eq(schema.posts.id, postId));
+  async likePost(postId: string, userId: string): Promise<boolean> {
+    const inserted = await db
+      .insert(schema.postLikes)
+      .values({ postId, userId })
+      .onConflictDoNothing()
+      .returning();
+    if (inserted.length > 0) {
+      await db
+        .update(schema.posts)
+        .set({ likeCount: sql`${schema.posts.likeCount} + 1` })
+        .where(eq(schema.posts.id, postId));
+      return true;
+    }
+    return false;
   }
 
   async unlikePost(postId: string, userId: string) {
-    await db
+    const deleted = await db
       .delete(schema.postLikes)
-      .where(and(eq(schema.postLikes.postId, postId), eq(schema.postLikes.userId, userId)));
-    await db
-      .update(schema.posts)
-      .set({ likeCount: sql`${schema.posts.likeCount} - 1` })
-      .where(eq(schema.posts.id, postId));
+      .where(and(eq(schema.postLikes.postId, postId), eq(schema.postLikes.userId, userId)))
+      .returning();
+    if (deleted.length > 0) {
+      await db
+        .update(schema.posts)
+        .set({ likeCount: sql`GREATEST(0, ${schema.posts.likeCount} - 1)` })
+        .where(eq(schema.posts.id, postId));
+    }
   }
 
   async getComments(postId: string) {
@@ -316,7 +327,7 @@ export class DatabaseStorage implements IStorage {
     if (comment) {
       await db
         .update(schema.posts)
-        .set({ commentCount: sql`${schema.posts.commentCount} - 1` })
+        .set({ commentCount: sql`GREATEST(0, ${schema.posts.commentCount} - 1)` })
         .where(eq(schema.posts.id, comment.postId));
     }
   }
@@ -599,11 +610,21 @@ export class DatabaseStorage implements IStorage {
   }
 
   async applyToJob(jobId: string, artistId: string, data: any) {
+    const existing = await db
+      .select({ id: schema.jobApplications.id })
+      .from(schema.jobApplications)
+      .where(and(eq(schema.jobApplications.jobId, jobId), eq(schema.jobApplications.artistId, artistId)))
+      .limit(1);
+    if (existing.length > 0) {
+      const err: any = new Error("You have already applied to this job.");
+      err.status = 409;
+      throw err;
+    }
     await db.insert(schema.jobApplications).values({
       jobId,
       artistId,
       coverLetter: data.coverLetter,
-      portfolioSnapshot: data.portfolioSnapshot
+      portfolioSnapshot: data.portfolioSnapshot,
     });
   }
 
@@ -956,19 +977,16 @@ export class DatabaseStorage implements IStorage {
   }
 
   async unsavePost(userId: string, postId: string) {
-    await db
+    const deleted = await db
       .delete(schema.savedPosts)
-      .where(
-        and(
-          eq(schema.savedPosts.userId, userId),
-          eq(schema.savedPosts.postId, postId)
-        )
-      );
-    
-    await db
-      .update(schema.posts)
-      .set({ saveCount: sql`${schema.posts.saveCount} - 1` })
-      .where(eq(schema.posts.id, postId));
+      .where(and(eq(schema.savedPosts.userId, userId), eq(schema.savedPosts.postId, postId)))
+      .returning();
+    if (deleted.length > 0) {
+      await db
+        .update(schema.posts)
+        .set({ saveCount: sql`GREATEST(0, ${schema.posts.saveCount} - 1)` })
+        .where(eq(schema.posts.id, postId));
+    }
   }
 
   async getSavedPosts(userId: string, collectionName?: string) {

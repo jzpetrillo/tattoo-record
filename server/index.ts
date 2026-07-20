@@ -111,8 +111,14 @@ app.use((req, res, next) => {
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
-    // Only expose specific messages for client errors; use generic text for 500s
-    const message = status < 500 ? (err.message || "Bad Request") : "Internal Server Error";
+    let message: string;
+    if (status >= 500) {
+      message = "Internal Server Error";
+    } else if (err.name === "ZodError") {
+      message = err.errors?.[0]?.message || "Validation failed";
+    } else {
+      message = err.message || "Bad Request";
+    }
     console.error(`[error] ${err.message}`, err.stack);
     res.status(status).json({ message });
   });

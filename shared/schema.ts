@@ -338,7 +338,8 @@ export const jobApplications = pgTable("job_applications", {
   updatedAt: timestamp("updated_at").notNull().defaultNow()
 }, (table) => ({
   jobIdx: index("job_applications_job_idx").on(table.jobId),
-  artistIdx: index("job_applications_artist_idx").on(table.artistId)
+  artistIdx: index("job_applications_artist_idx").on(table.artistId),
+  uniqueApplication: uniqueIndex("unique_job_application").on(table.jobId, table.artistId),
 }));
 
 // Live Streaming

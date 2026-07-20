@@ -1,5 +1,5 @@
 import { useParams, useLocation } from "wouter";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -56,6 +56,7 @@ export default function JobDetail() {
   const [, navigate] = useLocation();
   const { user, token } = useAuth();
   const { toast } = useToast();
+  const [hasApplied, setHasApplied] = useState(false);
 
   const { data: jobData, isLoading } = useQuery<any>({
     queryKey: ["/api/jobs", id],
@@ -113,15 +114,21 @@ export default function JobDetail() {
   const applyMutation = useMutation({
     mutationFn: async (data: any) => {
       const res = await apiRequest("POST", `/api/jobs/${id}/apply`, data);
-      if (!res.ok) throw new Error("Failed to submit application");
       return res.json();
     },
     onSuccess: () => {
-      toast({ title: "Success", description: "Application submitted successfully!" });
+      setHasApplied(true);
+      toast({ title: "Application submitted!", description: "The studio will review your application." });
       applyForm.reset();
     },
     onError: (error: Error) => {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
+      const msg = error.message || "";
+      if (msg.startsWith("409:")) {
+        setHasApplied(true);
+        toast({ title: "Already applied", description: "You have already applied to this job.", variant: "destructive" });
+      } else {
+        toast({ title: "Error", description: "Could not submit application. Please try again.", variant: "destructive" });
+      }
     },
   });
 
@@ -402,6 +409,11 @@ export default function JobDetail() {
 
               {canApply && (
                 <div className="pt-4 border-t">
+                  {hasApplied ? (
+                    <Button className="w-full" disabled data-testid="button-apply">
+                      ✓ Application Submitted
+                    </Button>
+                  ) : (
                   <Dialog>
                     <DialogTrigger asChild>
                       <Button className="w-full" data-testid="button-apply">
@@ -460,6 +472,7 @@ export default function JobDetail() {
                       </Form>
                     </DialogContent>
                   </Dialog>
+                  )}
                 </div>
               )}
 

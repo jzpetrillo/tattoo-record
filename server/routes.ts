@@ -352,18 +352,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const postResult = await storage.getPost(req.params.id);
       if (!postResult) return res.status(404).json({ message: "Post not found" });
-      const alreadyLiked = await db.select().from(schema.likes)
-        .where(and(eq(schema.likes.postId, req.params.id), eq(schema.likes.userId, req.userId!)))
-        .limit(1);
-      if (alreadyLiked.length === 0) {
-        await storage.likePost(req.params.id, req.userId!);
-        if (postResult.post.authorId !== req.userId) {
-          storage.createNotification({
-            userId: postResult.post.authorId,
-            type: "LIKE",
-            payload: { actorId: req.userId, postId: req.params.id },
-          }).catch((e) => console.error("notification failed:", e));
-        }
+      const wasLiked = await storage.likePost(req.params.id, req.userId!);
+      if (wasLiked && postResult.post.authorId !== req.userId) {
+        storage.createNotification({
+          userId: postResult.post.authorId,
+          type: "LIKE",
+          payload: { actorId: req.userId, postId: req.params.id },
+        }).catch((e) => console.error("[like notification]", e));
+      }
+      if (wasLiked) {
         storage.logEvent({
           userId: req.userId,
           type: "post_like",
@@ -373,6 +370,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       res.json({ message: "Post liked" });
     } catch (error: any) {
+      console.error("[like post]", error);
       res.status(500).json({ message: "Internal server error" });
     }
   });
@@ -791,7 +789,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await storage.applyToJob(req.params.jobId, req.userId!, validated);
       res.json({ message: "Application submitted" });
     } catch (error: any) {
-      res.status(400).json({ message: error.message });
+      if (error?.name === "ZodError") {
+        return res.status(400).json({ message: error.errors?.[0]?.message || "Validation failed" });
+      }
+      if (error?.status === 409) {
+        return res.status(409).json({ message: error.message });
+      }
+      console.error("[job apply]", error);
+      res.status(400).json({ message: "Could not submit application. Please try again." });
     }
   });
 
@@ -901,7 +906,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       res.json(booking);
     } catch (error: any) {
-      res.status(400).json({ message: error.message });
+      if (error?.name === "ZodError") {
+        return res.status(400).json({ message: error.errors?.[0]?.message || "Validation failed" });
+      }
+      console.error("[booking create]", error);
+      res.status(400).json({ message: "Could not create booking. Please check your input." });
     }
   });
 

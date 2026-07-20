@@ -9,6 +9,25 @@ export async function initDatabase() {
   }
 
   try {
+    // De-duplicate job applications before adding the unique constraint
+    await pool.query(`
+      DELETE FROM job_applications
+      WHERE id NOT IN (
+        SELECT DISTINCT ON (job_id, artist_id) id
+        FROM job_applications
+        ORDER BY job_id, artist_id, created_at ASC
+      )
+    `);
+    await pool.query(`
+      CREATE UNIQUE INDEX IF NOT EXISTS unique_job_application
+        ON job_applications (job_id, artist_id)
+    `);
+    console.log("[db-init] Job applications unique constraint ready");
+  } catch (err) {
+    console.warn("[db-init] Job applications unique index skipped:", err instanceof Error ? err.message : String(err));
+  }
+
+  try {
     await pool.query(`
       ALTER TABLE posts ADD COLUMN IF NOT EXISTS embedding vector(1024)
     `);

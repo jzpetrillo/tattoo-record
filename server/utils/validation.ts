@@ -92,14 +92,19 @@ export const createFlashSaleSchema = z.object({
 });
 
 export const createBookingSchema = z.object({
+  title: z.string().min(1, "Title is required").max(255),
   artistId: z.string().uuid("Invalid artist ID"),
   scheduledAt: z.string().refine(v => new Date(v) > new Date(), { message: "Appointment must be in the future" }),
+  durationMinutes: z.number().int().positive().default(120),
   totalPriceCents: z.number().int().nonnegative().optional(),
   depositCents: z.number().int().nonnegative().optional(),
   description: z.string().optional(),
+  notes: z.string().optional(),
   tattooStyle: z.string().optional(),
   tattooSize: z.string().optional(),
   flashSaleId: z.string().uuid().optional(),
+  referenceImages: z.array(z.object({ publicId: z.string(), url: z.string() })).optional(),
+  reminderPreference: z.enum(["DAY_BEFORE", "WEEK_BEFORE", "NONE"]).optional(),
 }).refine(d => d.depositCents == null || d.totalPriceCents == null || d.depositCents <= d.totalPriceCents, {
   message: "Deposit cannot exceed total price",
   path: ["depositCents"],

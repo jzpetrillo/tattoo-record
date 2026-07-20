@@ -1,0 +1,61 @@
+Five bugs found in live E2E testing of "Tattoo Record" (Express + Drizzle + Postgres). Fix in order — the first two are total feature outages. Run `npm run check` after each. Verify with the exact checks listed.
+
+=====================================================
+HOTFIX 1 — CRITICAL: liking a post returns 500 for EVERY user and EVERY post
+=====================================================
+Repro: as any logged-in user, `POST /api/posts/<any id>/like` → `500 {"message":"Internal server error"}`. Confirmed on 4 different posts including never-liked ones. Unlike (DELETE) works fine. This broke when LIKE notifications were added.
+
+In server/routes.ts (the POST /api/posts/:id/like handler) and server/storage.ts (likePost):
+a) FIRST, add `console.error(error)` in the handler's catch so the real stack is logged, and run a like to capture the cause. Likely candidates: the createNotification call throwing (bad payload/enum/FK), a failed post-author lookup, or the unique-constraint violation on post_likes propagating.
+b) Make the notification NON-FATAL: a notification failure must never fail the like. Wrap it as fire-and-forget with a catch, e.g. `storage.createNotification({...}).catch(e => console.error("like notification failed:", e))` — and do not notify when the liker IS the post author.
+c) Make liking IDEMPOTENT: in storage.likePost, insert with `ON CONFLICT DO NOTHING` (there's a unique index on (postId,userId)) and only increment likeCount when a row was actually inserted. A duplicate like must return 200, not 500.
+VERIFY: like a fresh post → 200; like the SAME post again → 200 (not 500); likeCount increments exactly once.
+
+=====================================================
+HOTFIX 2 — CRITICAL: booking creation is impossible (title stripped by validation)
+=====================================================
+Repro: `POST /api/bookings` with a valid future date returns:
+`400 — null value in column "title" of relation "bookings" violates not-null constraint`
+Cause: the new booking Zod schema does NOT include `title`, so `.parse()` strips it (Zod drops unknown keys) and the insert writes NULL into a NOT NULL column. The DB has 0 bookings because no booking can ever be created.
+
+In server/utils/validation.ts (the booking schema) + server/routes.ts POST /api/bookings:
+- Add ALL legitimate fields to the schema so they survive parsing: `title` (string, min 1, required), `description` (optional), `artistId` (uuid, required), `flashSaleId` (uuid optional), `scheduledAt` (future date — keep the existing check), `durationMinutes` (int positive, default 120), `depositCents` / `totalPriceCents` (int, non-negative, optional), `referenceImages` (array optional), `reminderPreference` (enum optional), `notes` (optional).
+- Keep the existing validations that already work (past date rejected, negative prices rejected).
+- Add a cross-field rule: depositCents <= totalPriceCents when both present.
+VERIFY: create a booking with {artistId, title, scheduledAt(future), durationMinutes, depositCents, totalPriceCents} → 200 and the row appears in `GET /api/bookings?clientId=<me>`; past date still 400; negative price still 400.
+
+=====================================================
+HOTFIX 3 — HIGH: raw Postgres errors leak to clients
+=====================================================
+The 400 above returned the literal DB message (`null value in column "title" of relation "bookings"...`), exposing table/column internals. The earlier sanitization only covered 500s.
+- Audit every route catch block: log the real error server-side (`console.error`), but return a safe client message. Zod validation errors may return field-level messages; ANY database/driver error (unique violation, not-null, FK) must return a generic message like "Could not create booking. Please check your input." — never the driver text.
+- Do the same for the global error handler in server/index.ts.
+VERIFY: force a DB error and confirm the response contains no table/column names.
+
+=====================================================
+HOTFIX 4 — HIGH: likeCount / saveCount can go negative (data corruption)
+=====================================================
+Repro: calling unlike repeatedly decrements unconditionally. I drove post `bae3cd92-2b51-40f3-9eab-b8ff89b4e76f` to `likeCount: -3` with three unlikes.
+In server/storage.ts unlikePost + unsavePost:
+- Only decrement if a row was ACTUALLY deleted (use `.returning()` on the delete and skip the update when empty).
+- Clamp the update so it can never go below zero, e.g. `likeCount = GREATEST(0, like_count - 1)`. Same for saveCount and commentCount in deleteComment.
+DATA REPAIR (run once): `UPDATE posts SET like_count = 0 WHERE like_count < 0; UPDATE posts SET save_count = 0 WHERE save_count < 0; UPDATE posts SET comment_count = 0 WHERE comment_count < 0;`
+Optionally reconcile counts from the source tables: set like_count = (SELECT COUNT(*) FROM post_likes WHERE post_id = posts.id), and similarly for saves/comments.
+VERIFY: unlike a post you haven't liked → count stays >= 0 and does not change.
+
+=====================================================
+HOTFIX 5 — HIGH: duplicate job applications allowed
+=====================================================
+Repro: applying twice to the same job as the same artist returns `200 Application submitted` both times.
+- shared/schema.ts: add a unique index on job_applications (jobId, artistId); run `npm run db:push`.
+- server/storage.ts applyToJob + the route: check for an existing application first and return `409 {"message":"You have already applied to this job."}`; also reject applying to an inactive job.
+- Client (job-detail.tsx): surface the already-applied state (disable/relabel the Apply button) instead of allowing repeat submits.
+DATA REPAIR: de-duplicate existing rows before adding the unique index (keep the earliest per jobId+artistId). Note: artist1 currently has 2 duplicate applications on job 8202c6a5-bb04-449f-8ef1-0ddcc40ff459 from testing.
+
+=====================================================
+TEST-DATA CLEANUP (from my E2E run)
+=====================================================
+- `studio11` was set to REJECTED during a verification test but was originally PENDING — reset: `UPDATE users SET verification_status = 'PENDING', is_verified = false WHERE username = 'studio11';`
+- artist1's bio is currently "E2E TEST bio — botanical blackwork specialist." — restore or reseed as appropriate.
+
+Summarize per-file what changed, and confirm the two outage repros (like, booking) now succeed.
