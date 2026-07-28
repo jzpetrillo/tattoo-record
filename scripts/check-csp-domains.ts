@@ -43,11 +43,16 @@ function parseCspDomains(source: string): Set<string> {
   return domains;
 }
 
-function scanSourceDomains(files: string[]): Map<string, string[]> {
+async function scanSourceDomains(files: string[]): Promise<Map<string, string[]>> {
   const domainToFiles = new Map<string, string[]>();
 
-  for (const file of files) {
-    const source = fs.readFileSync(file, "utf8");
+  const results = await Promise.all(
+    files.map((file) =>
+      fs.promises.readFile(file, "utf8").then((source) => ({ file, source }))
+    )
+  );
+
+  for (const { file, source } of results) {
     for (const match of source.matchAll(URL_RE)) {
       const hostname = match[1].toLowerCase();
       if (!domainToFiles.has(hostname)) {
@@ -72,13 +77,13 @@ function isCovered(hostname: string, cspDomains: Set<string>): boolean {
   return false;
 }
 
-function main(): void {
+async function main(): Promise<void> {
   if (!fs.existsSync(CSP_FILE)) {
     console.error(`[check-csp-domains] ERROR: CSP file not found: ${CSP_FILE}`);
     process.exit(1);
   }
 
-  const cspSource = fs.readFileSync(CSP_FILE, "utf8");
+  const cspSource = await fs.promises.readFile(CSP_FILE, "utf8");
   const cspDomains = parseCspDomains(cspSource);
 
   if (cspDomains.size === 0) {
@@ -97,7 +102,7 @@ function main(): void {
     }
   }
 
-  const domainToFiles = scanSourceDomains(sourceFiles);
+  const domainToFiles = await scanSourceDomains(sourceFiles);
 
   const uncovered: Array<{ hostname: string; files: string[] }> = [];
 
