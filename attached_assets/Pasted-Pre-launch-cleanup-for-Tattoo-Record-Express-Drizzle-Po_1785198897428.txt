@@ -1,0 +1,50 @@
+Pre-launch cleanup for "Tattoo Record" (Express + Drizzle + Postgres/Neon; Vite/React client). Do all phases. Run `npm run check` and `npm run build` at the end and fix any errors.
+
+=== BLOCKER 1 — kill the public admin password ===
+- scripts/seed.ts: stop hardcoding "Test1234!". Generate each seed user's password from an env var or a random per-run value. For the ADMIN specifically, read SEED_ADMIN_PASSWORD from env and FAIL if it's unset when NODE_ENV=production. Print the generated demo passwords only to the console at seed time, never commit them.
+- Remove the plaintext credential tables from README.md and every docs/*.md and *_REPORT.md that lists "admin@tattoorecord.com / Test1234!" (and the other three). Replace with "seeded via scripts/seed.ts; see console output."
+- Add an admin password-reset/rotation note to the launch checklist. If a production DB was already seeded with Test1234!, rotate all seed-account passwords now.
+- Keep the dev-only quick-login buttons gated by `import.meta.env.MODE !== 'production'` (already correct) — but the underlying accounts must no longer share a known password.
+
+=== BLOCKER 2 — booking status enum (COMPLETED/CANCELLED → 500) ===
+- shared/schema.ts: add `export const bookingStatusEnum = pgEnum("booking_status", ["PENDING","APPROVED","REJECTED","COMPLETED","CANCELLED"]);` and change the bookings.status column to use it. Leave users.verificationStatus and studioApprovalRequests.status on approvalStatusEnum.
+- Migrate the existing column with an explicit cast (drizzle-kit push will NOT do this safely) — add to server/db-init.ts, idempotent:
+    DO $$ BEGIN CREATE TYPE booking_status AS ENUM ('PENDING','APPROVED','REJECTED','COMPLETED','CANCELLED'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+    ALTER TABLE bookings ALTER COLUMN status DROP DEFAULT;
+    ALTER TABLE bookings ALTER COLUMN status TYPE booking_status USING status::text::booking_status;
+    ALTER TABLE bookings ALTER COLUMN status SET DEFAULT 'PENDING';
+- Validate PUT /api/bookings/:id status against the 5-value enum (400, not 500, on invalid). Change storage.cancelBookingAdmin to set "CANCELLED" instead of "REJECTED".
+- client/src/pages/bookings.tsx: add REJECTED and CANCELLED filter tabs; confirm Mark Complete works.
+- VERIFY: as the booking's artist, PENDING→APPROVED→COMPLETED and APPROVED→CANCELLED all return 200; invalid status → 400 with no Postgres text.
+
+=== BLOCKER 3 — .gitignore ===
+Add: `.env`, `.env.*` (but keep `.env.example`), `test-results/`, `playwright-report/`, `*.log`. Then `git rm -r --cached test-results` so it stops being tracked.
+
+=== HIGH — repo hygiene / dead code ===
+- Delete server/services/openai.ts (unused — recommendations now use services/ai/recommendations).
+- `git rm` the root screenshots: first_post_retry.png, full_feed_retry.png, no-logout.png.
+- Remove committed prompt dumps and images under attached_assets/ (they're build-time noise, not app assets — confirm nothing imports them first).
+- Consolidate the redundant docs: keep ONE accurate README + one docs/LAUNCH_CHECKLIST; delete or archive APP_MAP.md, APP_STRUCTURE.md, COMPREHENSIVE_E2E_REPORT.md, E2E_TEST_REPORT.md, QA_SESSION_SUMMARY.md, TEST_FLOWS.md and the stale docs/QA_*.md that describe outdated/false state.
+
+=== POLISH ===
+- README.md: fix the stack section — remove "Next.js 14 (App Router)" and "Prisma ORM"; it's Vite + React + Wouter + Drizzle ORM + Express.
+- .env.example: remove OPENAI_API_KEY (unused) and NEXT_PUBLIC_API_BASE_URL; if the client needs an API base, document VITE_API_BASE_URL instead. Keep the strong-secret warning on JWT_SECRET/SESSION_SECRET.
+- .replit: remove the javascript_openai integration entry.
+- package.json: set "name" to "tattoo-record"; add "test": "playwright test".
+- Replace the 7 server console.log calls with a guarded logger (or remove) so production logs stay clean. Do NOT log response bodies for any /api/auth route (already handled — keep it).
+- Data repair on the live DB:
+    UPDATE users SET verification_status='PENDING', is_verified=false WHERE username='studio11';
+    UPDATE users SET bio='Fine line and blackwork specialist.' WHERE username='artist1';
+
+=== AI ACTIVATION (config — cannot be done in code) ===
+Add ANTHROPIC_API_KEY and VOYAGE_API_KEY to Replit Secrets, then run:
+    npx tsx scripts/backfill-tags.ts
+    npx tsx scripts/backfill-embeddings.ts
+If you are NOT launching with AI on, instead hide the AI Recommendations nav entry and the semantic-search UI so users don't hit disabled features.
+
+=== FINAL GATES ===
+- `npm run check` (tsc) passes.
+- `npm run build` succeeds.
+- `npm run test` (Playwright) passes.
+- Confirm no seed account uses a shared/known password; confirm .env is gitignored; confirm all five booking transitions work.
+Summarize every file changed/deleted.
