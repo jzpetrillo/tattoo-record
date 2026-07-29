@@ -26,11 +26,23 @@ const SCAN_GLOBS = [
   "scripts/**/*.ts",
   "shared/**/*.ts",
   "migrations/**/*.ts",
+  // Non-TypeScript assets that may contain hard-coded external URLs
+  "*.{json,html}",
+  "client/**/*.{json,html}",
+  "server/**/*.{json,html}",
+  "public/**/*.html",
+  ".env.example",
+  "*.env.example",
 ];
 
 const EXCLUDE_FILES = [
   "server/index.ts",
   "scripts/check-csp-domains.ts",
+  // Generated / package-manager files — URLs in these are not browser-loaded
+  "package-lock.json",
+  "package.json",
+  // shadcn component registry config — $schema URL is a CLI tool reference, not CSP-relevant
+  "components.json",
 ];
 
 const URL_RE = /https?:\/\/([a-zA-Z0-9.\-]+\.[a-zA-Z]{2,})/g;
