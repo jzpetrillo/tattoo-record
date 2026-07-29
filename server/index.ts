@@ -58,9 +58,32 @@ app.use(helmet({
         "https://api.voyageai.com",
       ],
       frameAncestors: ["'none'"],
+      // Instruct browsers to POST violation reports to our logging endpoint.
+      // This catches dynamically-constructed URLs that static scanning misses.
+      reportUri: ["/api/csp-report"],
     },
   },
 }));
+
+// Accept CSP violation reports from the browser.
+// Browsers send application/csp-report (a JSON body) — we must parse it
+// before any JSON body-parser runs, so register the route early.
+app.post(
+  "/api/csp-report",
+  express.json({ type: ["application/json", "application/csp-report"] }),
+  (req: Request, res: Response) => {
+    const report = req.body?.["csp-report"] ?? req.body;
+    log(
+      `[CSP violation] blocked-uri="${report?.["blocked-uri"] ?? "unknown"}" ` +
+      `violated-directive="${report?.["violated-directive"] ?? "unknown"}" ` +
+      `document-uri="${report?.["document-uri"] ?? "unknown"}"`,
+    );
+    if (isDev) {
+      console.warn("[CSP violation full report]", JSON.stringify(report, null, 2));
+    }
+    res.status(204).end();
+  },
+);
 
 declare module 'http' {
   interface IncomingMessage {
