@@ -84,14 +84,16 @@ export default function SidebarNav() {
           </button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start" className="w-56">
-          <DropdownMenuItem 
-            className="cursor-pointer"
-            onClick={() => setLocation("/ai-recommendations")}
-            data-testid="menu-ai-recommendations"
-          >
-            <Sparkles className="w-4 h-4 mr-2" />
-            AI Recommendations
-          </DropdownMenuItem>
+          {import.meta.env.VITE_AI_ENABLED === 'true' && (
+            <DropdownMenuItem 
+              className="cursor-pointer"
+              onClick={() => setLocation("/ai-recommendations")}
+              data-testid="menu-ai-recommendations"
+            >
+              <Sparkles className="w-4 h-4 mr-2" />
+              AI Recommendations
+            </DropdownMenuItem>
+          )}
           <DropdownMenuItem 
             className="cursor-pointer"
             onClick={() => setLocation("/saved")}

@@ -83,7 +83,7 @@ export async function sendWeeklyDigests() {
     }
   }
 
-  console.log(`[digest] Sent ${sent} weekly digests`);
+  if (process.env.NODE_ENV !== 'production') console.log(`[digest] Sent ${sent} weekly digests`);
 }
 
 export function startDigestScheduler() {
@@ -95,5 +95,5 @@ export function startDigestScheduler() {
       console.error("[digest] Scheduler error:", err);
     }
   }, WEEK_MS);
-  console.log("[digest] Weekly digest scheduler started");
+  if (process.env.NODE_ENV !== 'production') console.log("[digest] Weekly digest scheduler started");
 }

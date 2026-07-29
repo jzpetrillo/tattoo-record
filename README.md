@@ -5,8 +5,7 @@ A production-ready, full-stack tattoo social community platform with real-time m
 ## Tech Stack
 
 ### Frontend
-- Next.js 14 (App Router)
-- React 18
+- Vite + React 18
 - TypeScript
 - Tailwind CSS
 - shadcn/ui component library
@@ -20,17 +19,17 @@ A production-ready, full-stack tattoo social community platform with real-time m
 - Node.js
 - Express.js
 - TypeScript
-- Prisma ORM
+- Drizzle ORM
 - PostgreSQL (Neon compatible)
-- JWT authentication
+- Session-based authentication (express-session + passport)
 - WebSocket (ws)
 - Cloudinary (media storage)
-- OpenAI API (AI recommendations)
+- Anthropic Claude (AI recommendations)
 - bcrypt (password hashing)
 
 ## Features
 
-- **User Authentication**: JWT-based auth with role-based access (Artist, Studio, Enthusiast)
+- **User Authentication**: Session-based auth with role-based access (Artist, Studio, Enthusiast)
 - **Social Features**: Posts, likes, comments, follows, hashtags, sharing
 - **Real-time Messaging**: WebSocket-powered chat with typing indicators, read receipts, and reactions
 - **Stories**: 24-hour expiring stories with highlights (Instagram-like)
@@ -38,7 +37,7 @@ A production-ready, full-stack tattoo social community platform with real-time m
 - **Studio System**: Studio approval requests and artist management
 - **Job Board**: Job postings and application system
 - **Live Streaming**: Real-time live events with comments and reactions
-- **AI Recommendations**: OpenAI-powered tattoo design suggestions
+- **AI Recommendations**: Claude-powered tattoo design suggestions
 - **Search & Discovery**: Advanced search across posts, users, and hashtags
 
 ## Setup Instructions
@@ -47,7 +46,6 @@ A production-ready, full-stack tattoo social community platform with real-time m
 - Node.js 18+ installed
 - PostgreSQL database (or Neon account)
 - Cloudinary account
-- OpenAI API key
 
 ### Installation
 
@@ -57,14 +55,9 @@ npm install
 ```
 
 2. **Set up environment variables**
-Create a `.env` file in the root directory with the following:
+Copy `.env.example` to `.env` and fill in your values:
 ```bash
-DATABASE_URL=your_postgresql_connection_string
-SESSION_SECRET=your_session_secret
-CLOUDINARY_CLOUD_NAME=your_cloudinary_cloud_name
-CLOUDINARY_API_KEY=your_cloudinary_api_key
-CLOUDINARY_API_SECRET=your_cloudinary_api_secret
-OPENAI_API_KEY=your_openai_api_key
+cp .env.example .env
 ```
 
 3. **Push database schema**
@@ -100,3 +93,18 @@ Enthusiast: enthusiast1@tattoorecord.com / Test1234!
 5. **Start the development server**
 ```bash
 npm run dev
+```
+
+The app will be available at `http://localhost:5000`.
+
+## Available Scripts
+
+| Script | Description |
+|--------|-------------|
+| `npm run dev` | Start development server |
+| `npm run build` | Production build |
+| `npm run start` | Run production build |
+| `npm run check` | TypeScript type check |
+| `npm run check:csp` | Verify CSP domain allowlist |
+| `npm run db:push` | Push schema changes to database |
+| `npm test` | Run Playwright end-to-end tests |

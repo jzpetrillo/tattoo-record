@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 
 export default function Search() {
   const { token } = useAuth();
+  const aiEnabled = import.meta.env.VITE_AI_ENABLED === 'true';
   const [searchQuery, setSearchQuery] = useState("");
   const [semanticMode, setSemanticMode] = useState(false);
 
@@ -22,7 +23,7 @@ export default function Search() {
 
   const { data: semanticData, isLoading: isSemanticLoading } = useQuery<{ posts: any[]; available: boolean }>({
     queryKey: [`/api/search/semantic?q=${searchQuery}`],
-    enabled: !!token && searchQuery.length > 0 && semanticMode,
+    enabled: !!token && searchQuery.length > 0 && semanticMode && aiEnabled,
   });
 
   const users = searchData?.users || [];
@@ -57,30 +58,32 @@ export default function Search() {
             />
           </div>
 
-          <div className="flex items-center gap-2 mb-6">
-            <Button
-              variant={semanticMode ? "outline" : "default"}
-              size="sm"
-              onClick={() => setSemanticMode(false)}
-              data-testid="button-text-search"
-              className="text-xs"
-            >
-              Text
-            </Button>
-            <Button
-              variant={semanticMode ? "default" : "outline"}
-              size="sm"
-              onClick={() => setSemanticMode(true)}
-              data-testid="button-semantic-search"
-              className="text-xs gap-1"
-            >
-              <Sparkles className="w-3 h-3" />
-              AI Semantic
-            </Button>
-            {semanticMode && (
-              <span className="text-xs text-muted-foreground">finds posts by meaning, not keywords</span>
-            )}
-          </div>
+          {aiEnabled && (
+            <div className="flex items-center gap-2 mb-6">
+              <Button
+                variant={semanticMode ? "outline" : "default"}
+                size="sm"
+                onClick={() => setSemanticMode(false)}
+                data-testid="button-text-search"
+                className="text-xs"
+              >
+                Text
+              </Button>
+              <Button
+                variant={semanticMode ? "default" : "outline"}
+                size="sm"
+                onClick={() => setSemanticMode(true)}
+                data-testid="button-semantic-search"
+                className="text-xs gap-1"
+              >
+                <Sparkles className="w-3 h-3" />
+                AI Semantic
+              </Button>
+              {semanticMode && (
+                <span className="text-xs text-muted-foreground">finds posts by meaning, not keywords</span>
+              )}
+            </div>
+          )}
 
           {searchQuery.length > 0 && (
             <div className="space-y-6">
@@ -99,7 +102,7 @@ export default function Search() {
               )}
 
               {/* ── Semantic results ── */}
-              {semanticMode && !loading && (
+              {aiEnabled && semanticMode && !loading && (
                 <>
                   {!semanticAvailable && (
                     <p className="text-sm text-muted-foreground py-4 text-center border border-border">

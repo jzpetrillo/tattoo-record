@@ -37,14 +37,14 @@ export async function initDatabase() {
         END IF;
       END$$
     `);
-    console.log("[db-init] bookings.status migrated to booking_status enum");
+    if (process.env.NODE_ENV !== 'production') console.log("[db-init] bookings.status migrated to booking_status enum");
   } catch (err) {
     console.warn("[db-init] bookings status migration skipped:", err instanceof Error ? err.message : String(err));
   }
 
   try {
     await pool.query("CREATE EXTENSION IF NOT EXISTS vector");
-    console.log("[db-init] pgvector extension enabled");
+    if (process.env.NODE_ENV !== 'production') console.log("[db-init] pgvector extension enabled");
   } catch {
     console.warn("[db-init] pgvector not available — semantic search disabled");
   }
@@ -63,7 +63,7 @@ export async function initDatabase() {
       CREATE UNIQUE INDEX IF NOT EXISTS unique_job_application
         ON job_applications (job_id, artist_id)
     `);
-    console.log("[db-init] Job applications unique constraint ready");
+    if (process.env.NODE_ENV !== 'production') console.log("[db-init] Job applications unique constraint ready");
   } catch (err) {
     console.warn("[db-init] Job applications unique index skipped:", err instanceof Error ? err.message : String(err));
   }
@@ -76,7 +76,7 @@ export async function initDatabase() {
       CREATE INDEX IF NOT EXISTS posts_embedding_idx ON posts
         USING ivfflat (embedding vector_cosine_ops) WITH (lists = 100)
     `);
-    console.log("[db-init] Posts embedding column ready");
+    if (process.env.NODE_ENV !== 'production') console.log("[db-init] Posts embedding column ready");
   } catch (err) {
     console.warn("[db-init] Embedding column setup skipped:", err instanceof Error ? err.message : String(err));
   }

@@ -29,7 +29,7 @@ export default function MobileNav() {
     { path: "/bookings", icon: Calendar, label: "Bookings" },
     { path: "/flash-sales", icon: Zap, label: "Flash Sales" },
     { path: "/saved", icon: Bookmark, label: "Saved" },
-    { path: "/ai-recommendations", icon: Sparkles, label: "AI Recommendations" },
+    ...(import.meta.env.VITE_AI_ENABLED === 'true' ? [{ path: "/ai-recommendations", icon: Sparkles, label: "AI Recommendations" }] : []),
     ...(user?.role === "ADMIN" ? [{ path: "/admin", icon: Shield, label: "Admin" }] : []),
   ];
 

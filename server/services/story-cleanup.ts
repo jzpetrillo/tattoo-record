@@ -25,7 +25,7 @@ export async function cleanupExpiredStories() {
       .where(lt(stories.expiresAt, new Date()))
       .returning();
 
-    console.log(`Cleaned up ${result.length} expired stories`);
+    if (process.env.NODE_ENV !== 'production') console.log(`Cleaned up ${result.length} expired stories`);
     return result.length;
   } catch (error) {
     console.error("Story cleanup failed:", error);
