@@ -45,6 +45,16 @@ const EXCLUDE_FILES = [
   "components.json",
 ];
 
+// Directory patterns to exclude from globbing — generated output, vendor code,
+// and auto-generated migration artefacts that are not authored by developers.
+const EXCLUDE_DIRS = [
+  "dist/**",
+  "node_modules/**",
+  "build/**",
+  ".cache/**",
+  "migrations/**",
+];
+
 const URL_RE = /https?:\/\/([a-zA-Z0-9.\-]+\.[a-zA-Z]{2,})/g;
 
 function parseCspDomains(source: string): Set<string> {
@@ -105,7 +115,7 @@ async function main(): Promise<void> {
 
   const sourceFiles: string[] = [];
   for (const pattern of SCAN_GLOBS) {
-    const matches = globSync(pattern, { cwd: ROOT, absolute: true });
+    const matches = globSync(pattern, { cwd: ROOT, absolute: true, ignore: EXCLUDE_DIRS });
     for (const f of matches) {
       const rel = path.relative(ROOT, f);
       if (!EXCLUDE_FILES.some((ex) => rel === ex || rel.endsWith(ex))) {
