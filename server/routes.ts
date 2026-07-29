@@ -930,6 +930,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (status !== undefined && !VALID_BOOKING_STATUSES.includes(status)) {
         return res.status(400).json({ message: `Invalid status. Must be one of: ${VALID_BOOKING_STATUSES.join(", ")}` });
       }
+      // Enforce role-based status transition rules
+      if (status !== undefined) {
+        const isArtist = booking.artistId === req.userId;
+        const currentStatus = booking.status as string;
+        // Statuses only the artist may set
+        const artistOnlyStatuses = new Set(["APPROVED", "REJECTED", "COMPLETED"]);
+        // Valid transitions keyed by current status — artists only
+        const artistTransitions: Record<string, Set<string>> = {
+          PENDING:   new Set(["APPROVED", "REJECTED", "CANCELLED"]),
+          APPROVED:  new Set(["COMPLETED", "CANCELLED"]),
+          REJECTED:  new Set([]),
+          COMPLETED: new Set([]),
+          CANCELLED: new Set([]),
+        };
+        // Valid transitions for clients
+        const clientTransitions: Record<string, Set<string>> = {
+          PENDING:   new Set(["CANCELLED"]),
+          APPROVED:  new Set([]),
+          REJECTED:  new Set([]),
+          COMPLETED: new Set([]),
+          CANCELLED: new Set([]),
+        };
+        // Reject if client tries to set an artist-only status
+        if (!isArtist && artistOnlyStatuses.has(status)) {
+          return res.status(403).json({ message: "Not authorized to set this booking status" });
+        }
+        // Reject if the transition is not in the allowed set for the caller's role
+        const allowed = isArtist
+          ? (artistTransitions[currentStatus] ?? new Set())
+          : (clientTransitions[currentStatus] ?? new Set());
+        if (!allowed.has(status)) {
+          return res.status(403).json({ message: `Cannot transition booking from ${currentStatus} to ${status}` });
+        }
+      }
       const updated = await storage.updateBooking(req.params.id, status !== undefined ? { ...rest, status } : rest);
       res.json(updated);
     } catch (error: any) {
@@ -988,6 +1022,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Only the artist or client involved in the booking may cancel it
       if (booking.artistId !== req.userId && booking.clientId !== req.userId) {
         return res.status(403).json({ message: "Not authorized to cancel this booking" });
+      }
+      // Enforce the same role-based transition policy as PUT:
+      // cancellation via DELETE is equivalent to setting status → CANCELLED.
+      // Clients may only cancel PENDING bookings; artists may cancel PENDING or APPROVED.
+      const isArtist = booking.artistId === req.userId;
+      const currentStatus = booking.status as string;
+      const cancellableByClient = new Set(["PENDING"]);
+      const cancellableByArtist = new Set(["PENDING", "APPROVED"]);
+      const cancellable = isArtist ? cancellableByArtist : cancellableByClient;
+      if (!cancellable.has(currentStatus)) {
+        return res.status(403).json({
+          message: `Cannot cancel a booking that is already ${currentStatus}`,
+        });
       }
       await storage.deleteBooking(req.params.id);
       res.json({ message: "Booking cancelled" });
