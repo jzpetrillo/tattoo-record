@@ -471,6 +471,12 @@ export default function BookingsPage() {
             <TabsTrigger value="COMPLETED" className="min-h-[44px] px-3 sm:px-4 data-[state=active]:bg-black data-[state=active]:text-white dark:data-[state=active]:bg-white dark:data-[state=active]:text-black" data-testid="tab-completed">
               Completed
             </TabsTrigger>
+            <TabsTrigger value="REJECTED" className="min-h-[44px] px-3 sm:px-4 data-[state=active]:bg-black data-[state=active]:text-white dark:data-[state=active]:bg-white dark:data-[state=active]:text-black" data-testid="tab-rejected">
+              Rejected
+            </TabsTrigger>
+            <TabsTrigger value="CANCELLED" className="min-h-[44px] px-3 sm:px-4 data-[state=active]:bg-black data-[state=active]:text-white dark:data-[state=active]:bg-white dark:data-[state=active]:text-black" data-testid="tab-cancelled">
+              Cancelled
+            </TabsTrigger>
           </TabsList>
         </Tabs>
 

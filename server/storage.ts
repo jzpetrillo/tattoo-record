@@ -1450,7 +1450,7 @@ export class DatabaseStorage implements IStorage {
 
   async cancelBookingAdmin(bookingId: string) {
     await db.update(schema.bookings)
-      .set({ status: "REJECTED" as any, updatedAt: new Date() })
+      .set({ status: "CANCELLED" as any, updatedAt: new Date() })
       .where(eq(schema.bookings.id, bookingId));
   }
 

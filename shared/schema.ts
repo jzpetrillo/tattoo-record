@@ -31,6 +31,13 @@ export const approvalStatusEnum = pgEnum("approval_status", [
   "APPROVED",
   "REJECTED"
 ]);
+export const bookingStatusEnum = pgEnum("booking_status", [
+  "PENDING",
+  "APPROVED",
+  "REJECTED",
+  "COMPLETED",
+  "CANCELLED"
+]);
 export const jobTypeEnum = pgEnum("job_type", [
   "FULL_TIME",
   "PART_TIME",
@@ -501,7 +508,7 @@ export const bookings = pgTable("bookings", {
   durationMinutes: integer("duration_minutes").notNull().default(120),
   depositCents: integer("deposit_cents"),
   totalPriceCents: integer("total_price_cents"),
-  status: approvalStatusEnum("status").notNull().default("PENDING"),
+  status: bookingStatusEnum("status").notNull().default("PENDING"),
   paymentStatus: paymentStatusEnum("payment_status").notNull().default("UNPAID"),
   depositPaidAt: timestamp("deposit_paid_at"),
   fullPaymentAt: timestamp("full_payment_at"),

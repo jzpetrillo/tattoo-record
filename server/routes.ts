@@ -924,7 +924,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (booking.artistId !== req.userId && booking.clientId !== req.userId) {
         return res.status(403).json({ message: "Not authorized to update this booking" });
       }
-      const updated = await storage.updateBooking(req.params.id, req.body);
+      // Validate status if provided
+      const { status, ...rest } = req.body;
+      const VALID_BOOKING_STATUSES = ["PENDING", "APPROVED", "REJECTED", "COMPLETED", "CANCELLED"];
+      if (status !== undefined && !VALID_BOOKING_STATUSES.includes(status)) {
+        return res.status(400).json({ message: `Invalid status. Must be one of: ${VALID_BOOKING_STATUSES.join(", ")}` });
+      }
+      const updated = await storage.updateBooking(req.params.id, status !== undefined ? { ...rest, status } : rest);
       res.json(updated);
     } catch (error: any) {
       res.status(500).json({ message: "Internal server error" });
