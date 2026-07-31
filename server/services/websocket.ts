@@ -1,8 +1,15 @@
 import { WebSocketServer, WebSocket } from "ws";
-import { Server } from "http";
+import { Server, IncomingMessage } from "http";
+import jwt from "jsonwebtoken";
 import { db } from "../db";
 import { messages, conversationParticipants } from "@shared/schema";
 import { eq, and } from "drizzle-orm";
+
+const _jwtSecret = process.env.JWT_SECRET || process.env.SESSION_SECRET;
+if (!_jwtSecret) {
+  throw new Error("JWT_SECRET or SESSION_SECRET environment variable must be set");
+}
+const JWT_SECRET: string = _jwtSecret;
 
 interface WSClient extends WebSocket {
   userId?: string;
@@ -15,6 +22,23 @@ interface WSMessage {
 }
 
 let _wss: WebSocketServer | null = null;
+
+function extractAndVerifyToken(req: IncomingMessage): string | null {
+  try {
+    // Try query param first: ws://host/ws?token=...
+    const url = new URL(req.url!, "http://localhost");
+    const queryToken = url.searchParams.get("token");
+    const rawToken = queryToken
+      ?? req.headers["authorization"]?.replace(/^Bearer\s+/i, "");
+
+    if (!rawToken) return null;
+
+    const decoded = jwt.verify(rawToken, JWT_SECRET) as { userId: string };
+    return decoded.userId ?? null;
+  } catch {
+    return null;
+  }
+}
 
 export async function broadcastNewMessage(conversationId: string, message: any) {
   if (!_wss) return;
@@ -35,7 +59,14 @@ export function setupMessageWebSocket(server: Server) {
 
   const heartbeatInterval = parseInt(process.env.WEBSOCKET_HEARTBEAT_MS || "30000");
 
-  wss.on("connection", (ws: WSClient) => {
+  wss.on("connection", (ws: WSClient, req: IncomingMessage) => {
+    // Authenticate at handshake time — reject if no valid JWT
+    const userId = extractAndVerifyToken(req);
+    if (!userId) {
+      ws.close(4401, "Unauthorized");
+      return;
+    }
+    ws.userId = userId;
     ws.isAlive = true;
 
     ws.on("pong", () => {
@@ -48,7 +79,7 @@ export function setupMessageWebSocket(server: Server) {
 
         switch (message.type) {
           case "USER_ONLINE":
-            ws.userId = message.payload?.userId;
+            // userId is already set from the verified JWT — ignore any client-supplied value
             broadcast(wss, {
               type: "USER_ONLINE",
               payload: { userId: ws.userId }

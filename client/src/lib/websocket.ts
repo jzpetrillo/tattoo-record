@@ -1,7 +1,7 @@
-export function createWebSocket(path: string, onMessage: (data: any) => void) {
+export function createWebSocket(path: string, onMessage: (data: any) => void, token?: string) {
   const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
   const host = window.location.host || "localhost:5000";
-  const wsUrl = `${protocol}//${host}${path}`;
+  const wsUrl = `${protocol}//${host}${path}${token ? `?token=${encodeURIComponent(token)}` : ""}`;
   
   const socket = new WebSocket(wsUrl);
   

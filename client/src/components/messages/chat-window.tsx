@@ -41,10 +41,11 @@ export default function ChatWindow({ conversationId, otherUser, onBack }: ChatWi
       if (data.type === "NEW_MESSAGE" && data.payload.conversationId === conversationId) {
         queryClient.invalidateQueries({ queryKey: [`/api/conversations/${conversationId}/messages`] });
       }
-    });
+    }, token ?? undefined);
 
     setSocket(ws);
-    sendWebSocketMessage(ws, "USER_ONLINE", { userId: user.id });
+    // userId is authenticated server-side from the JWT — no need to send it
+    ws.onopen = () => sendWebSocketMessage(ws, "USER_ONLINE");
 
     return () => {
       ws.close();
