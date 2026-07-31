@@ -15,11 +15,13 @@ import { apiRequest } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import { Palette, Building2, Heart, Shield } from "lucide-react";
 
-const DEMO_ACCOUNTS = {
-  ARTIST: { email: "artist1@tattoorecord.com", password: "Test1234!" },
-  STUDIO: { email: "studio1@tattoorecord.com", password: "Test1234!" },
-  ENTHUSIAST: { email: "enthusiast1@tattoorecord.com", password: "Test1234!" },
-  ADMIN: { email: "admin@tattoorecord.com", password: "Test1234!" },
+// Dev-only quick-login: emails only — passwords are randomised at seed time and
+// printed to the console. Enter the seed-output password manually after clicking.
+const DEMO_ACCOUNT_EMAILS = {
+  ARTIST:     "artist1@tattoorecord.com",
+  STUDIO:     "studio1@tattoorecord.com",
+  ENTHUSIAST: "enthusiast1@tattoorecord.com",
+  ADMIN:      "admin@tattoorecord.com",
 } as const;
 
 const loginSchema = z.object({
@@ -87,33 +89,14 @@ export default function Auth() {
     },
   });
 
-  const [quickLoginPending, setQuickLoginPending] = useState<string | null>(null);
-
-  const handleQuickLogin = async (role: keyof typeof DEMO_ACCOUNTS) => {
-    setQuickLoginPending(role);
-    try {
-      const credentials = DEMO_ACCOUNTS[role];
-      const res = await apiRequest("POST", "/api/auth/login", credentials);
-      if (!res.ok) {
-        const error = await res.json().catch(() => ({ message: "Login failed" }));
-        throw new Error(error.message || "Login failed");
-      }
-      const data = await res.json();
-      setAuth(data.user, data.token);
-      setLocation("/");
-      toast({ title: `Welcome, ${data.user.username}!`, description: `Logged in as ${data.user.role}` });
-    } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : "An error occurred";
-      toast({ 
-        title: "Quick login failed", 
-        description: message === "Login failed" 
-          ? "Demo account not available. Please register or check seed data."
-          : message,
-        variant: "destructive" 
-      });
-    } finally {
-      setQuickLoginPending(null);
-    }
+  // Pre-fills the email field; the developer must enter the password from `npm run seed` output.
+  const handleQuickLogin = (role: keyof typeof DEMO_ACCOUNT_EMAILS) => {
+    loginForm.setValue("email", DEMO_ACCOUNT_EMAILS[role]);
+    loginForm.setFocus("password");
+    toast({
+      title: "Email pre-filled",
+      description: "Enter the seed password printed by `npm run seed` to continue.",
+    });
   };
 
   return (
@@ -266,45 +249,41 @@ export default function Auth() {
                   variant="outline"
                   size="sm"
                   onClick={() => handleQuickLogin("ARTIST")}
-                  disabled={quickLoginPending !== null}
                   className="flex items-center gap-2"
                   data-testid="quick-login-artist"
                 >
                   <Palette className="w-4 h-4" />
-                  {quickLoginPending === "ARTIST" ? "..." : "Artist"}
+                  Artist
                 </Button>
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => handleQuickLogin("STUDIO")}
-                  disabled={quickLoginPending !== null}
                   className="flex items-center gap-2"
                   data-testid="quick-login-studio"
                 >
                   <Building2 className="w-4 h-4" />
-                  {quickLoginPending === "STUDIO" ? "..." : "Studio"}
+                  Studio
                 </Button>
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => handleQuickLogin("ENTHUSIAST")}
-                  disabled={quickLoginPending !== null}
                   className="flex items-center gap-2"
                   data-testid="quick-login-enthusiast"
                 >
                   <Heart className="w-4 h-4" />
-                  {quickLoginPending === "ENTHUSIAST" ? "..." : "Enthusiast"}
+                  Enthusiast
                 </Button>
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => handleQuickLogin("ADMIN")}
-                  disabled={quickLoginPending !== null}
                   className="flex items-center gap-2"
                   data-testid="quick-login-admin"
                 >
                   <Shield className="w-4 h-4" />
-                  {quickLoginPending === "ADMIN" ? "..." : "Admin"}
+                  Admin
                 </Button>
               </div>
             </>

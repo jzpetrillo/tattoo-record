@@ -120,21 +120,53 @@ npm run start
 
 ## Admin Setup
 
-1. Login: `admin@tattoorecord.com` / `Test1234!`
+1. Login: `admin@tattoorecord.com` — password printed to console at seed time
 2. Navigate to `/admin`
 3. Review pending artist/studio verifications
-4. **Change the admin password before going public**
+4. **Rotate all seed-account passwords before going public** (see Password Rotation step below)
+
+---
+
+## Seed Account Password Rotation
+
+If the production database was seeded (even once) with `scripts/seed.ts`, rotate all four
+seed accounts before launch:
+
+- `admin@tattoorecord.com`
+- `artist1@tattoorecord.com`
+- `studio1@tattoorecord.com`
+- `enthusiast1@tattoorecord.com`
+
+Reset via the app's change-password flow, or directly in the database:
+
+```sql
+UPDATE users
+SET "hashedPassword" = '<new-bcrypt-hash>'
+WHERE email IN (
+  'admin@tattoorecord.com',
+  'artist1@tattoorecord.com',
+  'studio1@tattoorecord.com',
+  'enthusiast1@tattoorecord.com'
+);
+```
+
+In production, set `SEED_ADMIN_PASSWORD` before running the seed script so the admin
+account is never created with a randomly generated, console-visible password.
 
 ---
 
 ## Test Accounts
 
+Passwords are generated at seed time and printed to the console.
+Check seed script output for the current credentials
+(seeded via `scripts/seed.ts`; see console output).
+
 | Role | Email | Password |
 |------|-------|----------|
-| Admin | admin@tattoorecord.com | Test1234! |
-| Artist | artist1@tattoorecord.com | Test1234! |
-| Studio | studio1@tattoorecord.com | Test1234! |
-| Enthusiast | enthusiast1@tattoorecord.com | Test1234! |
+| Admin | admin@tattoorecord.com | see seed console output |
+| Artist | artist1@tattoorecord.com | see seed console output |
+| Studio | studio1@tattoorecord.com | see seed console output |
+| Enthusiast | enthusiast1@tattoorecord.com | see seed console output |
 
 ---
 

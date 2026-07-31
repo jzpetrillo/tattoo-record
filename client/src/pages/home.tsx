@@ -7,29 +7,26 @@ import PostFeed from "@/components/posts/post-feed";
 import ForYouRail from "@/components/for-you/for-you-rail";
 import { useAuth } from "@/hooks/use-auth";
 import { Link, useLocation } from "wouter";
-import { useMutation, useQuery } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/api";
-import { useToast } from "@/hooks/use-toast";
+import { useQuery } from "@tanstack/react-query";
 import { Star, ChevronLeft, ChevronRight } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 
 /**
- * Demo accounts for quick login feature.
- * These accounts are pre-created in the database from seed data.
- * Password for all test accounts: Test1234!
+ * Dev-only quick-login: emails only — passwords are randomised at seed time and
+ * printed to the console. Clicking a button redirects to /auth with the email
+ * pre-filled; enter the seed-output password manually.
  */
-const DEMO_ACCOUNTS = {
-  ARTIST: { email: "artist1@tattoorecord.com", password: "Test1234!" },
-  STUDIO: { email: "studio1@tattoorecord.com", password: "Test1234!" },
-  ENTHUSIAST: { email: "enthusiast1@tattoorecord.com", password: "Test1234!" },
-  ADMIN: { email: "admin@tattoorecord.com", password: "Test1234!" },
+const DEMO_ACCOUNT_EMAILS = {
+  ARTIST:     "artist1@tattoorecord.com",
+  STUDIO:     "studio1@tattoorecord.com",
+  ENTHUSIAST: "enthusiast1@tattoorecord.com",
+  ADMIN:      "admin@tattoorecord.com",
 } as const;
 
 export default function Home() {
-  const { user, setAuth } = useAuth();
+  const { user } = useAuth();
   const [, setLocation] = useLocation();
-  const { toast } = useToast();
   const [featuredScrollPosition, setFeaturedScrollPosition] = useState(0);
 
   const { data: featuredPosts = [], isLoading: featuredLoading } = useQuery<any[]>({
@@ -49,40 +46,11 @@ export default function Home() {
     }
   };
 
-  const createQuickLoginMutation = () => useMutation({
-    mutationFn: async (credentials: { email: string; password: string }) => {
-      const res = await apiRequest("POST", "/api/auth/login", credentials);
-      if (!res.ok) {
-        const error = await res.json().catch(() => ({ message: "Login failed" }));
-        throw new Error(error.message || "Login failed");
-      }
-      return res.json();
-    },
-    onSuccess: (data) => {
-      setAuth(data.user, data.token);
-      setLocation("/");
-      toast({ title: `Welcome, ${data.user.username}!`, description: `Logged in as ${data.user.role}` });
-    },
-    onError: (error: unknown) => {
-      const message = error instanceof Error ? error.message : "An error occurred";
-      toast({ 
-        title: "Quick login failed", 
-        description: message === "Login failed" 
-          ? "Demo account not available. Please use the Enter button to create your own account."
-          : message,
-        variant: "destructive" 
-      });
-    },
-  });
-
-  const artistMutation = createQuickLoginMutation();
-  const studioMutation = createQuickLoginMutation();
-  const enthusiastMutation = createQuickLoginMutation();
-  const adminMutation = createQuickLoginMutation();
-
-  const handleQuickLogin = (role: keyof typeof DEMO_ACCOUNTS, mutation: ReturnType<typeof createQuickLoginMutation>) => {
-    const credentials = DEMO_ACCOUNTS[role];
-    mutation.mutate(credentials);
+  // Redirects to /auth with the email pre-filled via query param.
+  // The developer must enter the password from `npm run seed` console output.
+  const handleQuickLogin = (role: keyof typeof DEMO_ACCOUNT_EMAILS) => {
+    const email = encodeURIComponent(DEMO_ACCOUNT_EMAILS[role]);
+    setLocation(`/auth?email=${email}`);
   };
 
   if (!user) {
@@ -101,36 +69,32 @@ export default function Home() {
             <p className="text-xs uppercase tracking-wider opacity-40 mb-4">Quick Demo Login</p>
             <div className="flex gap-4 justify-center flex-wrap">
               <button
-                onClick={() => handleQuickLogin("ARTIST", artistMutation)}
-                disabled={artistMutation.isPending}
-                className="px-6 py-2 border border-foreground/40 hover:border-foreground hover:bg-foreground hover:text-background transition-all uppercase text-xs tracking-wider disabled:opacity-50"
+                onClick={() => handleQuickLogin("ARTIST")}
+                className="px-6 py-2 border border-foreground/40 hover:border-foreground hover:bg-foreground hover:text-background transition-all uppercase text-xs tracking-wider"
                 data-testid="quick-login-artist"
               >
-                {artistMutation.isPending ? "..." : "Demo Artist"}
+                Demo Artist
               </button>
               <button
-                onClick={() => handleQuickLogin("STUDIO", studioMutation)}
-                disabled={studioMutation.isPending}
-                className="px-6 py-2 border border-foreground/40 hover:border-foreground hover:bg-foreground hover:text-background transition-all uppercase text-xs tracking-wider disabled:opacity-50"
+                onClick={() => handleQuickLogin("STUDIO")}
+                className="px-6 py-2 border border-foreground/40 hover:border-foreground hover:bg-foreground hover:text-background transition-all uppercase text-xs tracking-wider"
                 data-testid="quick-login-studio"
               >
-                {studioMutation.isPending ? "..." : "Demo Studio"}
+                Demo Studio
               </button>
               <button
-                onClick={() => handleQuickLogin("ENTHUSIAST", enthusiastMutation)}
-                disabled={enthusiastMutation.isPending}
-                className="px-6 py-2 border border-foreground/40 hover:border-foreground hover:bg-foreground hover:text-background transition-all uppercase text-xs tracking-wider disabled:opacity-50"
+                onClick={() => handleQuickLogin("ENTHUSIAST")}
+                className="px-6 py-2 border border-foreground/40 hover:border-foreground hover:bg-foreground hover:text-background transition-all uppercase text-xs tracking-wider"
                 data-testid="quick-login-enthusiast"
               >
-                {enthusiastMutation.isPending ? "..." : "Demo Enthusiast"}
+                Demo Enthusiast
               </button>
               <button
-                onClick={() => handleQuickLogin("ADMIN", adminMutation)}
-                disabled={adminMutation.isPending}
-                className="px-6 py-2 border border-foreground/40 hover:border-foreground hover:bg-foreground hover:text-background transition-all uppercase text-xs tracking-wider disabled:opacity-50"
+                onClick={() => handleQuickLogin("ADMIN")}
+                className="px-6 py-2 border border-foreground/40 hover:border-foreground hover:bg-foreground hover:text-background transition-all uppercase text-xs tracking-wider"
                 data-testid="quick-login-admin"
               >
-                {adminMutation.isPending ? "..." : "Demo Admin"}
+                Demo Admin
               </button>
             </div>
           </div>

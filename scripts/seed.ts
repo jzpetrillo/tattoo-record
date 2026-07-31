@@ -1,6 +1,7 @@
 import { db } from "../server/db";
 import { faker } from "@faker-js/faker";
 import bcrypt from "bcrypt";
+import crypto from "crypto";
 import * as schema from "../shared/schema";
 
 // COMPREHENSIVE DATABASE SEEDING SCRIPT FOR TATTOO RECORD
@@ -90,15 +91,45 @@ async function clearDatabase() {
 
 async function seedUsers() {
   console.log("👥 Creating users...");
-  
-  const hashedPassword = await bcrypt.hash("Test1234!", 10);
+
+  // --- Admin password ---
+  const isProduction = process.env.NODE_ENV === "production";
+  const adminPasswordRaw = process.env.SEED_ADMIN_PASSWORD;
+  if (isProduction && !adminPasswordRaw) {
+    throw new Error(
+      "SEED_ADMIN_PASSWORD env var must be set when running the seed script in production."
+    );
+  }
+  const adminPassword = adminPasswordRaw ?? crypto.randomBytes(12).toString("base64url");
+  const hashedAdminPassword = await bcrypt.hash(adminPassword, 10);
+
+  // --- Demo account passwords (random per run) ---
+  const studioPassword   = crypto.randomBytes(12).toString("base64url");
+  const artistPassword   = crypto.randomBytes(12).toString("base64url");
+  const enthusiastPassword = crypto.randomBytes(12).toString("base64url");
+  const hashedStudioPassword   = await bcrypt.hash(studioPassword, 10);
+  const hashedArtistPassword   = await bcrypt.hash(artistPassword, 10);
+  const hashedEnthusiastPassword = await bcrypt.hash(enthusiastPassword, 10);
+
+  console.log("\n🔑 Seed account passwords (save these now):");
+  // Never echo back a secret that was read from the environment — it is already known to the caller.
+  if (adminPasswordRaw) {
+    console.log("   admin@tattoorecord.com          : (configured via SEED_ADMIN_PASSWORD env var)");
+  } else {
+    console.log(`   admin@tattoorecord.com          : ${adminPassword}`);
+  }
+  console.log(`   studio[N]@tattoorecord.com      : ${studioPassword}`);
+  console.log(`   artist[N]@tattoorecord.com      : ${artistPassword}`);
+  console.log(`   enthusiast[N]@tattoorecord.com  : ${enthusiastPassword}`);
+  console.log("   Set TEST_SEED_PASSWORD=<artist password> before running Playwright tests.\n");
+
   const users: typeof schema.users.$inferInsert[] = [];
   
   // Create 1 admin
   users.push({
     email: "admin@tattoorecord.com",
     username: "admin_tattoorecord",
-    hashedPassword,
+    hashedPassword: hashedAdminPassword,
     role: "ADMIN" as const,
     firstName: "Admin",
     lastName: "User",
@@ -116,7 +147,7 @@ async function seedUsers() {
     users.push({
       email: `studio${i}@tattoorecord.com`,
       username: `studio${i}`,
-      hashedPassword,
+      hashedPassword: hashedStudioPassword,
       role: "STUDIO" as const,
       firstName: studioDisplayName,
       lastName: "Studio",
@@ -139,7 +170,7 @@ async function seedUsers() {
     users.push({
       email: `artist${i}@tattoorecord.com`,
       username: `artist${i}`,
-      hashedPassword,
+      hashedPassword: hashedArtistPassword,
       role: "ARTIST" as const,
       firstName,
       lastName,
@@ -162,7 +193,7 @@ async function seedUsers() {
     users.push({
       email: `enthusiast${i}@tattoorecord.com`,
       username: `enthusiast${i}`,
-      hashedPassword,
+      hashedPassword: hashedEnthusiastPassword,
       role: "ENTHUSIAST" as const,
       firstName,
       lastName,
@@ -781,11 +812,7 @@ async function main() {
     console.log(`   - Every user has 10+ items across all relevant features`);
     console.log(`   - Social interactions (likes, comments, follows) added`);
     console.log(`   - Portfolio items, jobs, messages, livestreams included\n`);
-    console.log("🔑 Test Credentials:");
-    console.log("   - Admin: admin@tattoorecord.com / Test1234!");
-    console.log("   - Studio: studio1@tattoorecord.com / Test1234!");
-    console.log("   - Artist: artist1@tattoorecord.com / Test1234!");
-    console.log("   - Enthusiast: enthusiast1@tattoorecord.com / Test1234!\n");
+    console.log("🔑 Seed account passwords were printed above at startup.");
     
   } catch (error) {
     console.error("\n❌ Error during seeding:", error);

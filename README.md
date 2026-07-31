@@ -83,12 +83,10 @@ This will create:
 - **Notifications**: 10-30 notifications per user
 
 **Test Credentials:**
-```
-Admin:      admin@tattoorecord.com / Test1234!
-Studio:     studio1@tattoorecord.com / Test1234!
-Artist:     artist1@tattoorecord.com / Test1234!
-Enthusiast: enthusiast1@tattoorecord.com / Test1234!
-```
+
+Passwords are generated at seed time and printed to the console.
+Check the seed output for the admin and demo account passwords
+(seeded via `scripts/seed.ts`; see console output).
 
 5. **Start the development server**
 ```bash

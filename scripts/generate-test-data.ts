@@ -1,6 +1,7 @@
 import { db } from "../server/db";
 import * as schema from "../shared/schema";
 import bcrypt from "bcrypt";
+import crypto from "crypto";
 import { eq, sql } from "drizzle-orm";
 
 const TOTAL_USERS = 100;
@@ -11,6 +12,19 @@ const ENTHUSIASTS = 34;
 async function generateTestData() {
   console.log("Starting test data generation...");
 
+  // Generate random per-run passwords (never hardcode credentials)
+  const studioPassword   = crypto.randomBytes(12).toString("base64url");
+  const artistPassword   = crypto.randomBytes(12).toString("base64url");
+  const userPassword     = crypto.randomBytes(12).toString("base64url");
+  const hashedStudioPassword = await bcrypt.hash(studioPassword, 10);
+  const hashedArtistPassword = await bcrypt.hash(artistPassword, 10);
+  const hashedUserPassword   = await bcrypt.hash(userPassword, 10);
+
+  console.log("\n🔑 Generated test account passwords (save these now):");
+  console.log(`   studio[N]@tattoorecord.com : ${studioPassword}`);
+  console.log(`   artist[N]@tattoorecord.com : ${artistPassword}`);
+  console.log(`   user[N]@tattoorecord.com   : ${userPassword}\n`);
+
   // Create users
   const users: any[] = [];
   
@@ -18,12 +32,11 @@ async function generateTestData() {
   for (let i = 1; i <= STUDIOS; i++) {
     const username = `studio_${i}`;
     const email = `studio${i}@tattoorecord.com`;
-    const hashedPassword = await bcrypt.hash("Test1234!", 10);
     
     const [user] = await db.insert(schema.users).values({
       username,
       email,
-      hashedPassword,
+      hashedPassword: hashedStudioPassword,
       role: "STUDIO",
       bio: `Professional tattoo studio ${i}. Quality work, experienced artists.`,
       avatarUrl: `https://api.dicebear.com/7.x/initials/svg?seed=${username}`,
@@ -48,12 +61,11 @@ async function generateTestData() {
   for (let i = 1; i <= ARTISTS; i++) {
     const username = `artist_${i}`;
     const email = `artist${i}@tattoorecord.com`;
-    const hashedPassword = await bcrypt.hash("Test1234!", 10);
     
     const [user] = await db.insert(schema.users).values({
       username,
       email,
-      hashedPassword,
+      hashedPassword: hashedArtistPassword,
       role: "ARTIST",
       bio: `Tattoo artist specializing in ${i % 2 === 0 ? 'traditional' : 'modern'} styles.`,
       avatarUrl: `https://api.dicebear.com/7.x/avataaars/svg?seed=${username}`,
@@ -78,12 +90,11 @@ async function generateTestData() {
   for (let i = 1; i <= ENTHUSIASTS; i++) {
     const username = `user_${i}`;
     const email = `user${i}@tattoorecord.com`;
-    const hashedPassword = await bcrypt.hash("Test1234!", 10);
     
     const [user] = await db.insert(schema.users).values({
       username,
       email,
-      hashedPassword,
+      hashedPassword: hashedUserPassword,
       role: "ENTHUSIAST",
       bio: `Tattoo enthusiast. Love collecting ink!`,
       avatarUrl: `https://api.dicebear.com/7.x/bottts/svg?seed=${username}`,

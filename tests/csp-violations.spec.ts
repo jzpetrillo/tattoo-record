@@ -1,8 +1,17 @@
 import { test, expect, type Page, type ConsoleMessage } from "@playwright/test";
 
 const TEST_EMAIL = "artist1@tattoorecord.com";
-const TEST_PASSWORD = "Test1234!";
 const TEST_USERNAME = "artist1";
+
+// TEST_SEED_PASSWORD must be set to the artist password printed by `npm run seed`.
+// Run: TEST_SEED_PASSWORD=<password> npx playwright test
+const TEST_PASSWORD = process.env.TEST_SEED_PASSWORD;
+if (!TEST_PASSWORD) {
+  throw new Error(
+    "TEST_SEED_PASSWORD is not set. Run `npm run seed`, copy the artist password from the console output, " +
+    "and re-run tests with: TEST_SEED_PASSWORD=<password> npx playwright test"
+  );
+}
 
 const STUDIO_EMAIL = "studio1@tattoorecord.com";
 const STUDIO_USERNAME = "studio1";
@@ -10,7 +19,7 @@ const STUDIO_USERNAME = "studio1";
 const ENTHUSIAST_EMAIL = "enthusiast1@tattoorecord.com";
 const ENTHUSIAST_USERNAME = "enthusiast1";
 
-async function loginAs(page: Page, email: string, password = "Test1234!"): Promise<void> {
+async function loginAs(page: Page, email: string, password = TEST_PASSWORD): Promise<void> {
   await page.goto("/auth");
   await page.getByLabel(/email/i).fill(email);
   await page.getByLabel(/password/i).fill(password);

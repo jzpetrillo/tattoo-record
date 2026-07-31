@@ -1624,7 +1624,7 @@ POST /api/hashtags/update-trending called
 - [ ] Fix flash sale overbooking (atomic DB check)
 - [ ] Set all production environment variables
 - [ ] Run `npm run db:push` on production database
-- [ ] Change admin account password from `Test1234!`
+- [ ] Rotate all seed account passwords (see `docs/LAUNCH_CHECKLIST.md` → Seed Account Password Rotation)
 - [ ] Confirm Cloudinary secrets work in production
 - [ ] Confirm OpenAI key works in production (if AI feature enabled at launch)
 - [ ] Add Helmet.js for HTTP security headers
@@ -1748,7 +1748,7 @@ Well-indexed for common access patterns:
 | No health check endpoint | Load balancer / uptime monitoring has nothing to ping |
 | No database migration system | Schema changes require manual `db:push` |
 | No backup strategy documentation | Relies entirely on Neon's built-in backups |
-| Demo accounts not removed | `Test1234!` credentials in production are a security risk |
+| Demo accounts not removed | Seed account credentials in production are a security risk — rotate them before launch |
 
 ---
 
@@ -1772,7 +1772,7 @@ Well-indexed for common access patterns:
 
 1. **[CRITICAL]** Fix WebSocket `broadcastToConversation()` — privacy leak sending all messages to all users
 2. **[CRITICAL]** Fix flash sale overbooking — add atomic slot check in `createBooking()`
-3. **[HIGH]** Change all demo account passwords (`Test1234!`)
+3. **[HIGH]** Rotate all seed account passwords (seeded via `scripts/seed.ts`; see console output)
 4. **[HIGH]** Set `CLOUDINARY_*` and `OPENAI_API_KEY` secrets in production
 5. **[HIGH]** Add `helmet()` middleware for HTTP security headers
 
@@ -1803,7 +1803,7 @@ The following issues **must be resolved before going live**:
 |---|-------|----------|---------------|
 | 1 | WebSocket `broadcastToConversation()` sends messages to all users | CRITICAL | 2–4 hours |
 | 2 | Flash sale booking has no atomic slot limit check | CRITICAL | 1–2 hours |
-| 3 | Demo account passwords (`Test1234!`) exist in DB | CRITICAL | 15 minutes |
+| 3 | Seed account passwords exist in DB — rotate before go-live | CRITICAL | 15 minutes |
 | 4 | Production environment secrets not configured | BLOCKER | 30 minutes |
 | 5 | No Helmet.js HTTP security headers | HIGH | 30 minutes |
 
@@ -1980,14 +1980,18 @@ No other cron jobs or scheduled tasks exist.
 | zod | 3.x | Schema validation |
 | lucide-react | Latest | Icon set |
 
-## G. Test Accounts (Development Only — MUST CHANGE IN PRODUCTION)
+## G. Test Accounts (Development Only — MUST ROTATE IN PRODUCTION)
+
+Passwords are generated at seed time and printed to the console.
+Check the seed script output for current credentials
+(seeded via `scripts/seed.ts`; see console output).
 
 | Role | Email | Password |
 |------|-------|----------|
-| Admin | admin@tattoorecord.com | Test1234! |
-| Artist | artist1@tattoorecord.com | Test1234! |
-| Studio | studio1@tattoorecord.com | Test1234! |
-| Enthusiast | enthusiast1@tattoorecord.com | Test1234! |
+| Admin | admin@tattoorecord.com | see seed console output |
+| Artist | artist1@tattoorecord.com | see seed console output |
+| Studio | studio1@tattoorecord.com | see seed console output |
+| Enthusiast | enthusiast1@tattoorecord.com | see seed console output |
 
 ## H. Known Dead / Unused Code
 
