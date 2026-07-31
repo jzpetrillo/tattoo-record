@@ -18,6 +18,7 @@ interface FlashSale {
   originalPriceCents: number | null;
   expiresAt: string;
   availableSlots: number | null;
+  bookedSlots: number | null;
   media?: { url: string; type: string }[];
   artist?: {
     id: string;
@@ -90,29 +91,53 @@ export default function FlashSalesPage() {
           />
         ) : (
           <div className="grid grid-cols-3 gap-px bg-foreground">
-            {flashSales.map((sale) => (
-              <Link
-                key={sale.id}
-                href={`/u/${sale.artist?.username || ''}`}
-                data-testid={`flash-sale-${sale.id}`}
-              >
-                <Card className="p-0 overflow-hidden transition-all cursor-pointer border border-border group">
+            {flashSales.map((sale) => {
+              const spotsRemaining =
+                sale.availableSlots != null
+                  ? sale.availableSlots - (sale.bookedSlots ?? 0)
+                  : null;
+              const isSoldOut =
+                sale.availableSlots != null &&
+                (sale.bookedSlots ?? 0) >= sale.availableSlots;
+
+              const cardContent = (
+                <Card
+                  className={`p-0 overflow-hidden transition-all border border-border group ${
+                    isSoldOut ? "opacity-70 cursor-not-allowed" : "cursor-pointer"
+                  }`}
+                >
                   <div className="aspect-square bg-secondary relative overflow-hidden">
                     {sale.media && sale.media.length > 0 ? (
                       <>
                         <img
                           src={sale.media[0].url}
                           alt={sale.title}
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                          className={`w-full h-full object-cover transition-transform ${
+                            !isSoldOut ? "group-hover:scale-105" : "grayscale"
+                          }`}
                         />
-                        <div className="absolute top-3 right-3 bg-flash px-3 py-1 flex items-center gap-1">
-                          <Zap className="w-4 h-4 text-[#111] fill-current" />
-                          <span className="text-[#111] text-sm font-mono font-bold tracking-widest">FLASH</span>
-                        </div>
+                        {isSoldOut ? (
+                          <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+                            <span className="text-white text-lg font-mono font-bold tracking-widest uppercase">
+                              Sold Out
+                            </span>
+                          </div>
+                        ) : (
+                          <div className="absolute top-3 right-3 bg-flash px-3 py-1 flex items-center gap-1">
+                            <Zap className="w-4 h-4 text-[#111] fill-current" />
+                            <span className="text-[#111] text-sm font-mono font-bold tracking-widest">FLASH</span>
+                          </div>
+                        )}
                       </>
                     ) : (
                       <div className="w-full h-full flex items-center justify-center text-muted-foreground">
-                        <Zap className="w-16 h-16" />
+                        {isSoldOut ? (
+                          <span className="text-base font-mono font-bold tracking-widest uppercase text-muted-foreground">
+                            Sold Out
+                          </span>
+                        ) : (
+                          <Zap className="w-16 h-16" />
+                        )}
                       </div>
                     )}
                   </div>
@@ -148,11 +173,15 @@ export default function FlashSalesPage() {
                         <Clock className="w-4 h-4" />
                         <span>{getRemainingTime(sale.expiresAt)}</span>
                       </div>
-                      {sale.availableSlots != null && (
+                      {isSoldOut ? (
+                        <Badge variant="destructive" className="text-xs" data-testid={`sold-out-badge-${sale.id}`}>
+                          Sold Out
+                        </Badge>
+                      ) : spotsRemaining != null ? (
                         <div className="text-sm text-muted-foreground">
-                          {sale.availableSlots} {sale.availableSlots === 1 ? 'spot' : 'spots'} left
+                          {spotsRemaining} {spotsRemaining === 1 ? 'spot' : 'spots'} left
                         </div>
-                      )}
+                      ) : null}
                     </div>
                     {sale.artist?.location?.city && (
                       <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
@@ -162,8 +191,22 @@ export default function FlashSalesPage() {
                     )}
                   </div>
                 </Card>
-              </Link>
-            ))}
+              );
+
+              return isSoldOut ? (
+                <div key={sale.id} data-testid={`flash-sale-${sale.id}`}>
+                  {cardContent}
+                </div>
+              ) : (
+                <Link
+                  key={sale.id}
+                  href={`/u/${sale.artist?.username || ''}`}
+                  data-testid={`flash-sale-${sale.id}`}
+                >
+                  {cardContent}
+                </Link>
+              );
+            })}
           </div>
         )}
       </main>
