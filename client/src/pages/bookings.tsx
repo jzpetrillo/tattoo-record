@@ -621,7 +621,7 @@ export default function BookingsPage() {
                         </Button>
                       )}
 
-                      {isClient && ["PENDING", "APPROVED"].includes(booking.status) && (
+                      {isClient && booking.status === "PENDING" && (
                         <AlertDialog>
                           <AlertDialogTrigger asChild>
                             <Button
