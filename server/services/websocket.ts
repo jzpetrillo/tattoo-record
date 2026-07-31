@@ -52,9 +52,12 @@ export async function broadcastNewMessage(conversationId: string, message: any) 
 }
 
 export function setupMessageWebSocket(server: Server) {
-  const wss = new WebSocketServer({ 
-    server, 
-    path: "/ws" 
+  const wss = new WebSocketServer({
+    server,
+    path: "/ws",
+    // Disable per-message deflate so the RSV1 bit stays clear for all clients
+    // (including the ws test client which does not negotiate compression).
+    perMessageDeflate: false,
   });
 
   const heartbeatInterval = parseInt(process.env.WEBSOCKET_HEARTBEAT_MS || "30000");
