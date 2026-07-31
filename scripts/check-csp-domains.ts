@@ -11,6 +11,26 @@
  *
  * Usage:
  *   npx tsx scripts/check-csp-domains.ts
+ *
+ * ─── Maintenance guide ────────────────────────────────────────────────────────
+ *
+ * Adding a new file type to scan:
+ *   Append a glob pattern to SCAN_GLOBS.  Use brace-expansion for multiple
+ *   extensions, e.g. "config/**\/*.{yaml,toml}".  If the new file type can
+ *   contain browser-loaded URLs, no further changes are needed.
+ *
+ * Excluding a file from scanning:
+ *   Add its repo-root-relative path to EXCLUDE_FILES and include a short
+ *   comment explaining WHY it is excluded (e.g. "not browser-loaded",
+ *   "tool reference only", "generated — not authored by developers").
+ *   This comment is the primary signal for future maintainers deciding whether
+ *   the exclusion is still valid.
+ *
+ * Excluding a directory:
+ *   Add a glob pattern to EXCLUDE_DIRS.  Keep this list limited to generated
+ *   output, vendor code, and auto-generated artefacts that developers do not
+ *   directly author.
+ * ──────────────────────────────────────────────────────────────────────────────
  */
 
 import fs from "fs";
@@ -36,12 +56,15 @@ const SCAN_GLOBS = [
 ];
 
 const EXCLUDE_FILES = [
+  // The CSP source itself — scanning it would trivially cover every domain it lists.
   "server/index.ts",
+  // This scanner script — URLs here are documentation/examples, not browser-loaded.
   "scripts/check-csp-domains.ts",
-  // Generated / package-manager files — URLs in these are not browser-loaded
+  // npm lockfile — contains registry/CDN URLs used by the package manager, not the browser.
   "package-lock.json",
+  // package.json — repository/homepage/bugs URLs are metadata fields, not browser-loaded.
   "package.json",
-  // shadcn component registry config — $schema URL is a CLI tool reference, not CSP-relevant
+  // shadcn component registry config — $schema URL is a CLI tool reference, not loaded by the browser.
   "components.json",
 ];
 
