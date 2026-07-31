@@ -162,7 +162,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createUser(insertUser: schema.InsertUser) {
-    const [user] = await db.insert(schema.users).values(insertUser).returning();
+    const [user] = await db.insert(schema.users).values(insertUser as any).returning();
     return user;
   }
 
@@ -257,7 +257,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createPost(post: schema.InsertPost) {
-    const [newPost] = await db.insert(schema.posts).values(post).returning();
+    const [newPost] = await db.insert(schema.posts).values(post as any).returning();
     return newPost;
   }
 
@@ -374,7 +374,7 @@ export class DatabaseStorage implements IStorage {
     
     const [newStory] = await db
       .insert(schema.stories)
-      .values({ ...story, expiresAt })
+      .values({ ...story, expiresAt } as any)
       .returning();
     return newStory;
   }
@@ -495,12 +495,12 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createMessage(message: schema.InsertMessage) {
-    const [newMessage] = await db.insert(schema.messages).values(message).returning();
+    const newMessage = ((await db.insert(schema.messages).values(message as any).returning()) as any[])[0];
     
     await db
       .update(schema.conversations)
       .set({ lastMessageAt: new Date() })
-      .where(eq(schema.conversations.id, message.conversationId));
+      .where(eq(schema.conversations.id, message.conversationId as unknown as string));
 
     return newMessage;
   }
@@ -535,7 +535,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createPortfolioItem(item: schema.InsertPortfolioItem) {
-    const [newItem] = await db.insert(schema.portfolioItems).values(item).returning();
+    const [newItem] = await db.insert(schema.portfolioItems).values(item as any).returning();
     return newItem;
   }
 

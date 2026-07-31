@@ -6,6 +6,10 @@ interface User {
   username: string;
   email: string;
   role: string;
+  firstName?: string;
+  lastName?: string;
+  bio?: string;
+  website?: string;
   avatarUrl?: string;
   isVerified?: boolean;
   verificationStatus?: string;

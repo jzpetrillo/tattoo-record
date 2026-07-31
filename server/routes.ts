@@ -211,7 +211,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         storage.createNotification({
           userId: req.params.id,
           type: "FOLLOW",
-          payload: { actorId: req.userId },
+          payload: { actorId: req.userId } as any,
         }).catch((e) => console.error("notification failed:", e));
       }
       res.json({ message: "Followed successfully" });
@@ -357,7 +357,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         storage.createNotification({
           userId: postResult.post.authorId,
           type: "LIKE",
-          payload: { actorId: req.userId, postId: req.params.id },
+          payload: { actorId: req.userId, postId: req.params.id } as any,
         }).catch((e) => console.error("[like notification]", e));
       }
       if (wasLiked) {
@@ -435,7 +435,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           storage.createNotification({
             userId: postResult.post.authorId,
             type: "COMMENT",
-            payload: { actorId: req.userId, postId: req.params.postId, commentId: comment.id },
+            payload: { actorId: req.userId, postId: req.params.postId, commentId: comment.id } as any,
           }).catch((e) => console.error("notification failed:", e));
         }
       }).catch(() => {});

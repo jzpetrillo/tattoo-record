@@ -5,20 +5,20 @@ import { generateWeeklyDigestText } from "./ai/vision";
 import { flags } from "../config/flags";
 
 async function getUserDigestStats(userId: string, since: Date) {
-  const [followers] = await db.execute(sql`
+  const followersResult = await db.execute(sql`
     SELECT COUNT(*) as count FROM follows
     WHERE following_id = ${userId}
       AND created_at >= ${since}
   `);
 
-  const [likes] = await db.execute(sql`
+  const likesResult = await db.execute(sql`
     SELECT COUNT(*) as count FROM post_likes pl
     JOIN posts p ON p.id = pl.post_id
     WHERE p.author_id = ${userId}
       AND pl.created_at >= ${since}
   `);
 
-  const [comments] = await db.execute(sql`
+  const commentsResult = await db.execute(sql`
     SELECT COUNT(*) as count FROM comments c
     JOIN posts p ON p.id = c.post_id
     WHERE p.author_id = ${userId}
@@ -26,7 +26,7 @@ async function getUserDigestStats(userId: string, since: Date) {
       AND c.deleted_at IS NULL
   `);
 
-  const topPosts = await db.execute(sql`
+  const topPostsResult = await db.execute(sql`
     SELECT caption FROM posts
     WHERE author_id = ${userId}
       AND deleted_at IS NULL
@@ -35,10 +35,15 @@ async function getUserDigestStats(userId: string, since: Date) {
     LIMIT 1
   `);
 
+  const followers = followersResult.rows[0] as any;
+  const likes = likesResult.rows[0] as any;
+  const comments = commentsResult.rows[0] as any;
+  const topPosts = topPostsResult.rows;
+
   return {
-    newFollowers: Number((followers as any).count ?? 0),
-    newLikes: Number((likes as any).count ?? 0),
-    newComments: Number((comments as any).count ?? 0),
+    newFollowers: Number(followers?.count ?? 0),
+    newLikes: Number(likes?.count ?? 0),
+    newComments: Number(comments?.count ?? 0),
     topPostCaption: topPosts.length > 0 ? (topPosts[0] as any).caption : null,
   };
 }

@@ -21,7 +21,7 @@ app.use(helmet({
       scriptSrc: [
         "'self'",
         // Emit 'nonce-<value>' per request — no unsafe-inline needed.
-        (_req: Request, res: Response) => `'nonce-${res.locals.nonce}'`,
+        (_req: any, res: any) => `'nonce-${res.locals.nonce}'`,
         ...(isDev ? ["'unsafe-eval'"] : []),
       ],
       styleSrc: [
