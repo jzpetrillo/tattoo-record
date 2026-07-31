@@ -59,3 +59,11 @@ args = "npm run check:csp"
 [postMerge]
 path = "scripts/post-merge.sh"
 timeoutMs = 20000
+
+[userenv]
+
+[userenv.shared]
+AI_AUTOTAG = "false"
+AI_DIGEST = "false"
+AI_SEMANTIC_SEARCH = "false"
+VITE_AI_ENABLED = "false"
