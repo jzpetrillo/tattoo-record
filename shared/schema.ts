@@ -12,6 +12,20 @@ import {
   index,
   uniqueIndex
 } from "drizzle-orm/pg-core";
+
+// CSP Violation Reports — persisted so admins can review them in the dashboard
+export const cspViolations = pgTable("csp_violations", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  blockedUri: text("blocked_uri"),
+  violatedDirective: text("violated_directive"),
+  documentUri: text("document_uri"),
+  referrer: text("referrer"),
+  originalPolicy: text("original_policy"),
+  userAgent: text("user_agent"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+}, (table) => ({
+  createdAtIdx: index("csp_violations_created_at_idx").on(table.createdAt),
+}));
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 

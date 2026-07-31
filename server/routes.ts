@@ -4,7 +4,7 @@ import bcrypt from "bcrypt";
 import multer from "multer";
 import rateLimit from "express-rate-limit";
 import { eq, and, isNull, desc } from "drizzle-orm";
-import { db } from "./db";
+import { db, pool } from "./db";
 import * as schema from "@shared/schema";
 import { storage } from "./storage";
 import { requireAuth, requireRole, generateToken, type AuthRequest } from "./middleware/auth";
@@ -1695,6 +1695,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ message: "Booking marked as complete" });
     } catch (error: any) {
       res.status(400).json({ message: error.message });
+    }
+  });
+
+  // Admin - List recent CSP violation reports
+  app.get("/api/admin/csp-violations", requireAuth, requireRole(["ADMIN"]), async (_req: AuthRequest, res) => {
+    try {
+      const { rows } = await pool.query(
+        `SELECT id, blocked_uri, violated_directive, document_uri, referrer, user_agent, created_at
+           FROM csp_violations
+          ORDER BY created_at DESC
+          LIMIT 200`,
+      );
+      res.json(rows);
+    } catch (error: any) {
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Admin - Clear all CSP violation reports
+  app.delete("/api/admin/csp-violations", requireAuth, requireRole(["ADMIN"]), async (_req: AuthRequest, res) => {
+    try {
+      await pool.query("DELETE FROM csp_violations");
+      res.json({ message: "All CSP violation reports cleared." });
+    } catch (error: any) {
+      res.status(500).json({ message: "Internal server error" });
     }
   });
 

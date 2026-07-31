@@ -3,6 +3,7 @@ import express, { type Request, Response, NextFunction } from "express";
 import helmet from "helmet";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
+import { pool } from "./db";
 
 const app = express();
 const isDev = process.env.NODE_ENV === "development";
@@ -71,16 +72,37 @@ app.use(helmet({
 app.post(
   "/api/csp-report",
   express.json({ type: ["application/json", "application/csp-report"] }),
-  (req: Request, res: Response) => {
+  async (req: Request, res: Response) => {
     const report = req.body?.["csp-report"] ?? req.body;
+    const blockedUri = report?.["blocked-uri"] ?? null;
+    const violatedDirective = report?.["violated-directive"] ?? null;
+    const documentUri = report?.["document-uri"] ?? null;
+    const referrer = report?.["referrer"] ?? null;
+    const originalPolicy = report?.["original-policy"] ?? null;
+    const userAgent = req.headers["user-agent"] ?? null;
+
     log(
-      `[CSP violation] blocked-uri="${report?.["blocked-uri"] ?? "unknown"}" ` +
-      `violated-directive="${report?.["violated-directive"] ?? "unknown"}" ` +
-      `document-uri="${report?.["document-uri"] ?? "unknown"}"`,
+      `[CSP violation] blocked-uri="${blockedUri ?? "unknown"}" ` +
+      `violated-directive="${violatedDirective ?? "unknown"}" ` +
+      `document-uri="${documentUri ?? "unknown"}"`,
     );
     if (isDev) {
       console.warn("[CSP violation full report]", JSON.stringify(report, null, 2));
     }
+
+    // Persist to database so violations are visible in the admin dashboard.
+    try {
+      await pool.query(
+        `INSERT INTO csp_violations
+          (blocked_uri, violated_directive, document_uri, referrer, original_policy, user_agent)
+         VALUES ($1, $2, $3, $4, $5, $6)`,
+        [blockedUri, violatedDirective, documentUri, referrer, originalPolicy, userAgent],
+      );
+    } catch (err) {
+      // Non-fatal — log but don't fail the 204 response.
+      console.error("[CSP violation] failed to persist report:", err);
+    }
+
     res.status(204).end();
   },
 );

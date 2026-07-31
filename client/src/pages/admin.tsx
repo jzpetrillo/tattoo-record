@@ -12,7 +12,7 @@ import {
   Check, X, ShieldCheck, Users, Clock, CheckCircle2, XCircle, 
   LayoutDashboard, FileText, Briefcase, Zap, Calendar, Search,
   Trash2, Star, StarOff, Ban, UserPlus, Image, DollarSign,
-  UserCog, UserCheck, Power, Plus, Edit2
+  UserCog, UserCheck, Power, Plus, Edit2, ShieldAlert
 } from "lucide-react";
 import { EmptyState } from "@/components/ui/empty-state";
 import { StatusBadge } from "@/components/ui/status-badge";
@@ -22,7 +22,7 @@ import SidebarNav from "@/components/layout/sidebar-nav";
 import MobileNav from "@/components/layout/mobile-nav";
 import { useState } from "react";
 
-type AdminSection = "overview" | "users" | "posts" | "jobs" | "flash-sales" | "bookings" | "verification";
+type AdminSection = "overview" | "users" | "posts" | "jobs" | "flash-sales" | "bookings" | "verification" | "csp-violations";
 
 export default function AdminDashboard() {
   const { token, user } = useAuth();
@@ -140,6 +140,20 @@ export default function AdminDashboard() {
       return res.json();
     },
     enabled: !!token && user?.role === "ADMIN" && activeSection === "bookings",
+  });
+
+  // CSP violations query
+  const { data: cspViolations, isLoading: cspLoading } = useQuery({
+    queryKey: ["/api/admin/csp-violations"],
+    queryFn: async () => {
+      const res = await fetch("/api/admin/csp-violations", {
+        headers: { Authorization: `Bearer ${token}` },
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error("Failed to fetch CSP violations");
+      return res.json();
+    },
+    enabled: !!token && user?.role === "ADMIN" && activeSection === "csp-violations",
   });
 
   // Artists list for flash sale create dialog
@@ -341,6 +355,17 @@ export default function AdminDashboard() {
     },
   });
 
+  const clearCspViolationsMutation = useMutation({
+    mutationFn: async () => apiRequest("DELETE", "/api/admin/csp-violations"),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/csp-violations"] });
+      toast({ title: "Reports cleared", description: "All CSP violation reports have been deleted." });
+    },
+    onError: (error: any) => {
+      toast({ variant: "destructive", title: "Error", description: error.message });
+    },
+  });
+
   const cancelBookingMutation = useMutation({
     mutationFn: async (bookingId: string) => apiRequest("PUT", `/api/admin/bookings/${bookingId}/cancel`),
     onSuccess: () => {
@@ -391,6 +416,7 @@ export default function AdminDashboard() {
     { id: "jobs", label: "Jobs", icon: Briefcase },
     { id: "flash-sales", label: "Flash Sales", icon: Zap },
     { id: "bookings", label: "Bookings", icon: Calendar },
+    { id: "csp-violations", label: "CSP Reports", icon: ShieldAlert },
   ];
 
   return (
@@ -1203,6 +1229,82 @@ export default function AdminDashboard() {
                     </div>
                   );
                 })()
+              )}
+            </div>
+          )}
+          {/* CSP Violations Section */}
+          {activeSection === "csp-violations" && (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="press-nameplate text-lg">CSP Violation Reports</h2>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Browser-reported Content Security Policy violations — last 200 entries
+                  </p>
+                </div>
+                {cspViolations && cspViolations.length > 0 && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => clearCspViolationsMutation.mutate()}
+                    disabled={clearCspViolationsMutation.isPending}
+                    data-testid="button-clear-csp-violations"
+                  >
+                    <Trash2 className="w-4 h-4 mr-1.5" />
+                    Clear All
+                  </Button>
+                )}
+              </div>
+
+              {cspLoading ? (
+                <div className="space-y-3">
+                  {Array.from({ length: 5 }).map((_, i) => (
+                    <AdminCardSkeleton key={i} />
+                  ))}
+                </div>
+              ) : !cspViolations || cspViolations.length === 0 ? (
+                <EmptyState
+                  icon={ShieldAlert}
+                  title="No CSP violations recorded"
+                  description="Any browser-reported Content Security Policy violations will appear here."
+                />
+              ) : (
+                <div className="space-y-2">
+                  {cspViolations.map((v: any) => (
+                    <Card key={v.id} className="border-border">
+                      <CardContent className="p-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1 text-sm">
+                          <div className="flex gap-2">
+                            <span className="text-muted-foreground shrink-0 w-32">Blocked URI</span>
+                            <span className="font-mono text-xs break-all">{v.blocked_uri || "—"}</span>
+                          </div>
+                          <div className="flex gap-2">
+                            <span className="text-muted-foreground shrink-0 w-32">Directive</span>
+                            <Badge variant="outline" className="font-mono text-xs h-auto py-0">
+                              {v.violated_directive || "—"}
+                            </Badge>
+                          </div>
+                          <div className="flex gap-2">
+                            <span className="text-muted-foreground shrink-0 w-32">Document URI</span>
+                            <span className="font-mono text-xs break-all">{v.document_uri || "—"}</span>
+                          </div>
+                          <div className="flex gap-2">
+                            <span className="text-muted-foreground shrink-0 w-32">Reported At</span>
+                            <span className="text-xs text-muted-foreground">
+                              {new Date(v.created_at).toLocaleString()}
+                            </span>
+                          </div>
+                          {v.referrer && (
+                            <div className="flex gap-2 sm:col-span-2">
+                              <span className="text-muted-foreground shrink-0 w-32">Referrer</span>
+                              <span className="font-mono text-xs break-all">{v.referrer}</span>
+                            </div>
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
               )}
             </div>
           )}

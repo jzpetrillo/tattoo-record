@@ -1,6 +1,29 @@
 import { pool } from "./db";
 
 export async function initDatabase() {
+  // Create csp_violations table for persisting browser CSP reports
+  try {
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS csp_violations (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        blocked_uri TEXT,
+        violated_directive TEXT,
+        document_uri TEXT,
+        referrer TEXT,
+        original_policy TEXT,
+        user_agent TEXT,
+        created_at TIMESTAMP NOT NULL DEFAULT NOW()
+      )
+    `);
+    await pool.query(`
+      CREATE INDEX IF NOT EXISTS csp_violations_created_at_idx
+        ON csp_violations (created_at DESC)
+    `);
+    if (process.env.NODE_ENV !== 'production') console.log("[db-init] csp_violations table ready");
+  } catch (err) {
+    console.warn("[db-init] csp_violations setup skipped:", err instanceof Error ? err.message : String(err));
+  }
+
   // Migrate bookings.status from approval_status enum to booking_status enum
   try {
     await pool.query(`
