@@ -127,6 +127,7 @@ export interface IStorage {
   changeUserRole(userId: string, role: string): Promise<void>;
   toggleFlashSaleActive(saleId: string): Promise<void>;
   cancelBookingAdmin(bookingId: string): Promise<void>;
+  completeBookingAdmin(bookingId: string): Promise<void>;
   getAdminPosts(options: { limit: number; offset: number; featured?: boolean }): Promise<any[]>;
   featurePost(postId: string): Promise<void>;
   unfeaturePost(postId: string): Promise<void>;
@@ -1451,6 +1452,12 @@ export class DatabaseStorage implements IStorage {
   async cancelBookingAdmin(bookingId: string) {
     await db.update(schema.bookings)
       .set({ status: "CANCELLED" as any, updatedAt: new Date() })
+      .where(eq(schema.bookings.id, bookingId));
+  }
+
+  async completeBookingAdmin(bookingId: string) {
+    await db.update(schema.bookings)
+      .set({ status: "COMPLETED" as any, updatedAt: new Date() })
       .where(eq(schema.bookings.id, bookingId));
   }
 

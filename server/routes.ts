@@ -1681,5 +1681,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Admin - Mark booking complete (status override — always writes COMPLETED, never REJECTED)
+  app.put("/api/admin/bookings/:id/complete", requireAuth, requireRole(["ADMIN"]), async (req: AuthRequest, res) => {
+    try {
+      const booking = await storage.getBooking(req.params.id);
+      if (!booking) {
+        return res.status(404).json({ message: "Booking not found" });
+      }
+      if (booking.status !== "APPROVED") {
+        return res.status(400).json({ message: "Only APPROVED bookings can be marked complete" });
+      }
+      await storage.completeBookingAdmin(req.params.id);
+      res.json({ message: "Booking marked as complete" });
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+
   return httpServer;
 }

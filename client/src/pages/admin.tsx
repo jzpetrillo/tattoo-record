@@ -39,6 +39,7 @@ export default function AdminDashboard() {
   const [newSale, setNewSale] = useState({ artistId: "", title: "", description: "", originalPrice: "", flashPrice: "", availableSlots: "1", expiresAt: "" });
   const [postsFeatureFilter, setPostsFeatureFilter] = useState<string>("all");
   const [postsAuthorSearch, setPostsAuthorSearch] = useState<string>("");
+  const [bookingStatusFilter, setBookingStatusFilter] = useState<string>("all");
 
   // Stats query
   const { data: stats, isLoading: statsLoading } = useQuery({
@@ -345,6 +346,17 @@ export default function AdminDashboard() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/bookings"] });
       toast({ title: "Booking cancelled", description: "The booking has been cancelled." });
+    },
+    onError: (error: any) => {
+      toast({ variant: "destructive", title: "Error", description: error.message });
+    },
+  });
+
+  const completeBookingMutation = useMutation({
+    mutationFn: async (bookingId: string) => apiRequest("PUT", `/api/admin/bookings/${bookingId}/complete`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/bookings"] });
+      toast({ title: "Booking completed", description: "The booking has been marked as complete." });
     },
     onError: (error: any) => {
       toast({ variant: "destructive", title: "Error", description: error.message });
@@ -1103,7 +1115,22 @@ export default function AdminDashboard() {
           {/* Bookings Overview Section */}
           {activeSection === "bookings" && (
             <div className="space-y-6">
-              <h2 className="text-base font-semibold uppercase tracking-wider text-muted-foreground">Bookings Overview</h2>
+              <div className="flex flex-col sm:flex-row justify-between gap-4">
+                <h2 className="text-base font-semibold uppercase tracking-wider text-muted-foreground">Bookings Overview</h2>
+                <Select value={bookingStatusFilter} onValueChange={setBookingStatusFilter}>
+                  <SelectTrigger className="w-44" data-testid="select-booking-status-filter">
+                    <SelectValue placeholder="Filter by status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Statuses</SelectItem>
+                    <SelectItem value="PENDING">Pending</SelectItem>
+                    <SelectItem value="APPROVED">Approved</SelectItem>
+                    <SelectItem value="COMPLETED">Completed</SelectItem>
+                    <SelectItem value="CANCELLED">Cancelled</SelectItem>
+                    <SelectItem value="REJECTED">Rejected</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
 
               {bookingsLoading ? (
                 <div className="grid gap-4">
@@ -1112,49 +1139,70 @@ export default function AdminDashboard() {
               ) : !bookings || bookings.length === 0 ? (
                 <EmptyState icon={Calendar} title="No bookings" description="No bookings have been made yet." />
               ) : (
-                <div className="space-y-2">
-                  {bookings.map((booking: any) => (
-                    <Card key={booking.id} data-testid={`card-booking-${booking.id}`}>
-                      <CardContent className="p-4">
-                        <div className="flex items-center justify-between">
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-1">
-                              <span className="font-medium">
-                                {booking.client?.username || "Unknown"} → {booking.artist?.username || "Unknown"}
-                              </span>
-                              <StatusBadge status={booking.status} type="booking" />
+                (() => {
+                  const filtered = (bookings as any[]).filter((b) =>
+                    bookingStatusFilter === "all" || b.status === bookingStatusFilter
+                  );
+                  return filtered.length === 0 ? (
+                    <EmptyState icon={Calendar} title="No bookings found" description="No bookings match the selected status." />
+                  ) : (
+                    <div className="space-y-2">
+                      {filtered.map((booking: any) => (
+                        <Card key={booking.id} data-testid={`card-booking-${booking.id}`}>
+                          <CardContent className="p-4">
+                            <div className="flex items-center justify-between">
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2 mb-1">
+                                  <span className="font-medium">
+                                    {booking.client?.username || "Unknown"} → {booking.artist?.username || "Unknown"}
+                                  </span>
+                                  <StatusBadge status={booking.status} type="booking" />
+                                </div>
+                                <p className="text-sm text-muted-foreground">
+                                  {booking.scheduledAt ? new Date(booking.scheduledAt).toLocaleString() : "Not scheduled"}
+                                </p>
+                                {booking.notes && (
+                                  <p className="text-sm text-muted-foreground line-clamp-1 mt-1">
+                                    {booking.notes}
+                                  </p>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-3">
+                                <div className="text-right text-sm text-muted-foreground">
+                                  <p>Payment: {booking.paymentStatus || "N/A"}</p>
+                                </div>
+                                {booking.status === "APPROVED" && (
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => completeBookingMutation.mutate(booking.id)}
+                                    disabled={completeBookingMutation.isPending}
+                                    data-testid={`button-complete-booking-${booking.id}`}
+                                  >
+                                    <CheckCircle2 className="w-4 h-4 mr-1" />
+                                    Complete
+                                  </Button>
+                                )}
+                                {booking.status !== "REJECTED" && booking.status !== "CANCELLED" && booking.status !== "COMPLETED" && (
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => cancelBookingMutation.mutate(booking.id)}
+                                    disabled={cancelBookingMutation.isPending}
+                                    data-testid={`button-cancel-booking-${booking.id}`}
+                                  >
+                                    <XCircle className="w-4 h-4 mr-1" />
+                                    Cancel
+                                  </Button>
+                                )}
+                              </div>
                             </div>
-                            <p className="text-sm text-muted-foreground">
-                              {booking.scheduledAt ? new Date(booking.scheduledAt).toLocaleString() : "Not scheduled"}
-                            </p>
-                            {booking.notes && (
-                              <p className="text-sm text-muted-foreground line-clamp-1 mt-1">
-                                {booking.notes}
-                              </p>
-                            )}
-                          </div>
-                          <div className="flex items-center gap-3">
-                            <div className="text-right text-sm text-muted-foreground">
-                              <p>Payment: {booking.paymentStatus || "N/A"}</p>
-                            </div>
-                            {booking.status !== "REJECTED" && booking.status !== "CANCELLED" && (
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => cancelBookingMutation.mutate(booking.id)}
-                                disabled={cancelBookingMutation.isPending}
-                                data-testid={`button-cancel-booking-${booking.id}`}
-                              >
-                                <XCircle className="w-4 h-4 mr-1" />
-                                Cancel
-                              </Button>
-                            )}
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  );
+                })()
               )}
             </div>
           )}
