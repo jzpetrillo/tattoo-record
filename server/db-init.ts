@@ -65,6 +65,26 @@ export async function initDatabase() {
     console.warn("[db-init] bookings status migration skipped:", err instanceof Error ? err.message : String(err));
   }
 
+  // Add cancellation_requested column to bookings table
+  try {
+    await pool.query(`
+      ALTER TABLE bookings ADD COLUMN IF NOT EXISTS cancellation_requested BOOLEAN NOT NULL DEFAULT FALSE
+    `);
+    if (process.env.NODE_ENV !== 'production') console.log("[db-init] bookings.cancellation_requested column ready");
+  } catch (err) {
+    console.warn("[db-init] bookings.cancellation_requested migration skipped:", err instanceof Error ? err.message : String(err));
+  }
+
+  // Add new notification type enum values
+  try {
+    await pool.query(`ALTER TYPE notification_type ADD VALUE IF NOT EXISTS 'CANCELLATION_REQUEST'`);
+    await pool.query(`ALTER TYPE notification_type ADD VALUE IF NOT EXISTS 'CANCELLATION_APPROVED'`);
+    await pool.query(`ALTER TYPE notification_type ADD VALUE IF NOT EXISTS 'CANCELLATION_REJECTED'`);
+    if (process.env.NODE_ENV !== 'production') console.log("[db-init] notification_type cancellation values ready");
+  } catch (err) {
+    console.warn("[db-init] notification_type cancellation values skipped:", err instanceof Error ? err.message : String(err));
+  }
+
   try {
     await pool.query("CREATE EXTENSION IF NOT EXISTS vector");
     if (process.env.NODE_ENV !== 'production') console.log("[db-init] pgvector extension enabled");

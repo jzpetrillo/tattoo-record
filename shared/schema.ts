@@ -37,7 +37,10 @@ export const notificationTypeEnum = pgEnum("notification_type", [
   "LIKE",
   "COMMENT",
   "APPROVAL",
-  "SYSTEM"
+  "SYSTEM",
+  "CANCELLATION_REQUEST",
+  "CANCELLATION_APPROVED",
+  "CANCELLATION_REJECTED"
 ]);
 export const conversationRoleEnum = pgEnum("conversation_role", ["MEMBER", "ADMIN"]);
 export const approvalStatusEnum = pgEnum("approval_status", [
@@ -528,6 +531,7 @@ export const bookings = pgTable("bookings", {
   fullPaymentAt: timestamp("full_payment_at"),
   reminderPreference: reminderPreferenceEnum("reminder_preference").notNull().default("DAY_BEFORE"),
   reminderSentAt: timestamp("reminder_sent_at"),
+  cancellationRequested: boolean("cancellation_requested").notNull().default(false),
   notes: text("notes"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow()

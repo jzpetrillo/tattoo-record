@@ -166,6 +166,32 @@ export default function BookingsPage() {
     },
   });
 
+  const requestCancellationMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return apiRequest("POST", `/api/bookings/${id}/cancellation-request`);
+    },
+    onSuccess: () => {
+      queryClient.refetchQueries({ queryKey: ["/api/bookings"] });
+      toast({ title: "Cancellation requested", description: "The artist will be notified of your request." });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const cancellationResponseMutation = useMutation({
+    mutationFn: async ({ id, approve }: { id: string; approve: boolean }) => {
+      return apiRequest("POST", `/api/bookings/${id}/cancellation-response`, { approve });
+    },
+    onSuccess: (_data, variables) => {
+      queryClient.refetchQueries({ queryKey: ["/api/bookings"] });
+      toast({ title: variables.approve ? "Cancellation approved" : "Cancellation request rejected" });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    },
+  });
+
   // Server handles filtering via status query parameter
 
 
@@ -654,6 +680,76 @@ export default function BookingsPage() {
                             </AlertDialogFooter>
                           </AlertDialogContent>
                         </AlertDialog>
+                      )}
+
+                      {isClient && booking.status === "APPROVED" && !booking.cancellationRequested && (
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="border-black dark:border-white text-black dark:text-white"
+                              disabled={requestCancellationMutation.isPending}
+                              data-testid={`button-request-cancel-${booking.id}`}
+                            >
+                              <XCircle className="w-4 h-4 mr-1" />
+                              Request Cancellation
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Request Cancellation</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                This will send a cancellation request to the artist. They can choose to approve or reject it.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Keep Booking</AlertDialogCancel>
+                              <AlertDialogAction
+                                onClick={() => requestCancellationMutation.mutate(booking.id)}
+                                data-testid={`button-confirm-request-cancel-${booking.id}`}
+                              >
+                                Send Request
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      )}
+
+                      {isClient && booking.status === "APPROVED" && booking.cancellationRequested && (
+                        <span
+                          className="text-sm text-muted-foreground italic"
+                          data-testid={`text-cancel-pending-${booking.id}`}
+                        >
+                          Cancellation request pending…
+                        </span>
+                      )}
+
+                      {isArtist && booking.status === "APPROVED" && booking.cancellationRequested && (
+                        <>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => cancellationResponseMutation.mutate({ id: booking.id, approve: true })}
+                            disabled={cancellationResponseMutation.isPending}
+                            className="border-black dark:border-white text-black dark:text-white"
+                            data-testid={`button-approve-cancel-${booking.id}`}
+                          >
+                            <CheckCircle className="w-4 h-4 mr-1" />
+                            Approve Cancellation
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => cancellationResponseMutation.mutate({ id: booking.id, approve: false })}
+                            disabled={cancellationResponseMutation.isPending}
+                            className="border-black dark:border-white text-black dark:text-white"
+                            data-testid={`button-reject-cancel-${booking.id}`}
+                          >
+                            <XCircle className="w-4 h-4 mr-1" />
+                            Reject Cancellation
+                          </Button>
+                        </>
                       )}
                     </div>
                   </Card>

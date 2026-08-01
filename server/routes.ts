@@ -1052,6 +1052,81 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Client requests cancellation of an APPROVED booking
+  app.post("/api/bookings/:id/cancellation-request", requireAuth, async (req: AuthRequest, res) => {
+    try {
+      const booking = await storage.getBooking(req.params.id);
+      if (!booking) {
+        return res.status(404).json({ message: "Booking not found" });
+      }
+      // Only the client may request cancellation
+      if (booking.clientId !== req.userId) {
+        return res.status(403).json({ message: "Only the client can request a cancellation" });
+      }
+      // Only allowed on APPROVED bookings
+      if (booking.status !== "APPROVED") {
+        return res.status(400).json({ message: "Cancellation requests can only be made on approved bookings" });
+      }
+      // Prevent duplicate requests
+      if (booking.cancellationRequested) {
+        return res.status(409).json({ message: "A cancellation request is already pending for this booking" });
+      }
+      // Mark the booking as having a pending cancellation request
+      await storage.updateBooking(req.params.id, { cancellationRequested: true });
+      // Notify the artist
+      storage.createNotification({
+        userId: booking.artistId,
+        type: "CANCELLATION_REQUEST",
+        payload: { bookingId: booking.id, clientId: req.userId } as any,
+      }).catch((e) => console.error("[cancellation-request notification]", e));
+      res.json({ message: "Cancellation request sent to the artist" });
+    } catch (error: any) {
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Artist responds to a cancellation request
+  app.post("/api/bookings/:id/cancellation-response", requireAuth, async (req: AuthRequest, res) => {
+    try {
+      const booking = await storage.getBooking(req.params.id);
+      if (!booking) {
+        return res.status(404).json({ message: "Booking not found" });
+      }
+      // Only the artist may respond
+      if (booking.artistId !== req.userId) {
+        return res.status(403).json({ message: "Only the artist can respond to a cancellation request" });
+      }
+      if (!booking.cancellationRequested) {
+        return res.status(400).json({ message: "No cancellation request pending for this booking" });
+      }
+      const { approve } = req.body;
+      if (typeof approve !== "boolean") {
+        return res.status(400).json({ message: "approve (boolean) is required" });
+      }
+      if (approve) {
+        // Approve: cancel the booking
+        await storage.updateBooking(req.params.id, { status: "CANCELLED", cancellationRequested: false });
+        storage.createNotification({
+          userId: booking.clientId,
+          type: "CANCELLATION_APPROVED",
+          payload: { bookingId: booking.id, artistId: req.userId } as any,
+        }).catch((e) => console.error("[cancellation-approved notification]", e));
+        res.json({ message: "Cancellation approved" });
+      } else {
+        // Reject: clear the request flag
+        await storage.updateBooking(req.params.id, { cancellationRequested: false });
+        storage.createNotification({
+          userId: booking.clientId,
+          type: "CANCELLATION_REJECTED",
+          payload: { bookingId: booking.id, artistId: req.userId } as any,
+        }).catch((e) => console.error("[cancellation-rejected notification]", e));
+        res.json({ message: "Cancellation request rejected" });
+      }
+    } catch (error: any) {
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
   // Process booking reminders (admin only)
   app.post("/api/bookings/process-reminders", requireAuth, requireRole(["ADMIN"]), async (req: AuthRequest, res) => {
     try {
