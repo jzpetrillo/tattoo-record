@@ -165,4 +165,58 @@ test.describe("Booking status transition guards", () => {
     const res = await setStatus(request, bookingId, client.token, "PENDING");
     expect(res.status()).toBe(403);
   });
+
+  // ---------------------------------------------------------------------------
+  // Approved-booking cancellation block (Task 64)
+  // ---------------------------------------------------------------------------
+
+  test("client cannot cancel an APPROVED booking via PUT status=CANCELLED (403)", async ({
+    request,
+  }) => {
+    const suffix = `${Date.now()}f`;
+    const artist = await register(request, suffix, "ARTIST");
+    const client = await register(request, suffix, "ENTHUSIAST");
+
+    const bookingId = await createBooking(request, client.token, artist.userId);
+
+    // Artist approves the booking
+    const approveRes = await setStatus(request, bookingId, artist.token, "APPROVED");
+    expect(
+      approveRes.status(),
+      `expected 200 when artist approves, got ${approveRes.status()}: ${await approveRes.text()}`
+    ).toBe(200);
+
+    // Client attempts to cancel — must be rejected
+    const cancelRes = await setStatus(request, bookingId, client.token, "CANCELLED");
+    expect(
+      cancelRes.status(),
+      `expected 403 when client tries to cancel APPROVED booking via PUT, got ${cancelRes.status()}: ${await cancelRes.text()}`
+    ).toBe(403);
+  });
+
+  test("client cannot cancel an APPROVED booking via DELETE (403)", async ({
+    request,
+  }) => {
+    const suffix = `${Date.now()}g`;
+    const artist = await register(request, suffix, "ARTIST");
+    const client = await register(request, suffix, "ENTHUSIAST");
+
+    const bookingId = await createBooking(request, client.token, artist.userId);
+
+    // Artist approves the booking
+    const approveRes = await setStatus(request, bookingId, artist.token, "APPROVED");
+    expect(
+      approveRes.status(),
+      `expected 200 when artist approves, got ${approveRes.status()}: ${await approveRes.text()}`
+    ).toBe(200);
+
+    // Client attempts to cancel via DELETE — must be rejected
+    const deleteRes = await request.delete(`${BASE}/api/bookings/${bookingId}`, {
+      ...authed(client.token),
+    });
+    expect(
+      deleteRes.status(),
+      `expected 403 when client tries to DELETE an APPROVED booking, got ${deleteRes.status()}: ${await deleteRes.text()}`
+    ).toBe(403);
+  });
 });
