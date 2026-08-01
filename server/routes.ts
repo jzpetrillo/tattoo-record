@@ -320,19 +320,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Fire-and-forget AI enrichment after response is sent
       const imageMedia = (post.media as any[] || []).find((m: any) => m.type === "image");
       if (flags.aiAutotag && imageMedia?.url) {
+        // Chain embedding after tagging so it includes AI-generated styles/subjects
         tagTattooImage(imageMedia.url)
-          .then((tags) => {
+          .then(async (tags) => {
             if (tags) {
-              return storage.updatePostTags(post.id, {
+              await storage.updatePostTags(post.id, {
                 aiTags: tags,
                 styles: tags.styles,
                 subjects: tags.subjects,
               });
             }
+            if (flags.aiSemanticSearch && isVoyageEnabled()) {
+              const vec = await embedPost({
+                caption: post.caption,
+                styles: tags?.styles ?? (post.styles as any),
+                subjects: tags?.subjects,
+              });
+              await storage.updatePostEmbedding(post.id, vec);
+            }
           })
           .catch((err) => console.error("[ai-tag]", err));
-      }
-      if (flags.aiSemanticSearch && isVoyageEnabled()) {
+      } else if (flags.aiSemanticSearch && isVoyageEnabled()) {
+        // No autotag — embed with whatever caption/styles the post already has
         embedPost({ caption: post.caption, styles: post.styles as any })
           .then((vec) => storage.updatePostEmbedding(post.id, vec))
           .catch((err) => console.error("[embed]", err));
