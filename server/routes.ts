@@ -40,7 +40,9 @@ const upload = multer({
 
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 20,
+  // Relax the limit in development/test so repeated test runs don't exhaust
+  // the bucket. In production the tight limit (20) still applies.
+  max: process.env.NODE_ENV === "production" ? 20 : 200,
   standardHeaders: true,
   legacyHeaders: false,
   message: { message: "Too many attempts, please try again later." },
