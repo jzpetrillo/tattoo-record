@@ -1077,7 +1077,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       storage.createNotification({
         userId: booking.artistId,
         type: "CANCELLATION_REQUEST",
-        payload: { bookingId: booking.id, clientId: req.userId } as any,
+        payload: { bookingId: booking.id, clientId: req.userId, bookingTitle: booking.title } as any,
       }).catch((e) => console.error("[cancellation-request notification]", e));
       res.json({ message: "Cancellation request sent to the artist" });
     } catch (error: any) {
@@ -1109,7 +1109,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         storage.createNotification({
           userId: booking.clientId,
           type: "CANCELLATION_APPROVED",
-          payload: { bookingId: booking.id, artistId: req.userId } as any,
+          payload: { bookingId: booking.id, artistId: req.userId, bookingTitle: booking.title } as any,
         }).catch((e) => console.error("[cancellation-approved notification]", e));
         res.json({ message: "Cancellation approved" });
       } else {
@@ -1118,7 +1118,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         storage.createNotification({
           userId: booking.clientId,
           type: "CANCELLATION_REJECTED",
-          payload: { bookingId: booking.id, artistId: req.userId } as any,
+          payload: { bookingId: booking.id, artistId: req.userId, bookingTitle: booking.title } as any,
         }).catch((e) => console.error("[cancellation-rejected notification]", e));
         res.json({ message: "Cancellation request rejected" });
       }

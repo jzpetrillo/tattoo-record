@@ -4,7 +4,7 @@ import { apiRequest } from "@/lib/api";
 import SidebarNav from "@/components/layout/sidebar-nav";
 import MobileNav from "@/components/layout/mobile-nav";
 import { useAuth } from "@/hooks/use-auth";
-import { Heart, MessageCircle, UserPlus, CheckCircle, Bell, UserCheck, Eye, Calendar } from "lucide-react";
+import { Heart, MessageCircle, UserPlus, CheckCircle, Bell, UserCheck, Eye, Calendar, XCircle } from "lucide-react";
 import { formatDistanceToNow, isToday, isYesterday, isThisWeek, format } from "date-fns";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
@@ -15,7 +15,7 @@ interface Notification {
   notification: {
     id: string;
     userId: string;
-    type: "FOLLOW" | "LIKE" | "COMMENT" | "APPROVAL" | "SYSTEM";
+    type: "FOLLOW" | "LIKE" | "COMMENT" | "APPROVAL" | "SYSTEM" | "CANCELLATION_REQUEST" | "CANCELLATION_APPROVED" | "CANCELLATION_REJECTED";
     payload: {
       actorId?: string;
       postId?: string;
@@ -23,8 +23,11 @@ interface Notification {
       message?: string;
       type?: string;
       bookingId?: string;
+      bookingTitle?: string;
       artistName?: string;
       scheduledAt?: string;
+      clientId?: string;
+      artistId?: string;
     };
     isRead: boolean;
     createdAt: string;
@@ -90,6 +93,12 @@ export default function Notifications() {
         return <MessageCircle className="w-5 h-5 text-muted-foreground" />;
       case "APPROVAL":
         return <CheckCircle className="w-5 h-5 text-muted-foreground" />;
+      case "CANCELLATION_REQUEST":
+        return <XCircle className="w-5 h-5 text-muted-foreground" />;
+      case "CANCELLATION_APPROVED":
+        return <CheckCircle className="w-5 h-5 text-muted-foreground" />;
+      case "CANCELLATION_REJECTED":
+        return <XCircle className="w-5 h-5 text-muted-foreground" />;
       default:
         return <Bell className="w-5 h-5 text-muted-foreground" />;
     }
@@ -110,6 +119,12 @@ export default function Notifications() {
         return payload.message || <><span className="font-semibold">{actorName}</span> approved your request</>;
       case "SYSTEM":
         return payload.message || "System notification";
+      case "CANCELLATION_REQUEST":
+        return <>Client requested to cancel booking <span className="font-semibold">{payload.bookingTitle || "your booking"}</span></>;
+      case "CANCELLATION_APPROVED":
+        return <>Artist approved your cancellation request</>;
+      case "CANCELLATION_REJECTED":
+        return <>Artist declined your cancellation request — your booking is still on</>;
       default:
         return "New notification";
     }
@@ -124,6 +139,12 @@ export default function Notifications() {
     
     // Handle booking reminder - navigate to bookings page
     if (type === "SYSTEM" && payload.type === "BOOKING_REMINDER") {
+      setLocation("/bookings");
+      return;
+    }
+
+    // Handle cancellation notifications - navigate to bookings page
+    if (type === "CANCELLATION_REQUEST" || type === "CANCELLATION_APPROVED" || type === "CANCELLATION_REJECTED") {
       setLocation("/bookings");
       return;
     }
@@ -304,6 +325,24 @@ export default function Notifications() {
                           )}
 
                           {notification.notification.type === "SYSTEM" && notification.notification.payload.type === "BOOKING_REMINDER" && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setLocation("/bookings");
+                              }}
+                              data-testid={`button-view-booking-${notification.notification.id}`}
+                              className="text-xs"
+                            >
+                              <Calendar className="w-3 h-3 mr-1" />
+                              View Booking
+                            </Button>
+                          )}
+
+                          {(notification.notification.type === "CANCELLATION_REQUEST" ||
+                            notification.notification.type === "CANCELLATION_APPROVED" ||
+                            notification.notification.type === "CANCELLATION_REJECTED") && (
                             <Button
                               size="sm"
                               variant="outline"
