@@ -53,6 +53,30 @@ export default function Notifications() {
     enabled: !!user,
   });
 
+  // Determine whether any cancellation notification is missing bookingTitle so we
+  // can lazily fetch the bookings list to back-fill the display label.
+  const cancellationTypes = new Set([
+    "CANCELLATION_REQUEST",
+    "CANCELLATION_APPROVED",
+    "CANCELLATION_REJECTED",
+  ]);
+  const needsBookingLookup = notifications.some(
+    (n) =>
+      cancellationTypes.has(n.notification.type) &&
+      !n.notification.payload.bookingTitle &&
+      !!n.notification.payload.bookingId
+  );
+
+  const { data: bookingsForLookup = [] } = useQuery<{ id: string; title: string }[]>({
+    queryKey: ["/api/bookings"],
+    enabled: !!user && needsBookingLookup,
+    select: (data: any[]) => data.map((b) => ({ id: String(b.id), title: b.title ?? "" })),
+  });
+
+  const bookingTitleMap = new Map<string, string>(
+    bookingsForLookup.map((b) => [b.id, b.title])
+  );
+
   const markAsReadMutation = useMutation({
     mutationFn: async (notificationId: string) => {
       return apiRequest("POST", `/api/notifications/${notificationId}/read`, {}, token!);
@@ -108,6 +132,14 @@ export default function Notifications() {
     const { type, payload } = notification.notification;
     const actorName = notification.actor?.username || "Someone";
 
+    // Resolve booking title: prefer the stored payload value, fall back to the
+    // live lookup map (covers notifications created before bookingTitle was added
+    // to the payload), and finally fall back to a generic label.
+    const resolvedBookingTitle =
+      payload.bookingTitle ||
+      (payload.bookingId ? bookingTitleMap.get(payload.bookingId) : undefined) ||
+      "your booking";
+
     switch (type) {
       case "FOLLOW":
         return <><span className="font-semibold">{actorName}</span> started following you</>;
@@ -120,11 +152,11 @@ export default function Notifications() {
       case "SYSTEM":
         return payload.message || "System notification";
       case "CANCELLATION_REQUEST":
-        return <>Client requested to cancel booking <span className="font-semibold">{payload.bookingTitle || "your booking"}</span></>;
+        return <>Client requested to cancel booking <span className="font-semibold">{resolvedBookingTitle}</span></>;
       case "CANCELLATION_APPROVED":
-        return <>Artist approved your cancellation request</>;
+        return <>Artist approved your cancellation request for <span className="font-semibold">{resolvedBookingTitle}</span></>;
       case "CANCELLATION_REJECTED":
-        return <>Artist declined your cancellation request — your booking is still on</>;
+        return <>Artist declined your cancellation request for <span className="font-semibold">{resolvedBookingTitle}</span> — your booking is still on</>;
       default:
         return "New notification";
     }
