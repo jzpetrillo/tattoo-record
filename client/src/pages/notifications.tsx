@@ -148,7 +148,7 @@ export default function Notifications() {
       case "COMMENT":
         return <><span className="font-semibold">{actorName}</span> commented on your post</>;
       case "APPROVAL":
-        return payload.message || <><span className="font-semibold">{actorName}</span> approved your request</>;
+        return payload.message || <><span className="font-semibold">{actorName}</span> approved your booking <span className="font-semibold">{resolvedBookingTitle}</span></>;
       case "SYSTEM":
         return payload.message || "System notification";
       case "CANCELLATION_REQUEST":

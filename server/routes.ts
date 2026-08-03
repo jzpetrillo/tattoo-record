@@ -981,6 +981,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       const updated = await storage.updateBooking(req.params.id, status !== undefined ? { ...rest, status } : rest);
+      // Notify the client when their booking is approved
+      if (status === "APPROVED") {
+        storage.createNotification({
+          userId: booking.clientId,
+          type: "APPROVAL",
+          payload: { actorId: req.userId, bookingId: booking.id, bookingTitle: booking.title } as any,
+        }).catch((e) => console.error("[approval notification]", e));
+      }
       res.json(updated);
     } catch (error: any) {
       res.status(500).json({ message: "Internal server error" });
