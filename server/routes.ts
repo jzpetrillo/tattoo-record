@@ -881,6 +881,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Booking Routes
+  // NOTE: This endpoint intentionally returns ALL booking statuses (including CANCELLED)
+  // when no `status` query param is provided. The notifications page relies on this to
+  // resolve booking titles for cancellation notifications — if CANCELLED bookings were
+  // excluded by default, the title lookup would fail and fall back to "your booking".
+  // Do not add a default status filter here without updating that lookup.
   app.get("/api/bookings", requireAuth, async (req: AuthRequest, res) => {
     try {
       const filters = {
