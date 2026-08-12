@@ -61,7 +61,7 @@ PHASE 4 — CONSISTENCY + POLISH
 =====================================================
 PHASE 5 — LIVE-DATA ACTIONS (cannot be done in code — must run against the deployment)
 =====================================================
-- ROTATE the compromised admin password: `admin@tattoorecord.com / Test1234!` still logs in on the live DB. Re-seed with SEED_ADMIN_PASSWORD set, or run an UPDATE that sets a new bcrypt hash for all seed accounts. Confirm Test1234! no longer authenticates.
+- ROTATE the compromised admin password: `[REDACTED — rotate via SEED_ADMIN_PASSWORD env var before redeploying]` still logs in on the live DB. Re-seed with SEED_ADMIN_PASSWORD set, or run an UPDATE that sets a new bcrypt hash for all seed accounts. Confirm Test1234! no longer authenticates.
 - Clean up leftover E2E test bookings (titles starting "E2E") via admin.
 - Confirm the earlier repair ran: studio11 verification_status, artist1 bio.
 

@@ -1151,14 +1151,26 @@ export class DatabaseStorage implements IStorage {
     });
   }
 
-  async getBookings(filters: { artistId?: string; clientId?: string; status?: string }) {
+  async getBookings(filters: { artistId?: string; clientId?: string; status?: string; callerId?: string }) {
     const conditions = [];
     
-    if (filters.artistId) {
-      conditions.push(eq(schema.bookings.artistId, filters.artistId));
-    }
-    if (filters.clientId) {
-      conditions.push(eq(schema.bookings.clientId, filters.clientId));
+    // When callerId is set (non-admin callers) force results to only include
+    // bookings where the caller is either the artist or the client, regardless
+    // of any artistId/clientId query params they supplied.
+    if (filters.callerId) {
+      conditions.push(
+        or(
+          eq(schema.bookings.artistId, filters.callerId),
+          eq(schema.bookings.clientId, filters.callerId)
+        )
+      );
+    } else {
+      if (filters.artistId) {
+        conditions.push(eq(schema.bookings.artistId, filters.artistId));
+      }
+      if (filters.clientId) {
+        conditions.push(eq(schema.bookings.clientId, filters.clientId));
+      }
     }
     if (filters.status) {
       conditions.push(eq(schema.bookings.status, filters.status as any));

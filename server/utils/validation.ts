@@ -110,6 +110,56 @@ export const createBookingSchema = z.object({
   path: ["depositCents"],
 });
 
+// Only the fields a booking party is allowed to update via PUT /api/bookings/:id.
+// Payment fields (paymentStatus, totalPriceCents, depositCents) are intentionally
+// excluded — use the dedicated mark-deposit-paid / mark-fully-paid endpoints.
+export const updateBookingSchema = z.object({
+  title: z.string().min(1).max(255).optional(),
+  description: z.string().optional(),
+  scheduledAt: z.string().refine(v => new Date(v) > new Date(), { message: "Appointment must be in the future" }).optional(),
+  durationMinutes: z.number().int().positive().optional(),
+  referenceImages: z.array(z.object({ publicId: z.string(), url: z.string() })).optional(),
+  notes: z.string().optional(),
+  reminderPreference: z.enum(["DAY_BEFORE", "WEEK_BEFORE", "NONE"]).optional(),
+  status: z.enum(["PENDING", "APPROVED", "REJECTED", "COMPLETED", "CANCELLED"]).optional(),
+});
+
+// Fields an artist may update on their own portfolio item.
+// Matches actual portfolio_items columns; excludes ownership (artistId).
+export const updatePortfolioItemSchema = z.object({
+  title: z.string().min(1).max(255).optional(),
+  description: z.string().optional(),
+  media: z.array(z.object({
+    publicId: z.string(),
+    url: z.string(),
+    type: z.string(),
+    width: z.number().optional(),
+    height: z.number().optional(),
+  })).optional(),
+  categories: z.array(z.string()).optional(),
+  sortOrder: z.number().int().nonnegative().optional(),
+});
+
+// Fields an artist may update on their own flash sale.
+// Excludes ownership (artistId), counter (bookedSlots), and isActive toggle
+// (which has its own admin endpoint).
+export const updateFlashSaleSchema = z.object({
+  title: z.string().min(1).max(255).optional(),
+  description: z.string().optional(),
+  originalPriceCents: z.number().int().positive().optional(),
+  flashPriceCents: z.number().int().positive().optional(),
+  availableSlots: z.number().int().min(1).optional(),
+  expiresAt: z.string().refine(v => new Date(v) > new Date(), { message: "Expiry must be in the future" }).optional(),
+  media: z.array(z.object({ publicId: z.string(), url: z.string(), type: z.string() })).optional(),
+  styles: z.array(z.string()).optional(),
+}).superRefine((data, ctx) => {
+  if (data.flashPriceCents !== undefined && data.originalPriceCents !== undefined) {
+    if (data.flashPriceCents >= data.originalPriceCents) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Flash price must be less than original price", path: ["flashPriceCents"] });
+    }
+  }
+});
+
 export const jobApplySchema = z.object({
   coverLetter: z.string().min(10, "Cover letter must be at least 10 characters").max(5000),
 });

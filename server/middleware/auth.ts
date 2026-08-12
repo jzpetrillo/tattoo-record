@@ -35,7 +35,7 @@ export async function requireAuth(
       .where(eq(users.id, decoded.userId))
       .limit(1);
 
-    if (!user || user.deletedAt) {
+    if (!user || user.deletedAt || user.isBanned) {
       return res.status(401).json({ message: "Invalid authentication" });
     }
 
@@ -44,6 +44,47 @@ export async function requireAuth(
     next();
   } catch (error) {
     return res.status(401).json({ message: "Invalid or expired token" });
+  }
+}
+
+/**
+ * Optional authentication middleware.
+ * If a valid Bearer token is present for a non-banned, non-deleted user,
+ * populates req.userId and req.userRole; otherwise passes through silently.
+ * Use this on routes that are public but need caller identity when available.
+ */
+export async function optionalAuth(
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+) {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      return next();
+    }
+
+    const token = authHeader.substring(7);
+    let decoded: { userId: string };
+    try {
+      decoded = jwt.verify(token, JWT_SECRET) as unknown as { userId: string };
+    } catch {
+      return next(); // Invalid/expired token — treat as unauthenticated
+    }
+
+    const [user] = await db
+      .select()
+      .from(users)
+      .where(eq(users.id, decoded.userId))
+      .limit(1);
+
+    if (user && !user.deletedAt && !user.isBanned) {
+      req.userId = user.id;
+      req.userRole = user.role;
+    }
+    next();
+  } catch (error) {
+    next(); // Never block on auth errors in optional middleware
   }
 }
 

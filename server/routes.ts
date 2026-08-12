@@ -7,7 +7,7 @@ import { eq, and, isNull, desc } from "drizzle-orm";
 import { db, pool } from "./db";
 import * as schema from "@shared/schema";
 import { storage } from "./storage";
-import { requireAuth, requireRole, generateToken, type AuthRequest } from "./middleware/auth";
+import { requireAuth, optionalAuth, requireRole, generateToken, type AuthRequest } from "./middleware/auth";
 import { uploadMedia, deleteMedia } from "./services/cloudinary";
 import { generateTattooRecommendations } from "./services/ai/recommendations";
 import { setupMessageWebSocket, broadcastNewMessage } from "./services/websocket";
@@ -109,6 +109,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const validPassword = await bcrypt.compare(validated.password, user.hashedPassword);
       if (!validPassword) {
         return res.status(401).json({ message: "Invalid credentials" });
+      }
+
+      if (user.isBanned) {
+        return res.status(403).json({ message: "Your account has been suspended" });
       }
 
       const token = generateToken(user.id);
@@ -298,11 +302,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/posts/:id", async (req, res) => {
+  app.get("/api/posts/:id", optionalAuth, async (req: AuthRequest, res) => {
     try {
       const post = await storage.getPost(req.params.id);
       if (!post) {
         return res.status(404).json({ message: "Post not found" });
+      }
+      // Enforce visibility: FOLLOWERS-only posts require authentication and a follow relationship.
+      // optionalAuth has already verified the token and enforced ban/deleted status; if req.userId
+      // is not set here the caller is unauthenticated (or had an invalid/banned token).
+      if (post.post?.visibility === "FOLLOWERS") {
+        if (!req.userId) {
+          return res.status(401).json({ message: "Authentication required" });
+        }
+        const isAuthor = post.post.authorId === req.userId;
+        const isAdmin = req.userRole === "ADMIN";
+        if (!isAuthor && !isAdmin) {
+          const isFollower = await storage.isFollowing(req.userId, post.post.authorId);
+          if (!isFollower) {
+            return res.status(403).json({ message: "This post is only visible to followers" });
+          }
+        }
       }
       res.json(post);
     } catch (error: any) {
@@ -700,7 +720,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (item.artistId !== req.userId) {
         return res.status(403).json({ message: "Not authorized to edit this portfolio item" });
       }
-      await storage.updatePortfolioItem(req.params.id, req.body);
+      const validated = validation.updatePortfolioItemSchema.parse(req.body);
+      await storage.updatePortfolioItem(req.params.id, validated);
       res.json({ message: "Portfolio item updated" });
     } catch (error: any) {
       res.status(500).json({ message: "Internal server error" });
@@ -873,7 +894,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if ((flashSale as any).artistId !== req.userId) {
         return res.status(403).json({ message: "Not authorized to edit this flash sale" });
       }
-      const updated = await storage.updateFlashSale(req.params.id, req.body);
+      let validated: ReturnType<typeof validation.updateFlashSaleSchema.parse>;
+      try {
+        validated = validation.updateFlashSaleSchema.parse(req.body);
+      } catch (err: any) {
+        return res.status(400).json({ message: err.errors?.[0]?.message || "Validation failed" });
+      }
+      // Re-check flashPrice < originalPrice by merging partial values with the stored sale,
+      // so a partial update cannot set flashPriceCents >= the persisted originalPriceCents.
+      const storedSale = flashSale as any;
+      const mergedFlash = validated.flashPriceCents ?? storedSale.flashPriceCents;
+      const mergedOriginal = validated.originalPriceCents ?? storedSale.originalPriceCents;
+      if (mergedFlash >= mergedOriginal) {
+        return res.status(400).json({ message: "Flash price must be less than original price" });
+      }
+      const { expiresAt, ...flashRest } = validated;
+      const updated = await storage.updateFlashSale(req.params.id, {
+        ...flashRest,
+        ...(expiresAt !== undefined ? { expiresAt: new Date(expiresAt) } : {}),
+      });
       res.json(updated);
     } catch (error: any) {
       res.status(500).json({ message: "Internal server error" });
@@ -888,11 +927,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Do not add a default status filter here without updating that lookup.
   app.get("/api/bookings", requireAuth, async (req: AuthRequest, res) => {
     try {
-      const filters = {
+      const isAdmin = req.userRole === "ADMIN";
+      const filters: { artistId?: string; clientId?: string; status?: string; callerId?: string } = {
         artistId: req.query.artistId as string | undefined,
         clientId: req.query.clientId as string | undefined,
         status: req.query.status as string | undefined
       };
+      // Non-admins may only see bookings they are party to.
+      if (!isAdmin) {
+        filters.callerId = req.userId!;
+      }
       const bookings = await storage.getBookings(filters);
       res.json(bookings);
     } catch (error: any) {
@@ -905,6 +949,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const booking = await storage.getBooking(req.params.id);
       if (!booking) {
         return res.status(404).json({ message: "Booking not found" });
+      }
+      const isAdmin = req.userRole === "ADMIN";
+      if (!isAdmin && booking.artistId !== req.userId && booking.clientId !== req.userId) {
+        return res.status(403).json({ message: "Not authorized to view this booking" });
       }
       res.json(booking);
     } catch (error: any) {
@@ -940,12 +988,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (booking.artistId !== req.userId && booking.clientId !== req.userId) {
         return res.status(403).json({ message: "Not authorized to update this booking" });
       }
-      // Validate status if provided
-      const { status, ...rest } = req.body;
-      const VALID_BOOKING_STATUSES = ["PENDING", "APPROVED", "REJECTED", "COMPLETED", "CANCELLED"];
-      if (status !== undefined && !VALID_BOOKING_STATUSES.includes(status)) {
-        return res.status(400).json({ message: `Invalid status. Must be one of: ${VALID_BOOKING_STATUSES.join(", ")}` });
+      // Parse through the safe update schema — strips paymentStatus, totalPriceCents, etc.
+      let validated: ReturnType<typeof validation.updateBookingSchema.parse>;
+      try {
+        validated = validation.updateBookingSchema.parse(req.body);
+      } catch (err: any) {
+        return res.status(400).json({ message: err.errors?.[0]?.message || "Validation failed" });
       }
+      const { status, ...rest } = validated;
       // Enforce role-based status transition rules
       if (status !== undefined) {
         const isArtist = booking.artistId === req.userId;
@@ -980,7 +1030,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return res.status(403).json({ message: `Cannot transition booking from ${currentStatus} to ${status}` });
         }
       }
-      const updated = await storage.updateBooking(req.params.id, status !== undefined ? { ...rest, status } : rest);
+      const { scheduledAt, ...restWithoutDate } = rest;
+      const bookingUpdate = {
+        ...restWithoutDate,
+        ...(scheduledAt !== undefined ? { scheduledAt: new Date(scheduledAt) } : {}),
+        ...(status !== undefined ? { status } : {}),
+      };
+      const updated = await storage.updateBooking(req.params.id, bookingUpdate);
       // Notify the client when their booking is approved
       if (status === "APPROVED") {
         storage.createNotification({
