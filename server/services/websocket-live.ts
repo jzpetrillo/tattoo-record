@@ -1,8 +1,15 @@
 import { WebSocketServer, WebSocket } from "ws";
-import { Server } from "http";
+import { Server, IncomingMessage } from "http";
+import jwt from "jsonwebtoken";
 import { db } from "../db";
-import { livestreamEvents, livestreamParticipants, liveComments, liveReactions } from "@shared/schema";
+import { users, livestreamEvents, livestreamParticipants, liveComments, liveReactions } from "@shared/schema";
 import { eq } from "drizzle-orm";
+
+const _jwtSecret = process.env.JWT_SECRET || process.env.SESSION_SECRET;
+if (!_jwtSecret) {
+  throw new Error("JWT_SECRET or SESSION_SECRET environment variable must be set");
+}
+const JWT_SECRET: string = _jwtSecret;
 
 interface LiveWSClient extends WebSocket {
   userId?: string;
@@ -15,6 +22,22 @@ interface LiveWSMessage {
   payload?: any;
 }
 
+function extractAndVerifyToken(req: IncomingMessage): string | null {
+  try {
+    const url = new URL(req.url!, "http://localhost");
+    const queryToken = url.searchParams.get("token");
+    const rawToken = queryToken
+      ?? req.headers["authorization"]?.replace(/^Bearer\s+/i, "");
+
+    if (!rawToken) return null;
+
+    const decoded = jwt.verify(rawToken, JWT_SECRET) as { userId: string };
+    return decoded.userId ?? null;
+  } catch {
+    return null;
+  }
+}
+
 export function setupLiveWebSocket(server: Server) {
   const wss = new WebSocketServer({ 
     server, 
@@ -24,7 +47,28 @@ export function setupLiveWebSocket(server: Server) {
   const heartbeatInterval = parseInt(process.env.WEBSOCKET_HEARTBEAT_MS || "30000");
   const eventViewers = new Map<string, Set<string>>();
 
-  wss.on("connection", (ws: LiveWSClient, req) => {
+  wss.on("connection", async (ws: LiveWSClient, req: IncomingMessage) => {
+    // Authenticate at handshake time — reject if no valid JWT
+    const userId = extractAndVerifyToken(req);
+    if (!userId) {
+      ws.close(4401, "Unauthorized");
+      return;
+    }
+
+    // Validate the token subject is an active, non-banned, non-deleted user
+    const [activeUser] = await db
+      .select({ id: users.id, isBanned: users.isBanned, deletedAt: users.deletedAt })
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1);
+
+    if (!activeUser || activeUser.deletedAt || activeUser.isBanned) {
+      ws.close(4401, "Unauthorized");
+      return;
+    }
+
+    ws.userId = userId;
+
     const eventId = new URL(req.url!, `http://${req.headers.host}`).searchParams.get("eventId");
     
     if (!eventId) {
@@ -61,11 +105,11 @@ export function setupLiveWebSocket(server: Server) {
             break;
 
           case "START":
-            await handleStreamStart(wss, ws.eventId!);
+            await handleStreamStart(wss, ws);
             break;
 
           case "END":
-            await handleStreamEnd(wss, ws.eventId!);
+            await handleStreamEnd(wss, ws);
             break;
 
           case "HEARTBEAT":
@@ -107,30 +151,34 @@ async function handleJoin(
   eventViewers: Map<string, Set<string>>,
   payload: any
 ) {
-  ws.userId = payload.userId;
+  // userId is pinned to the verified JWT — ignore any client-supplied userId in payload
   const eventId = ws.eventId;
   
   if (!eventId || !ws.userId) return;
+
+  // Fetch the event first so we can derive isHost from authoritative data
+  const [event] = await db
+    .select()
+    .from(livestreamEvents)
+    .where(eq(livestreamEvents.id, eventId))
+    .limit(1);
 
   if (!eventViewers.has(eventId)) {
     eventViewers.set(eventId, new Set());
   }
   eventViewers.get(eventId)!.add(ws.userId);
 
+  // Derive isHost from the event record — never trust client-supplied payload
+  const isHost = event ? event.hostId === ws.userId : false;
+
   await db.insert(livestreamParticipants).values({
     eventId: eventId,
     userId: ws.userId,
     joinedAt: new Date(),
-    isHost: payload.isHost || false
+    isHost
   } as any);
 
   const viewerCount = eventViewers.get(eventId)!.size;
-
-  const [event] = await db
-    .select()
-    .from(livestreamEvents)
-    .where(eq(livestreamEvents.id, eventId))
-    .limit(1);
 
   if (event) {
     const updates: any = { viewerTotal: event.viewerTotal + 1 };
@@ -214,7 +262,21 @@ async function handleLiveReaction(wss: WebSocketServer, ws: LiveWSClient, payloa
   });
 }
 
-async function handleStreamStart(wss: WebSocketServer, eventId: string) {
+async function handleStreamStart(wss: WebSocketServer, ws: LiveWSClient) {
+  const eventId = ws.eventId!;
+  const userId = ws.userId!;
+
+  const [event] = await db
+    .select()
+    .from(livestreamEvents)
+    .where(eq(livestreamEvents.id, eventId))
+    .limit(1);
+
+  if (!event || event.hostId !== userId) {
+    ws.send(JSON.stringify({ type: "ERROR", payload: { message: "Forbidden: only the host can start the stream" } }));
+    return;
+  }
+
   await db
     .update(livestreamEvents)
     .set({
@@ -229,7 +291,21 @@ async function handleStreamStart(wss: WebSocketServer, eventId: string) {
   });
 }
 
-async function handleStreamEnd(wss: WebSocketServer, eventId: string) {
+async function handleStreamEnd(wss: WebSocketServer, ws: LiveWSClient) {
+  const eventId = ws.eventId!;
+  const userId = ws.userId!;
+
+  const [event] = await db
+    .select()
+    .from(livestreamEvents)
+    .where(eq(livestreamEvents.id, eventId))
+    .limit(1);
+
+  if (!event || event.hostId !== userId) {
+    ws.send(JSON.stringify({ type: "ERROR", payload: { message: "Forbidden: only the host can end the stream" } }));
+    return;
+  }
+
   await db
     .update(livestreamEvents)
     .set({
