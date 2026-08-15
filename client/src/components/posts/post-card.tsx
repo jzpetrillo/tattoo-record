@@ -301,16 +301,17 @@ export default function PostCard({ post, author, isLiked = false, isSaved = fals
               <div className="space-y-2">
                 {conversations?.map((conv: any) => {
                   const otherParticipant = conv.participants?.find((p: any) => p.id !== user?.id);
+                  const convId = conv.conversation?.id ?? conv.id;
                   return (
                     <button
-                      key={conv.id}
+                      key={convId}
                       onClick={() => {
-                        setSelectedUser(conv.id);
-                        shareMutation.mutate(conv.id);
+                        setSelectedUser(convId);
+                        shareMutation.mutate(convId);
                       }}
                       className="w-full flex items-center gap-3 p-3 hover:bg-secondary rounded-lg transition-colors"
                       disabled={shareMutation.isPending}
-                      data-testid={`share-conversation-${conv.id}`}
+                      data-testid={`share-conversation-${convId}`}
                     >
                       <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center">
                         <span className="text-sm font-semibold">

@@ -90,7 +90,7 @@ export default function FlashSalesPage() {
             description="Check back soon for limited-time tattoo deals from artists."
           />
         ) : (
-          <div className="grid grid-cols-3 gap-px bg-foreground">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {flashSales.map((sale) => {
               const spotsRemaining =
                 sale.availableSlots != null

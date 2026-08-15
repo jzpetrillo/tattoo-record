@@ -647,14 +647,14 @@ export default function AdminDashboard() {
             <div className="space-y-6">
               <div className="flex flex-col sm:flex-row justify-between gap-4">
                 <h2 className="text-base font-semibold uppercase tracking-wider text-muted-foreground">User Management</h2>
-                <div className="flex gap-2">
-                  <div className="relative">
+                <div className="flex flex-wrap gap-2">
+                  <div className="relative flex-1 sm:flex-none">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                     <Input
                       placeholder="Search users..."
                       value={userSearch}
                       onChange={(e) => setUserSearch(e.target.value)}
-                      className="pl-9 w-64"
+                      className="pl-9 w-full sm:w-64"
                       data-testid="input-search-users"
                     />
                   </div>
@@ -817,14 +817,14 @@ export default function AdminDashboard() {
             <div className="space-y-6">
               <div className="flex flex-col sm:flex-row justify-between gap-4">
                 <h2 className="text-base font-semibold uppercase tracking-wider text-muted-foreground">Posts Management</h2>
-                <div className="flex gap-2">
-                  <div className="relative">
+                <div className="flex flex-wrap gap-2">
+                  <div className="relative flex-1 sm:flex-none">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                     <Input
                       placeholder="Search by author..."
                       value={postsAuthorSearch}
                       onChange={(e) => setPostsAuthorSearch(e.target.value)}
-                      className="pl-9 w-52"
+                      className="pl-9 w-full sm:w-52"
                       data-testid="input-search-posts"
                     />
                   </div>

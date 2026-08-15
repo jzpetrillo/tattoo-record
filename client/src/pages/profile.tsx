@@ -379,7 +379,7 @@ export default function Profile() {
                   )}
                   <Button
                     size="sm"
-                    onClick={() => navigate(`/messages?user=${user?.id}`)}
+                    onClick={() => navigate(`/messages?withUserId=${user?.id}`)}
                     data-testid="button-message"
                     className="border border-border bg-background hover:bg-secondary text-foreground"
                   >

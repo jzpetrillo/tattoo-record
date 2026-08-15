@@ -484,7 +484,7 @@ export default function BookingsPage() {
         </div>
 
         <Tabs value={statusFilter} onValueChange={setStatusFilter} className="mb-6">
-          <TabsList className="bg-white dark:bg-black border border-black dark:border-white h-12 flex-wrap sm:flex-nowrap">
+          <TabsList className="bg-white dark:bg-black border border-black dark:border-white h-auto min-h-[44px] flex-wrap sm:flex-nowrap">
             <TabsTrigger value="ALL" className="min-h-[44px] px-3 sm:px-4 data-[state=active]:bg-black data-[state=active]:text-white dark:data-[state=active]:bg-white dark:data-[state=active]:text-black" data-testid="tab-all">
               All
             </TabsTrigger>
