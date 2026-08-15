@@ -4,7 +4,7 @@ import { useAuth } from "@/hooks/use-auth";
 import SidebarNav from "@/components/layout/sidebar-nav";
 import MobileNav from "@/components/layout/mobile-nav";
 import { Link } from "wouter";
-import { Zap, Clock, MapPin } from "lucide-react";
+import { Zap, Clock, MapPin, AlertCircle } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { FlashSaleCardSkeleton } from "@/components/ui/skeletons";
@@ -43,7 +43,7 @@ export default function FlashSalesPage() {
   const { token } = useAuth();
   useCountdown(); // triggers a re-render every minute so timers stay live
 
-  const { data: flashSales = [], isLoading } = useQuery<FlashSale[]>({
+  const { data: flashSales = [], isLoading, isError, refetch } = useQuery<FlashSale[]>({
     queryKey: ["/api/flash-sales?active=true"],
     enabled: !!token,
   });
@@ -82,6 +82,12 @@ export default function FlashSalesPage() {
         {isLoading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {[1, 2, 3, 4, 5, 6].map((i) => <FlashSaleCardSkeleton key={i} />)}
+          </div>
+        ) : isError ? (
+          <div className="text-center py-12">
+            <AlertCircle className="w-8 h-8 mx-auto mb-2 text-muted-foreground" />
+            <p className="text-muted-foreground mb-2">Failed to load flash sales</p>
+            <button onClick={() => refetch()} className="text-sm text-primary underline">Try again</button>
           </div>
         ) : flashSales.length === 0 ? (
           <EmptyState

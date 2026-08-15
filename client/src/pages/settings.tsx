@@ -14,7 +14,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Separator } from "@/components/ui/separator";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Lock, User, Trash2 } from "lucide-react";
 
 const profileSchema = z.object({
@@ -286,35 +285,16 @@ export default function Settings() {
                     <Separator />
                     <div>
                       <p className="text-sm font-semibold text-destructive mb-1">Danger Zone</p>
-                      <p className="text-sm text-muted-foreground mb-4">
-                        Once you delete your account, there is no going back. Please be certain.
+                      <p className="text-sm text-muted-foreground mb-2">
+                        To delete your account, please contact our support team.
                       </p>
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button variant="destructive" size="sm" data-testid="button-delete-account">
-                            <Trash2 className="w-4 h-4 mr-2" />
-                            Delete Account
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              This action cannot be undone. This will permanently delete your account and remove all of your data from our servers.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel data-testid="button-cancel-delete">Cancel</AlertDialogCancel>
-                            <AlertDialogAction
-                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                              data-testid="button-confirm-delete"
-                              onClick={() => toast({ variant: "destructive", description: "Account deletion is not yet available. Please contact support." })}
-                            >
-                              Delete Account
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
+                      <a
+                        href="mailto:support@tattoorecord.com"
+                        className="text-sm text-primary underline"
+                        data-testid="link-contact-support"
+                      >
+                        Contact support
+                      </a>
                     </div>
                   </CardContent>
                 </Card>

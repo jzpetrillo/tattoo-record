@@ -1,3 +1,5 @@
+import { Circle, Eye, Play } from "lucide-react";
+
 interface LiveStreamCardProps {
   event: any;
   host: any;
@@ -10,12 +12,12 @@ export default function LiveStreamCard({ event, host }: LiveStreamCardProps) {
         <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent"></div>
 
         <div className="absolute top-4 left-4 bg-destructive/95 backdrop-blur-sm px-3 py-1.5 rounded-full text-sm text-white font-bold flex items-center gap-2 animate-pulse">
-          <i className="fas fa-circle text-[8px]"></i>
+          <Circle className="w-2 h-2 fill-white" />
           LIVE
         </div>
 
         <div className="absolute top-4 right-4 bg-black/70 backdrop-blur-sm px-3 py-1.5 rounded-full text-sm text-white font-medium flex items-center gap-2">
-          <i className="fas fa-eye"></i>
+          <Eye className="w-4 h-4" />
           <span data-testid={`viewer-count-${event.id}`}>{event.viewerPeak || 0}</span>
         </div>
 
@@ -37,7 +39,7 @@ export default function LiveStreamCard({ event, host }: LiveStreamCardProps) {
 
         <div className="absolute inset-0 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
           <div className="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center">
-            <i className="fas fa-play text-white text-2xl ml-1"></i>
+            <Play className="w-6 h-6 text-white ml-1 fill-white" />
           </div>
         </div>
       </div>

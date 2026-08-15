@@ -8,7 +8,7 @@ import ForYouRail from "@/components/for-you/for-you-rail";
 import { useAuth } from "@/hooks/use-auth";
 import { Link, useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
-import { Star, ChevronLeft, ChevronRight } from "lucide-react";
+import { Star, ChevronLeft, ChevronRight, AlertCircle } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -29,7 +29,7 @@ export default function Home() {
   const [, setLocation] = useLocation();
   const [featuredScrollPosition, setFeaturedScrollPosition] = useState(0);
 
-  const { data: featuredPosts = [], isLoading: featuredLoading } = useQuery<any[]>({
+  const { data: featuredPosts = [], isLoading: featuredLoading, isError: featuredError, refetch: refetchFeatured } = useQuery<any[]>({
     queryKey: ["/api/posts?featured=true"],
     enabled: !!user,
   });
@@ -127,6 +127,15 @@ export default function Home() {
           <div className="border border-border rounded-lg mb-4 bg-background mt-4 lg:mt-0">
             <StoriesBar />
           </div>
+
+          {/* Featured Error */}
+          {featuredError && (
+            <div className="mb-4 text-center py-6 border border-border rounded-lg">
+              <AlertCircle className="w-6 h-6 mx-auto mb-2 text-muted-foreground" />
+              <p className="text-sm text-muted-foreground mb-1">Failed to load featured posts</p>
+              <button onClick={() => refetchFeatured()} className="text-sm text-primary underline">Try again</button>
+            </div>
+          )}
 
           {/* Featured Content Loading */}
           {featuredLoading && (

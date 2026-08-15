@@ -4,7 +4,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { Link, useLocation, useSearch } from "wouter";
 import SidebarNav from "@/components/layout/sidebar-nav";
 import MobileNav from "@/components/layout/mobile-nav";
-import { MapPin, Star, TrendingUp, Hash, Heart, Grid3X3, Palette, Building2, Users, X } from "lucide-react";
+import { MapPin, Star, TrendingUp, Hash, Heart, Grid3X3, Palette, Building2, Users, X, AlertCircle } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { ExploreGridSkeleton } from "@/components/ui/skeletons";
@@ -82,7 +82,7 @@ export default function Explore() {
 
   const hasActiveFilters = selectedType !== "ALL" || selectedStyle || locationFilter;
 
-  const { data: users = [], isLoading } = useQuery<any[]>({
+  const { data: users = [], isLoading, isError, refetch } = useQuery<any[]>({
     queryKey: ["/api/users", selectedType !== "ALL" ? `?type=${selectedType}` : ""],
     enabled: !!token,
   });
@@ -262,6 +262,12 @@ export default function Explore() {
 
         {isLoading ? (
           <ExploreGridSkeleton count={6} />
+        ) : isError ? (
+          <div className="text-center py-12">
+            <AlertCircle className="w-8 h-8 mx-auto mb-2 text-muted-foreground" />
+            <p className="text-muted-foreground mb-2">Failed to load users</p>
+            <button onClick={() => refetch()} className="text-sm text-primary underline">Try again</button>
+          </div>
         ) : filteredUsers.length === 0 ? (
           <EmptyState
             icon={Grid3X3}

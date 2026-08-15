@@ -3,14 +3,14 @@ import { useAuth } from "@/hooks/use-auth";
 import { Link } from "wouter";
 import SidebarNav from "@/components/layout/sidebar-nav";
 import MobileNav from "@/components/layout/mobile-nav";
-import { Heart, MessageCircle, Film } from "lucide-react";
+import { Heart, MessageCircle, Film, AlertCircle } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
 
 export default function Reels() {
   const { token } = useAuth();
 
-  const { data: reels = [], isLoading } = useQuery<any[]>({
+  const { data: reels = [], isLoading, isError, refetch } = useQuery<any[]>({
     queryKey: ["/api/posts?type=REEL"],
     enabled: !!token,
   });
@@ -35,6 +35,12 @@ export default function Reels() {
               {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
                 <Skeleton key={i} className="aspect-square w-full" />
               ))}
+            </div>
+          ) : isError ? (
+            <div className="text-center py-12">
+              <AlertCircle className="w-8 h-8 mx-auto mb-2 text-muted-foreground" />
+              <p className="text-muted-foreground mb-2">Failed to load reels</p>
+              <button onClick={() => refetch()} className="text-sm text-primary underline">Try again</button>
             </div>
           ) : reels.length === 0 ? (
             <EmptyState

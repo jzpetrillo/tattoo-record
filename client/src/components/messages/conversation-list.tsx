@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Search } from "lucide-react";
 import { MessageSkeleton } from "@/components/ui/skeletons";
 import { EmptyState } from "@/components/ui/empty-state";
-import { MessageCircle } from "lucide-react";
+import { MessageCircle, AlertCircle } from "lucide-react";
 
 export interface OtherUser {
   username: string;
@@ -37,7 +37,7 @@ export default function ConversationList({ onSelectConversation, selectedConvers
   const { token } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
 
-  const { data: conversations, isLoading } = useQuery<any[]>({
+  const { data: conversations, isLoading, isError, refetch } = useQuery<any[]>({
     queryKey: ["/api/conversations"],
     enabled: !!token,
   });
@@ -70,6 +70,12 @@ export default function ConversationList({ onSelectConversation, selectedConvers
         {isLoading ? (
           <div>
             {[1, 2, 3, 4].map((i) => <MessageSkeleton key={i} />)}
+          </div>
+        ) : isError ? (
+          <div className="text-center py-12 px-4">
+            <AlertCircle className="w-8 h-8 mx-auto mb-2 text-muted-foreground" />
+            <p className="text-muted-foreground text-sm mb-2">Failed to load conversations</p>
+            <button onClick={() => refetch()} className="text-sm text-primary underline">Try again</button>
           </div>
         ) : filtered.length === 0 ? (
           <EmptyState

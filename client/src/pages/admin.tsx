@@ -8,6 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { 
   Check, X, ShieldCheck, Users, Clock, CheckCircle2, XCircle, 
   LayoutDashboard, FileText, Briefcase, Zap, Calendar, Search,
@@ -36,6 +37,9 @@ export default function AdminDashboard() {
   const [roleChangeValue, setRoleChangeValue] = useState<string>("");
   const [createSaleOpen, setCreateSaleOpen] = useState(false);
   const [editSaleId, setEditSaleId] = useState<string | null>(null);
+  const [deletePostConfirmId, setDeletePostConfirmId] = useState<string | null>(null);
+  const [deleteJobConfirmId, setDeleteJobConfirmId] = useState<string | null>(null);
+  const [deleteSaleConfirmId, setDeleteSaleConfirmId] = useState<string | null>(null);
   const [newSale, setNewSale] = useState({ artistId: "", title: "", description: "", originalPrice: "", flashPrice: "", availableSlots: "1", expiresAt: "" });
   const [postsFeatureFilter, setPostsFeatureFilter] = useState<string>("all");
   const [postsAuthorSearch, setPostsAuthorSearch] = useState<string>("");
@@ -257,6 +261,7 @@ export default function AdminDashboard() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/posts"] });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/stats"] });
+      setDeletePostConfirmId(null);
       toast({ title: "Post deleted", description: "The post has been deleted." });
     },
     onError: (error: any) => {
@@ -291,6 +296,7 @@ export default function AdminDashboard() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/jobs"] });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/stats"] });
+      setDeleteJobConfirmId(null);
       toast({ title: "Job deleted", description: "The job posting has been deleted." });
     },
     onError: (error: any) => {
@@ -302,6 +308,7 @@ export default function AdminDashboard() {
     mutationFn: async (saleId: string) => apiRequest("DELETE", `/api/admin/flash-sales/${saleId}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/flash-sales"] });
+      setDeleteSaleConfirmId(null);
       toast({ title: "Flash sale deleted", description: "The flash sale has been deleted." });
     },
     onError: (error: any) => {
@@ -907,15 +914,36 @@ export default function AdminDashboard() {
                                 Feature
                               </Button>
                             )}
-                            <Button
-                              size="sm"
-                              variant="destructive"
-                              onClick={() => deletePostMutation.mutate(post.id)}
-                              disabled={deletePostMutation.isPending}
-                              data-testid={`button-delete-post-${post.id}`}
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
+                            <AlertDialog open={deletePostConfirmId === post.id} onOpenChange={(open) => !open && setDeletePostConfirmId(null)}>
+                              <AlertDialogTrigger asChild>
+                                <Button
+                                  size="sm"
+                                  variant="destructive"
+                                  onClick={() => setDeletePostConfirmId(post.id)}
+                                  data-testid={`button-delete-post-${post.id}`}
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Delete Post</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    Are you sure you want to delete this post? This action cannot be undone.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                  <AlertDialogAction
+                                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                    onClick={() => deletePostMutation.mutate(post.id)}
+                                    disabled={deletePostMutation.isPending}
+                                  >
+                                    Delete
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
                           </div>
                         </div>
                       </CardContent>
@@ -980,15 +1008,36 @@ export default function AdminDashboard() {
                                 Activate
                               </Button>
                             )}
-                            <Button
-                              size="sm"
-                              variant="destructive"
-                              onClick={() => deleteJobMutation.mutate(job.id)}
-                              disabled={deleteJobMutation.isPending}
-                              data-testid={`button-delete-job-${job.id}`}
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
+                            <AlertDialog open={deleteJobConfirmId === job.id} onOpenChange={(open) => !open && setDeleteJobConfirmId(null)}>
+                              <AlertDialogTrigger asChild>
+                                <Button
+                                  size="sm"
+                                  variant="destructive"
+                                  onClick={() => setDeleteJobConfirmId(job.id)}
+                                  data-testid={`button-delete-job-${job.id}`}
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Delete Job</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    Are you sure you want to delete this job posting? This action cannot be undone.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                  <AlertDialogAction
+                                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                    onClick={() => deleteJobMutation.mutate(job.id)}
+                                    disabled={deleteJobMutation.isPending}
+                                  >
+                                    Delete
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
                           </div>
                         </div>
                       </CardContent>
@@ -1119,15 +1168,36 @@ export default function AdminDashboard() {
                               <Power className="w-4 h-4 mr-1" />
                               {sale.isActive ? "Pause" : "Resume"}
                             </Button>
-                            <Button
-                              size="sm"
-                              variant="destructive"
-                              onClick={() => deleteFlashSaleMutation.mutate(sale.id)}
-                              disabled={deleteFlashSaleMutation.isPending}
-                              data-testid={`button-delete-sale-${sale.id}`}
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
+                            <AlertDialog open={deleteSaleConfirmId === sale.id} onOpenChange={(open) => !open && setDeleteSaleConfirmId(null)}>
+                              <AlertDialogTrigger asChild>
+                                <Button
+                                  size="sm"
+                                  variant="destructive"
+                                  onClick={() => setDeleteSaleConfirmId(sale.id)}
+                                  data-testid={`button-delete-sale-${sale.id}`}
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Delete Flash Sale</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    Are you sure you want to delete this flash sale? This action cannot be undone.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                  <AlertDialogAction
+                                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                    onClick={() => deleteFlashSaleMutation.mutate(sale.id)}
+                                    disabled={deleteFlashSaleMutation.isPending}
+                                  >
+                                    Delete
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
                           </div>
                         </div>
                       </CardContent>

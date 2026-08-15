@@ -206,11 +206,11 @@ export default function BookingsPage() {
 
   if (!user) {
     return (
-      <div className="min-h-screen bg-white dark:bg-black">
+      <div className="min-h-screen bg-background">
         <SidebarNav />
         <div className="lg:ml-64">
           <div className="flex items-center justify-center h-screen">
-            <p className="text-black dark:text-white">Please log in to view bookings</p>
+            <p className="text-foreground">Please log in to view bookings</p>
           </div>
         </div>
         <MobileNav />
@@ -232,16 +232,15 @@ export default function BookingsPage() {
               <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
                 <DialogTrigger asChild>
                   <Button 
-                    className="bg-black text-white hover:bg-black/90 dark:bg-white dark:text-black dark:hover:bg-white/90"
                     data-testid="button-create-booking"
                   >
                     <Plus className="w-4 h-4 mr-2" />
                     New Booking
                   </Button>
                 </DialogTrigger>
-                <DialogContent className="bg-white dark:bg-black border-black dark:border-white max-w-2xl">
+                <DialogContent className="bg-background border-border max-w-2xl">
                   <DialogHeader>
-                    <DialogTitle className="text-black dark:text-white uppercase tracking-tight">
+                    <DialogTitle className="text-foreground uppercase tracking-tight">
                       Create Booking
                     </DialogTitle>
                   </DialogHeader>
@@ -253,17 +252,17 @@ export default function BookingsPage() {
                         name="artistId"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel className="text-black dark:text-white">Artist</FormLabel>
+                            <FormLabel className="text-foreground">Artist</FormLabel>
                             <Select onValueChange={field.onChange} value={field.value}>
                               <FormControl>
                                 <SelectTrigger 
-                                  className="bg-white dark:bg-black border-black dark:border-white text-black dark:text-white"
+                                  className="bg-background border-border text-foreground"
                                   data-testid="select-artist"
                                 >
                                   <SelectValue placeholder="Select an artist" />
                                 </SelectTrigger>
                               </FormControl>
-                              <SelectContent className="bg-white dark:bg-black border-black dark:border-white">
+                              <SelectContent className="bg-background border-border">
                                 {artists.map((artist: any) => (
                                   <SelectItem key={artist.id} value={artist.id}>
                                     {artist.username} - {artist.profile?.displayName}
@@ -281,11 +280,11 @@ export default function BookingsPage() {
                         name="title"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel className="text-black dark:text-white">Title</FormLabel>
+                            <FormLabel className="text-foreground">Title</FormLabel>
                             <FormControl>
                               <Input
                                 {...field}
-                                className="bg-white dark:bg-black border-black dark:border-white text-black dark:text-white"
+                                className="bg-background border-border text-foreground"
                                 placeholder="e.g., Rose Sleeve Tattoo"
                                 data-testid="input-booking-title"
                               />
@@ -300,11 +299,11 @@ export default function BookingsPage() {
                         name="description"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel className="text-black dark:text-white">Description</FormLabel>
+                            <FormLabel className="text-foreground">Description</FormLabel>
                             <FormControl>
                               <Textarea
                                 {...field}
-                                className="bg-white dark:bg-black border-black dark:border-white text-black dark:text-white resize-none"
+                                className="bg-background border-border text-foreground resize-none"
                                 placeholder="Describe your tattoo idea..."
                                 rows={3}
                                 data-testid="textarea-booking-description"
@@ -321,12 +320,12 @@ export default function BookingsPage() {
                           name="scheduledAt"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel className="text-black dark:text-white">Date & Time</FormLabel>
+                              <FormLabel className="text-foreground">Date & Time</FormLabel>
                               <FormControl>
                                 <Input
                                   {...field}
                                   type="datetime-local"
-                                  className="bg-white dark:bg-black border-black dark:border-white text-black dark:text-white"
+                                  className="bg-background border-border text-foreground"
                                   data-testid="input-scheduled-at"
                                 />
                               </FormControl>
@@ -340,14 +339,14 @@ export default function BookingsPage() {
                           name="durationMinutes"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel className="text-black dark:text-white">Duration (minutes)</FormLabel>
+                              <FormLabel className="text-foreground">Duration (minutes)</FormLabel>
                               <FormControl>
                                 <Input
                                   {...field}
                                   type="number"
                                   min="30"
                                   step="30"
-                                  className="bg-white dark:bg-black border-black dark:border-white text-black dark:text-white"
+                                  className="bg-background border-border text-foreground"
                                   data-testid="input-duration"
                                 />
                               </FormControl>
@@ -363,14 +362,14 @@ export default function BookingsPage() {
                           name="depositCents"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel className="text-black dark:text-white">Deposit ($)</FormLabel>
+                              <FormLabel className="text-foreground">Deposit ($)</FormLabel>
                               <FormControl>
                                 <Input
                                   {...field}
                                   type="number"
                                   min="0"
                                   step="0.01"
-                                  className="bg-white dark:bg-black border-black dark:border-white text-black dark:text-white"
+                                  className="bg-background border-border text-foreground"
                                   placeholder="0.00"
                                   data-testid="input-deposit"
                                   onChange={(e) => field.onChange(Math.round(parseFloat(e.target.value || "0") * 100))}
@@ -387,14 +386,14 @@ export default function BookingsPage() {
                           name="totalPriceCents"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel className="text-black dark:text-white">Total Price ($)</FormLabel>
+                              <FormLabel className="text-foreground">Total Price ($)</FormLabel>
                               <FormControl>
                                 <Input
                                   {...field}
                                   type="number"
                                   min="0"
                                   step="0.01"
-                                  className="bg-white dark:bg-black border-black dark:border-white text-black dark:text-white"
+                                  className="bg-background border-border text-foreground"
                                   placeholder="0.00"
                                   data-testid="input-total-price"
                                   onChange={(e) => field.onChange(Math.round(parseFloat(e.target.value || "0") * 100))}
@@ -412,20 +411,20 @@ export default function BookingsPage() {
                         name="reminderPreference"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel className="text-black dark:text-white">
+                            <FormLabel className="text-foreground">
                               <Bell className="w-4 h-4 inline mr-2" />
                               Reminder
                             </FormLabel>
                             <Select onValueChange={field.onChange} value={field.value}>
                               <FormControl>
                                 <SelectTrigger 
-                                  className="bg-white dark:bg-black border-black dark:border-white text-black dark:text-white"
+                                  className="bg-background border-border text-foreground"
                                   data-testid="select-reminder"
                                 >
                                   <SelectValue placeholder="When to remind you" />
                                 </SelectTrigger>
                               </FormControl>
-                              <SelectContent className="bg-white dark:bg-black border-black dark:border-white">
+                              <SelectContent className="bg-background border-border">
                                 <SelectItem value="NONE">No reminder</SelectItem>
                                 <SelectItem value="DAY_BEFORE">1 day before</SelectItem>
                                 <SelectItem value="WEEK_BEFORE">1 week before</SelectItem>
@@ -442,11 +441,11 @@ export default function BookingsPage() {
                         name="notes"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel className="text-black dark:text-white">Notes</FormLabel>
+                            <FormLabel className="text-foreground">Notes</FormLabel>
                             <FormControl>
                               <Textarea
                                 {...field}
-                                className="bg-white dark:bg-black border-black dark:border-white text-black dark:text-white resize-none"
+                                className="bg-background border-border text-foreground resize-none"
                                 placeholder="Any additional notes..."
                                 rows={2}
                                 data-testid="textarea-booking-notes"
@@ -462,7 +461,7 @@ export default function BookingsPage() {
                           type="button"
                           variant="outline"
                           onClick={() => setCreateDialogOpen(false)}
-                          className="border-black dark:border-white text-black dark:text-white"
+                          className="border-border text-foreground"
                           data-testid="button-cancel-booking"
                         >
                           Cancel
@@ -470,7 +469,6 @@ export default function BookingsPage() {
                         <Button
                           type="submit"
                           disabled={createMutation.isPending}
-                          className="bg-black text-white hover:bg-black/90 dark:bg-white dark:text-black dark:hover:bg-white/90"
                           data-testid="button-submit-booking"
                         >
                           {createMutation.isPending ? "Creating..." : "Create Booking"}
@@ -484,23 +482,23 @@ export default function BookingsPage() {
         </div>
 
         <Tabs value={statusFilter} onValueChange={setStatusFilter} className="mb-6">
-          <TabsList className="bg-white dark:bg-black border border-black dark:border-white h-auto min-h-[44px] flex-wrap sm:flex-nowrap">
-            <TabsTrigger value="ALL" className="min-h-[44px] px-3 sm:px-4 data-[state=active]:bg-black data-[state=active]:text-white dark:data-[state=active]:bg-white dark:data-[state=active]:text-black" data-testid="tab-all">
+          <TabsList className="bg-background border border-border h-auto min-h-[44px] flex-wrap sm:flex-nowrap">
+            <TabsTrigger value="ALL" className="min-h-[44px] px-3 sm:px-4 data-[state=active]:bg-cobalt data-[state=active]:text-white" data-testid="tab-all">
               All
             </TabsTrigger>
-            <TabsTrigger value="PENDING" className="min-h-[44px] px-3 sm:px-4 data-[state=active]:bg-black data-[state=active]:text-white dark:data-[state=active]:bg-white dark:data-[state=active]:text-black" data-testid="tab-pending">
+            <TabsTrigger value="PENDING" className="min-h-[44px] px-3 sm:px-4 data-[state=active]:bg-cobalt data-[state=active]:text-white" data-testid="tab-pending">
               Pending
             </TabsTrigger>
-            <TabsTrigger value="APPROVED" className="min-h-[44px] px-3 sm:px-4 data-[state=active]:bg-black data-[state=active]:text-white dark:data-[state=active]:bg-white dark:data-[state=active]:text-black" data-testid="tab-approved">
+            <TabsTrigger value="APPROVED" className="min-h-[44px] px-3 sm:px-4 data-[state=active]:bg-cobalt data-[state=active]:text-white" data-testid="tab-approved">
               Approved
             </TabsTrigger>
-            <TabsTrigger value="COMPLETED" className="min-h-[44px] px-3 sm:px-4 data-[state=active]:bg-black data-[state=active]:text-white dark:data-[state=active]:bg-white dark:data-[state=active]:text-black" data-testid="tab-completed">
+            <TabsTrigger value="COMPLETED" className="min-h-[44px] px-3 sm:px-4 data-[state=active]:bg-cobalt data-[state=active]:text-white" data-testid="tab-completed">
               Completed
             </TabsTrigger>
-            <TabsTrigger value="REJECTED" className="min-h-[44px] px-3 sm:px-4 data-[state=active]:bg-black data-[state=active]:text-white dark:data-[state=active]:bg-white dark:data-[state=active]:text-black" data-testid="tab-rejected">
+            <TabsTrigger value="REJECTED" className="min-h-[44px] px-3 sm:px-4 data-[state=active]:bg-cobalt data-[state=active]:text-white" data-testid="tab-rejected">
               Rejected
             </TabsTrigger>
-            <TabsTrigger value="CANCELLED" className="min-h-[44px] px-3 sm:px-4 data-[state=active]:bg-black data-[state=active]:text-white dark:data-[state=active]:bg-white dark:data-[state=active]:text-black" data-testid="tab-cancelled">
+            <TabsTrigger value="CANCELLED" className="min-h-[44px] px-3 sm:px-4 data-[state=active]:bg-cobalt data-[state=active]:text-white" data-testid="tab-cancelled">
               Cancelled
             </TabsTrigger>
           </TabsList>
@@ -523,11 +521,11 @@ export default function BookingsPage() {
               const isClient = booking.clientId === user.id;
 
               return (
-                <Card key={booking.id} className="bg-white dark:bg-black border-black dark:border-white p-6" data-testid={`card-booking-${booking.id}`}>
+                <Card key={booking.id} className="bg-background border-border p-6" data-testid={`card-booking-${booking.id}`}>
                     <div className="flex items-start justify-between mb-4">
                       <div className="flex-1">
                         <div className="flex items-center gap-3 mb-2 flex-wrap">
-                          <h3 className="text-xl font-bold text-black dark:text-white uppercase tracking-tight" data-testid={`text-booking-title-${booking.id}`}>
+                          <h3 className="text-xl font-bold text-foreground uppercase tracking-tight" data-testid={`text-booking-title-${booking.id}`}>
                             {booking.title}
                           </h3>
                           <StatusBadge status={booking.status} type="booking" data-testid={`badge-status-${booking.id}`} />
@@ -537,7 +535,7 @@ export default function BookingsPage() {
                         </div>
                         
                         {booking.description && (
-                          <p className="text-gray-600 dark:text-gray-400 mb-3" data-testid={`text-description-${booking.id}`}>
+                          <p className="text-muted-foreground mb-3" data-testid={`text-description-${booking.id}`}>
                             {booking.description}
                           </p>
                         )}
@@ -583,7 +581,7 @@ export default function BookingsPage() {
                       </div>
                     </div>
 
-                    <div className="flex gap-2 justify-end pt-4 border-t border-black dark:border-white">
+                    <div className="flex gap-2 justify-end pt-4 border-t border-border">
                       {isArtist && booking.status === "PENDING" && (
                         <>
                           <Button
@@ -653,7 +651,7 @@ export default function BookingsPage() {
                             <Button
                               size="sm"
                               variant="outline"
-                              className="border-black dark:border-white text-black dark:text-white"
+                              className="border-border text-foreground"
                               disabled={deleteMutation.isPending}
                               data-testid={`button-cancel-${booking.id}`}
                             >
@@ -688,7 +686,7 @@ export default function BookingsPage() {
                             <Button
                               size="sm"
                               variant="outline"
-                              className="border-black dark:border-white text-black dark:text-white"
+                              className="border-border text-foreground"
                               disabled={requestCancellationMutation.isPending}
                               data-testid={`button-request-cancel-${booking.id}`}
                             >
@@ -732,7 +730,7 @@ export default function BookingsPage() {
                             variant="outline"
                             onClick={() => cancellationResponseMutation.mutate({ id: booking.id, approve: true })}
                             disabled={cancellationResponseMutation.isPending}
-                            className="border-black dark:border-white text-black dark:text-white"
+                            className="border-border text-foreground"
                             data-testid={`button-approve-cancel-${booking.id}`}
                           >
                             <CheckCircle className="w-4 h-4 mr-1" />
@@ -743,7 +741,7 @@ export default function BookingsPage() {
                             variant="outline"
                             onClick={() => cancellationResponseMutation.mutate({ id: booking.id, approve: false })}
                             disabled={cancellationResponseMutation.isPending}
-                            className="border-black dark:border-white text-black dark:text-white"
+                            className="border-border text-foreground"
                             data-testid={`button-reject-cancel-${booking.id}`}
                           >
                             <XCircle className="w-4 h-4 mr-1" />

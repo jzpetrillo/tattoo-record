@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useState, useEffect } from "react";
-import { X, Heart, Send } from "lucide-react";
+import { X } from "lucide-react";
 
 interface StoryViewerProps {
   userId: string;
@@ -83,23 +83,6 @@ export default function StoryViewer({ userId, onClose }: StoryViewerProps) {
               className="flex-1 active:bg-white/10"
               data-testid="button-next-story"
             ></button>
-          </div>
-        </div>
-
-        <div className="p-4 border-t border-white/10">
-          <div className="flex gap-3 items-center">
-            <input
-              type="text"
-              placeholder={`Reply to ${currentStory.user.username}...`}
-              className="flex-1 bg-transparent border border-white/30 rounded-full px-4 py-2.5 text-white placeholder-white/60 focus:outline-none focus:border-white/60"
-              data-testid="input-story-reply"
-            />
-            <button className="text-white hover:text-white/80">
-              <Heart className="w-6 h-6" />
-            </button>
-            <button className="text-white hover:text-white/80">
-              <Send className="w-6 h-6" />
-            </button>
           </div>
         </div>
       </div>

@@ -4,7 +4,7 @@ import { apiRequest } from "@/lib/api";
 import SidebarNav from "@/components/layout/sidebar-nav";
 import MobileNav from "@/components/layout/mobile-nav";
 import { useAuth } from "@/hooks/use-auth";
-import { Heart, MessageCircle, UserPlus, CheckCircle, Bell, UserCheck, Eye, Calendar, XCircle } from "lucide-react";
+import { Heart, MessageCircle, UserPlus, CheckCircle, Bell, UserCheck, Eye, Calendar, XCircle, AlertCircle } from "lucide-react";
 import { formatDistanceToNow, isToday, isYesterday, isThisWeek, format } from "date-fns";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
@@ -48,7 +48,7 @@ export default function Notifications() {
   const { user, token } = useAuth();
   const [, setLocation] = useLocation();
 
-  const { data: notifications = [], isLoading } = useQuery<Notification[]>({
+  const { data: notifications = [], isLoading, isError, refetch } = useQuery<Notification[]>({
     queryKey: ["/api/notifications"],
     enabled: !!user,
   });
@@ -268,6 +268,12 @@ export default function Notifications() {
             {[...Array(5)].map((_, i) => (
               <NotificationSkeleton key={i} />
             ))}
+          </div>
+        ) : isError ? (
+          <div className="text-center py-12">
+            <AlertCircle className="w-8 h-8 mx-auto mb-2 text-muted-foreground" />
+            <p className="text-muted-foreground mb-2">Failed to load notifications</p>
+            <button onClick={() => refetch()} className="text-sm text-primary underline">Try again</button>
           </div>
         ) : notifications.length === 0 ? (
           <EmptyState

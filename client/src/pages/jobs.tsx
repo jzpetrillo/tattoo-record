@@ -15,7 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Plus, MapPin, DollarSign, Briefcase } from "lucide-react";
+import { Plus, MapPin, DollarSign, Briefcase, AlertCircle } from "lucide-react";
 import { Link } from "wouter";
 import { JobCardSkeleton } from "@/components/ui/skeletons";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -49,7 +49,7 @@ export default function Jobs() {
   const { toast } = useToast();
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
 
-  const { data: jobs, isLoading } = useQuery<any[]>({
+  const { data: jobs, isLoading, isError, refetch } = useQuery<any[]>({
     queryKey: ["/api/jobs"],
     enabled: !!token,
   });
@@ -239,6 +239,12 @@ export default function Jobs() {
         {isLoading ? (
           <div className="space-y-4">
             {[1, 2, 3].map((i) => <JobCardSkeleton key={i} />)}
+          </div>
+        ) : isError ? (
+          <div className="text-center py-12">
+            <AlertCircle className="w-8 h-8 mx-auto mb-2 text-muted-foreground" />
+            <p className="text-muted-foreground mb-2">Failed to load jobs</p>
+            <button onClick={() => refetch()} className="text-sm text-primary underline">Try again</button>
           </div>
         ) : !jobs?.length ? (
           <EmptyState

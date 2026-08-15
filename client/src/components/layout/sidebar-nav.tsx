@@ -37,7 +37,7 @@ export default function SidebarNav() {
     { path: "/reels", label: "Reels", icon: Video },
     { path: "/messages", label: "Messages", icon: MessageCircle },
     { path: "/notifications", label: "Notifications", icon: Heart },
-    { path: "/live", label: "Live", icon: Radio },
+    ...(import.meta.env.VITE_LIVE_ENABLED === 'true' ? [{ path: "/live", label: "Live", icon: Radio }] : []),
     { path: "/jobs", label: "Jobs", icon: Briefcase },
     { path: "/bookings", label: "Bookings", icon: Calendar },
     { path: "/create", label: "Create", icon: PlusSquare },

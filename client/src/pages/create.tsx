@@ -46,14 +46,14 @@ export default function Create() {
       iconColor: "text-foreground",
       bgColor: "bg-secondary",
     },
-    {
+    ...(import.meta.env.VITE_LIVE_ENABLED === 'true' ? [{
       id: "live",
       title: "Go Live",
       description: "Start a live video stream",
       icon: Radio,
       iconColor: "text-foreground",
       bgColor: "bg-secondary",
-    },
+    }] : []),
   ];
 
   return (
@@ -97,7 +97,7 @@ export default function Create() {
               <ul className="text-sm text-muted-foreground space-y-2">
                 <li>• Share high-quality images of your work</li>
                 <li>• Use relevant hashtags to reach more people</li>
-                <li>• Go live to show your process and connect with clients</li>
+                {import.meta.env.VITE_LIVE_ENABLED === 'true' && <li>• Go live to show your process and connect with clients</li>}
                 <li>• Post reels to showcase before/after transformations</li>
               </ul>
             </div>

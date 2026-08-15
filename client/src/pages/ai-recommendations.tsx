@@ -1,58 +1,30 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 import { apiRequest } from "@/lib/api";
+import { useLocation } from "wouter";
 import SidebarNav from "@/components/layout/sidebar-nav";
 import MobileNav from "@/components/layout/mobile-nav";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Sparkles, Palette, MapPin, Ruler, Droplets, Info, Loader2, CheckCircle2 } from "lucide-react";
+import { Sparkles, Palette, MapPin, Ruler, Droplets, Info, Loader2 } from "lucide-react";
 
 const TATTOO_STYLES = [
-  "Traditional",
-  "Neo-Traditional", 
-  "Japanese",
-  "Realism",
-  "Watercolor",
-  "Geometric",
-  "Minimalist",
-  "Blackwork",
-  "Dotwork",
-  "Tribal",
-  "New School",
-  "Biomechanical",
+  "Traditional", "Neo-Traditional", "Japanese", "Realism", "Watercolor",
+  "Geometric", "Minimalist", "Blackwork", "Dotwork", "Tribal", "New School", "Biomechanical",
 ];
 
 const PLACEMENTS = [
-  "Arm (Upper)",
-  "Arm (Forearm)",
-  "Arm (Full Sleeve)",
-  "Back",
-  "Chest",
-  "Shoulder",
-  "Leg (Thigh)",
-  "Leg (Calf)",
-  "Ribs",
-  "Neck",
-  "Hand",
-  "Wrist",
-  "Ankle",
-  "Foot",
+  "Arm (Upper)", "Arm (Forearm)", "Arm (Full Sleeve)", "Back", "Chest",
+  "Shoulder", "Leg (Thigh)", "Leg (Calf)", "Ribs", "Neck", "Hand", "Wrist", "Ankle", "Foot",
 ];
 
 const SIZES = [
-  "Tiny (1-2 inches)",
-  "Small (2-4 inches)",
-  "Medium (4-6 inches)",
-  "Large (6-10 inches)",
-  "Extra Large (10+ inches)",
-  "Full Sleeve",
-  "Half Sleeve",
-  "Back Piece",
+  "Tiny (1-2 inches)", "Small (2-4 inches)", "Medium (4-6 inches)",
+  "Large (6-10 inches)", "Extra Large (10+ inches)", "Full Sleeve", "Half Sleeve", "Back Piece",
 ];
 
 interface TattooRecommendation {
@@ -64,13 +36,21 @@ interface TattooRecommendation {
   aftercareTips: string[];
 }
 
+const AI_ENABLED = import.meta.env.VITE_AI_ENABLED === "true";
+
 export default function AIRecommendations() {
+  // All hooks must be called unconditionally before any early return.
   const { token } = useAuth();
+  const [, setLocation] = useLocation();
   const [description, setDescription] = useState("");
   const [style, setStyle] = useState("");
   const [placement, setPlacement] = useState("");
   const [size, setSize] = useState("");
   const [recommendation, setRecommendation] = useState<TattooRecommendation | null>(null);
+
+  useEffect(() => {
+    if (!AI_ENABLED) setLocation("/");
+  }, [setLocation]);
 
   const generateMutation = useMutation({
     mutationFn: async () => {
@@ -92,6 +72,9 @@ export default function AIRecommendations() {
     },
   });
 
+  // Render nothing while the redirect fires — no content ever painted.
+  if (!AI_ENABLED) return null;
+
   return (
     <div className="min-h-screen bg-background">
       <SidebarNav />
@@ -112,9 +95,7 @@ export default function AIRecommendations() {
               </CardHeader>
               <CardContent className="space-y-6">
                 <div>
-                  <label className="block text-sm font-medium mb-2">
-                    Describe your idea
-                  </label>
+                  <label className="block text-sm font-medium mb-2">Describe your idea</label>
                   <Textarea
                     placeholder="E.g., A dragon wrapping around a sword with cherry blossoms..."
                     value={description}
@@ -125,52 +106,40 @@ export default function AIRecommendations() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium mb-2">
-                    Preferred Style
-                  </label>
+                  <label className="block text-sm font-medium mb-2">Preferred Style</label>
                   <Select value={style} onValueChange={setStyle}>
                     <SelectTrigger data-testid="select-style">
                       <SelectValue placeholder="Select a style" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="any">Open to suggestions</SelectItem>
-                      {TATTOO_STYLES.map((s) => (
-                        <SelectItem key={s} value={s}>{s}</SelectItem>
-                      ))}
+                      {TATTOO_STYLES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
                     </SelectContent>
                   </Select>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium mb-2">
-                    Preferred Placement
-                  </label>
+                  <label className="block text-sm font-medium mb-2">Preferred Placement</label>
                   <Select value={placement} onValueChange={setPlacement}>
                     <SelectTrigger data-testid="select-placement">
                       <SelectValue placeholder="Select placement" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="any">Open to suggestions</SelectItem>
-                      {PLACEMENTS.map((p) => (
-                        <SelectItem key={p} value={p}>{p}</SelectItem>
-                      ))}
+                      {PLACEMENTS.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}
                     </SelectContent>
                   </Select>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium mb-2">
-                    Preferred Size
-                  </label>
+                  <label className="block text-sm font-medium mb-2">Preferred Size</label>
                   <Select value={size} onValueChange={setSize}>
                     <SelectTrigger data-testid="select-size">
                       <SelectValue placeholder="Select size" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="any">Open to suggestions</SelectItem>
-                      {SIZES.map((s) => (
-                        <SelectItem key={s} value={s}>{s}</SelectItem>
-                      ))}
+                      {SIZES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
                     </SelectContent>
                   </Select>
                 </div>
@@ -182,15 +151,9 @@ export default function AIRecommendations() {
                   data-testid="button-generate"
                 >
                   {generateMutation.isPending ? (
-                    <>
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      Generating...
-                    </>
+                    <><Loader2 className="w-4 h-4 animate-spin" />Generating...</>
                   ) : (
-                    <>
-                      <Sparkles className="w-4 h-4" />
-                      Get Recommendations
-                    </>
+                    <><Sparkles className="w-4 h-4" />Get Recommendations</>
                   )}
                 </Button>
               </CardContent>
@@ -227,65 +190,46 @@ export default function AIRecommendations() {
                   <CardContent className="space-y-6">
                     <div>
                       <h4 className="font-semibold mb-2 flex items-center gap-2">
-                        <Palette className="w-4 h-4" />
-                        Recommended Styles
+                        <Palette className="w-4 h-4" />Recommended Styles
                       </h4>
                       <div className="flex flex-wrap gap-2">
-                        {recommendation.styles.map((s) => (
-                          <Badge key={s} variant="secondary">{s}</Badge>
-                        ))}
+                        {recommendation.styles.map((s) => <Badge key={s} variant="secondary">{s}</Badge>)}
                       </div>
                     </div>
-
                     <div>
                       <h4 className="font-semibold mb-2 flex items-center gap-2">
-                        <MapPin className="w-4 h-4" />
-                        Placement Suggestions
+                        <MapPin className="w-4 h-4" />Placement Suggestions
                       </h4>
                       <div className="flex flex-wrap gap-2">
-                        {recommendation.placement.map((p) => (
-                          <Badge key={p} variant="outline">{p}</Badge>
-                        ))}
+                        {recommendation.placement.map((p) => <Badge key={p} variant="outline">{p}</Badge>)}
                       </div>
                     </div>
-
                     <div>
                       <h4 className="font-semibold mb-2 flex items-center gap-2">
-                        <Ruler className="w-4 h-4" />
-                        Recommended Size
+                        <Ruler className="w-4 h-4" />Recommended Size
                       </h4>
                       <p className="text-muted-foreground">{recommendation.size}</p>
                     </div>
-
                     <div>
                       <h4 className="font-semibold mb-2 flex items-center gap-2">
-                        <Droplets className="w-4 h-4" />
-                        Color Palette
+                        <Droplets className="w-4 h-4" />Color Palette
                       </h4>
                       <div className="flex flex-wrap gap-2">
-                        {recommendation.colors.map((c) => (
-                          <Badge key={c} variant="secondary">{c}</Badge>
-                        ))}
+                        {recommendation.colors.map((c) => <Badge key={c} variant="secondary">{c}</Badge>)}
                       </div>
                     </div>
-
                     <div>
                       <h4 className="font-semibold mb-2">Design Description</h4>
-                      <p className="text-muted-foreground leading-relaxed">
-                        {recommendation.description}
-                      </p>
+                      <p className="text-muted-foreground leading-relaxed">{recommendation.description}</p>
                     </div>
-
                     <div className="pt-4 border-t">
                       <h4 className="font-semibold mb-3 flex items-center gap-2">
-                        <Info className="w-4 h-4" />
-                        Aftercare Tips
+                        <Info className="w-4 h-4" />Aftercare Tips
                       </h4>
                       <ul className="space-y-2">
                         {recommendation.aftercareTips.map((tip, i) => (
                           <li key={i} className="text-sm text-muted-foreground flex items-start gap-2">
-                            <span className="text-primary font-medium">{i + 1}.</span>
-                            {tip}
+                            <span className="text-primary font-medium">{i + 1}.</span>{tip}
                           </li>
                         ))}
                       </ul>
@@ -298,7 +242,7 @@ export default function AIRecommendations() {
                     <Sparkles className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
                     <h3 className="font-semibold mb-2">Ready to explore?</h3>
                     <p className="text-sm text-muted-foreground max-w-xs mx-auto">
-                      Describe your tattoo idea and our AI will provide personalized style, 
+                      Describe your tattoo idea and our AI will provide personalized style,
                       placement, and design recommendations.
                     </p>
                   </CardContent>

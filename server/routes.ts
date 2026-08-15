@@ -28,6 +28,18 @@ function safeUser<T extends { hashedPassword?: string }>(user: T): Omit<T, "hash
   return safe;
 }
 
+// Safe error responder: surfaces Zod validation messages (400) but returns a
+// generic message for all other errors so internal details never reach clients.
+function sendError(res: any, error: any): void {
+  if (error?.name === "ZodError") {
+    const msg = error.errors?.[0]?.message ?? error.message ?? "Validation failed";
+    res.status(400).json({ message: msg });
+  } else {
+    console.error("[route-error]", error);
+    res.status(500).json({ message: "An unexpected error occurred" });
+  }
+}
+
 const ALLOWED_MIME_TYPES = new Set([
   "image/jpeg", "image/png", "image/webp", "image/gif",
   "video/mp4", "video/webm", "video/quicktime", "video/x-msvideo"
@@ -93,7 +105,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const token = generateToken(user.id);
       res.json({ token, user: { id: user.id, username: user.username, email: user.email, role: user.role, verificationStatus: user.verificationStatus } });
     } catch (error: any) {
-      res.status(400).json({ message: error.message });
+      sendError(res, error);
     }
   });
 
@@ -118,7 +130,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const token = generateToken(user.id);
       res.json({ token, user: { id: user.id, username: user.username, email: user.email, role: user.role, isVerified: user.isVerified, verificationStatus: user.verificationStatus } });
     } catch (error: any) {
-      res.status(400).json({ message: error.message });
+      sendError(res, error);
     }
   });
 
@@ -202,7 +214,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const user = await storage.updateUser(req.userId!, validated);
       res.json(safeUser(user));
     } catch (error: any) {
-      res.status(400).json({ message: error.message });
+      sendError(res, error);
     }
   });
 
@@ -375,7 +387,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         entityType: "post",
       }).catch(() => {});
     } catch (error: any) {
-      res.status(400).json({ message: error.message });
+      sendError(res, error);
     }
   });
 
@@ -472,7 +484,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }).catch(() => {});
       res.json(comment);
     } catch (error: any) {
-      res.status(400).json({ message: error.message });
+      sendError(res, error);
     }
   });
 
@@ -510,7 +522,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         entityType: "post",
       }).catch(() => {});
     } catch (error: any) {
-      res.status(400).json({ message: error.message });
+      res.status(500).json({ message: "Internal server error" });
     }
   });
 
@@ -564,7 +576,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       res.json(story);
     } catch (error: any) {
-      res.status(400).json({ message: error.message });
+      sendError(res, error);
     }
   });
 
@@ -606,7 +618,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       );
       res.json(conversation);
     } catch (error: any) {
-      res.status(400).json({ message: error.message });
+      res.status(500).json({ message: "Internal server error" });
     }
   });
 
@@ -661,7 +673,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       broadcastNewMessage(req.params.id, message).catch((e) => console.error("WS broadcast failed:", e));
       res.json(message);
     } catch (error: any) {
-      res.status(400).json({ message: error.message });
+      sendError(res, error);
     }
   });
 
@@ -707,7 +719,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       res.json(item);
     } catch (error: any) {
-      res.status(400).json({ message: error.message });
+      res.status(500).json({ message: "Internal server error" });
     }
   });
 
@@ -775,7 +787,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       res.json(job);
     } catch (error: any) {
-      res.status(400).json({ message: error.message });
+      sendError(res, error);
     }
   });
 
@@ -792,7 +804,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await storage.updateJob(req.params.id, validated);
       res.json({ message: "Job updated successfully" });
     } catch (error: any) {
-      res.status(400).json({ message: error.message });
+      sendError(res, error);
     }
   });
 
@@ -808,7 +820,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await storage.deleteJob(req.params.id);
       res.json({ message: "Job deleted successfully" });
     } catch (error: any) {
-      res.status(400).json({ message: error.message });
+      sendError(res, error);
     }
   });
 
@@ -825,10 +837,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: error.errors?.[0]?.message || "Validation failed" });
       }
       if (error?.status === 409) {
-        return res.status(409).json({ message: error.message });
+        return res.status(409).json({ message: "You have already applied to this job" });
       }
       console.error("[job apply]", error);
-      res.status(400).json({ message: "Could not submit application. Please try again." });
+      res.status(500).json({ message: "An unexpected error occurred" });
     }
   });
 
@@ -881,7 +893,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       res.json(flashSale);
     } catch (error: any) {
-      res.status(400).json({ message: error.message });
+      sendError(res, error);
     }
   });
 
@@ -1268,7 +1280,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       res.json(event);
     } catch (error: any) {
-      res.status(400).json({ message: error.message });
+      sendError(res, error);
     }
   });
 
@@ -1482,7 +1494,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const request = await storage.createStudioApprovalRequest(validated);
       res.json(request);
     } catch (error: any) {
-      res.status(400).json({ message: error.message });
+      sendError(res, error);
     }
   });
 
@@ -1515,7 +1527,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await storage.updateStudioApprovalStatus(req.params.id, "APPROVED");
       res.json({ message: "Request approved" });
     } catch (error: any) {
-      res.status(400).json({ message: error.message });
+      sendError(res, error);
     }
   });
 
@@ -1527,7 +1539,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await storage.updateStudioApprovalStatus(req.params.id, "REJECTED");
       res.json({ message: "Request rejected" });
     } catch (error: any) {
-      res.status(400).json({ message: error.message });
+      sendError(res, error);
     }
   });
 
@@ -1592,7 +1604,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await storage.approveUser(req.params.id);
       res.json({ message: "User approved successfully" });
     } catch (error: any) {
-      res.status(400).json({ message: error.message });
+      sendError(res, error);
     }
   });
 
@@ -1601,7 +1613,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await storage.rejectUser(req.params.id);
       res.json({ message: "User rejected successfully" });
     } catch (error: any) {
-      res.status(400).json({ message: error.message });
+      sendError(res, error);
     }
   });
 
@@ -1637,7 +1649,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await storage.deleteUser(req.params.id);
       res.json({ message: "User deleted successfully" });
     } catch (error: any) {
-      res.status(400).json({ message: error.message });
+      sendError(res, error);
     }
   });
 
@@ -1647,7 +1659,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await storage.banUser(req.params.id);
       res.json({ message: "User banned successfully" });
     } catch (error: any) {
-      res.status(400).json({ message: error.message });
+      sendError(res, error);
     }
   });
 
@@ -1656,7 +1668,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await storage.unbanUser(req.params.id);
       res.json({ message: "User unbanned successfully" });
     } catch (error: any) {
-      res.status(400).json({ message: error.message });
+      sendError(res, error);
     }
   });
 
@@ -1680,7 +1692,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await storage.deletePost(req.params.id);
       res.json({ message: "Post deleted successfully" });
     } catch (error: any) {
-      res.status(400).json({ message: error.message });
+      sendError(res, error);
     }
   });
 
@@ -1689,7 +1701,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await storage.featurePost(req.params.id);
       res.json({ message: "Post featured successfully" });
     } catch (error: any) {
-      res.status(400).json({ message: error.message });
+      sendError(res, error);
     }
   });
 
@@ -1698,7 +1710,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await storage.unfeaturePost(req.params.id);
       res.json({ message: "Post unfeatured successfully" });
     } catch (error: any) {
-      res.status(400).json({ message: error.message });
+      sendError(res, error);
     }
   });
 
@@ -1717,7 +1729,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await storage.deleteJob(req.params.id);
       res.json({ message: "Job deleted successfully" });
     } catch (error: any) {
-      res.status(400).json({ message: error.message });
+      sendError(res, error);
     }
   });
 
@@ -1726,7 +1738,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await storage.activateJob(req.params.id);
       res.json({ message: "Job activated successfully" });
     } catch (error: any) {
-      res.status(400).json({ message: error.message });
+      sendError(res, error);
     }
   });
 
@@ -1735,7 +1747,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await storage.deactivateJob(req.params.id);
       res.json({ message: "Job deactivated successfully" });
     } catch (error: any) {
-      res.status(400).json({ message: error.message });
+      sendError(res, error);
     }
   });
 
@@ -1754,7 +1766,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await storage.deleteFlashSale(req.params.id);
       res.json({ message: "Flash sale deleted successfully" });
     } catch (error: any) {
-      res.status(400).json({ message: error.message });
+      sendError(res, error);
     }
   });
 
@@ -1778,7 +1790,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await storage.changeUserRole(req.params.id, role);
       res.json({ message: "User role updated successfully" });
     } catch (error: any) {
-      res.status(400).json({ message: error.message });
+      sendError(res, error);
     }
   });
 
@@ -1788,7 +1800,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await storage.toggleFlashSaleActive(req.params.id);
       res.json({ message: "Flash sale status toggled" });
     } catch (error: any) {
-      res.status(400).json({ message: error.message });
+      sendError(res, error);
     }
   });
 
@@ -1798,7 +1810,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const updated = await storage.updateFlashSale(req.params.id, req.body);
       res.json(updated);
     } catch (error: any) {
-      res.status(400).json({ message: error.message });
+      sendError(res, error);
     }
   });
 
@@ -1822,7 +1834,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       res.status(201).json(sale);
     } catch (error: any) {
-      res.status(400).json({ message: error.message });
+      sendError(res, error);
     }
   });
 
@@ -1832,7 +1844,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await storage.cancelBookingAdmin(req.params.id);
       res.json({ message: "Booking cancelled successfully" });
     } catch (error: any) {
-      res.status(400).json({ message: error.message });
+      sendError(res, error);
     }
   });
 
@@ -1849,7 +1861,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await storage.completeBookingAdmin(req.params.id);
       res.json({ message: "Booking marked as complete" });
     } catch (error: any) {
-      res.status(400).json({ message: error.message });
+      sendError(res, error);
     }
   });
 

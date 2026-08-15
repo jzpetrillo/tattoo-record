@@ -24,7 +24,7 @@ export default function MobileNav() {
     { path: "/explore", icon: Compass, label: "Explore" },
     { path: "/notifications", icon: Heart, label: "Notifications" },
     { path: "/reels", icon: Video, label: "Reels" },
-    { path: "/live", icon: Radio, label: "Live" },
+    ...(import.meta.env.VITE_LIVE_ENABLED === 'true' ? [{ path: "/live", icon: Radio, label: "Live" }] : []),
     { path: "/jobs", icon: Briefcase, label: "Jobs" },
     { path: "/bookings", icon: Calendar, label: "Bookings" },
     { path: "/flash-sales", icon: Zap, label: "Flash Sales" },
