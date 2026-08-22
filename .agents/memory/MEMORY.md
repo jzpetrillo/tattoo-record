@@ -5,3 +5,4 @@
 - [publicUserColumns pattern](public-user-columns.md) — export from server/storage.ts; use in every join returning user data; getConversations uses json_build_object (not json_agg(users)); feed-algorithm uses db.select({user: publicUserColumns}).
 - [AI recommendations service](ai-recs-migration.md) — migrated from dead openai.ts to server/services/ai/recommendations.ts using completeStructured (Claude Haiku); route returns 503 on failure; client parses inner JSON message from error string.
 - [Demo login safety](demo-login-safety.md) — one-click demo access is strict opt-in; production never permits Admin demo tokens.
+- [Expired-session routing](expired-session-routing.md) — invalid persisted sessions must clear live auth state so `/` returns to the public landing page, not login.

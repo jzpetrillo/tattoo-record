@@ -51,6 +51,16 @@ function ProtectedRoute({ component: Component }: { component: React.ComponentTy
   return <Component />;
 }
 
+function AuthExpiryListener() {
+  useEffect(() => {
+    const handleAuthExpiry = () => useAuth.getState().clearAuth();
+    window.addEventListener("auth-expired", handleAuthExpiry);
+    return () => window.removeEventListener("auth-expired", handleAuthExpiry);
+  }, []);
+
+  return null;
+}
+
 function Router() {
   return (
     <Switch>
@@ -84,6 +94,7 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
+        <AuthExpiryListener />
         <Toaster />
         <Router />
       </TooltipProvider>
