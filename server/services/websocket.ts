@@ -4,6 +4,7 @@ import jwt from "jsonwebtoken";
 import { db } from "../db";
 import { messages, conversationParticipants } from "@shared/schema";
 import { eq, and } from "drizzle-orm";
+import { getWebSocketUpgradePath } from "./websocket-routing";
 
 const _jwtSecret = process.env.JWT_SECRET || process.env.SESSION_SECRET;
 if (!_jwtSecret) {
@@ -53,11 +54,21 @@ export async function broadcastNewMessage(conversationId: string, message: any) 
 
 export function setupMessageWebSocket(server: Server) {
   const wss = new WebSocketServer({
-    server,
-    path: "/ws",
+    noServer: true,
     // Disable per-message deflate so the RSV1 bit stays clear for all clients
     // (including the ws test client which does not negotiate compression).
     perMessageDeflate: false,
+  });
+
+  // Keep the application WebSocket from intercepting Vite's HMR upgrade.
+  // WebSocketServer({ server, path }) responds with 400 for every other path,
+  // which prevents Vite's later upgrade listener from handling /.
+  server.on("upgrade", (req, socket, head) => {
+    if (getWebSocketUpgradePath(req.url) !== "/ws") return;
+
+    wss.handleUpgrade(req, socket, head, (ws) => {
+      wss.emit("connection", ws, req);
+    });
   });
 
   const heartbeatInterval = parseInt(process.env.WEBSOCKET_HEARTBEAT_MS || "30000");

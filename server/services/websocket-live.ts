@@ -4,6 +4,7 @@ import jwt from "jsonwebtoken";
 import { db } from "../db";
 import { users, livestreamEvents, livestreamParticipants, liveComments, liveReactions } from "@shared/schema";
 import { eq } from "drizzle-orm";
+import { getWebSocketUpgradePath } from "./websocket-routing";
 
 const _jwtSecret = process.env.JWT_SECRET || process.env.SESSION_SECRET;
 if (!_jwtSecret) {
@@ -39,9 +40,16 @@ function extractAndVerifyToken(req: IncomingMessage): string | null {
 }
 
 export function setupLiveWebSocket(server: Server) {
-  const wss = new WebSocketServer({ 
-    server, 
-    path: "/ws/live" 
+  const wss = new WebSocketServer({ noServer: true });
+
+  // Route only the live-stream path so this server does not reject Vite's HMR
+  // WebSocket upgrade with a 400 response.
+  server.on("upgrade", (req, socket, head) => {
+    if (getWebSocketUpgradePath(req.url) !== "/ws/live") return;
+
+    wss.handleUpgrade(req, socket, head, (ws) => {
+      wss.emit("connection", ws, req);
+    });
   });
 
   const heartbeatInterval = parseInt(process.env.WEBSOCKET_HEARTBEAT_MS || "30000");
