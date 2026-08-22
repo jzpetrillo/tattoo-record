@@ -21,6 +21,7 @@ import { embedPost, isVoyageEnabled } from "./services/ai/embeddings";
 import { embed } from "./services/ai/index";
 import { startDigestScheduler } from "./services/digest";
 import { initDatabase } from "./db-init";
+import { isDemoLoginEnabled, isDemoLoginRoleAllowed } from "./config/demo-mode";
 
 // Strip password hash before sending user objects to clients
 function safeUser<T extends { hashedPassword?: string }>(user: T): Omit<T, "hashedPassword"> {
@@ -129,6 +130,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const token = generateToken(user.id);
       res.json({ token, user: { id: user.id, username: user.username, email: user.email, role: user.role, isVerified: user.isVerified, verificationStatus: user.verificationStatus } });
+    } catch (error: any) {
+      sendError(res, error);
+    }
+  });
+
+  app.post("/api/auth/demo-login", authLimiter, async (req, res) => {
+    if (!isDemoLoginEnabled()) {
+      return res.status(404).json({ message: "Not found" });
+    }
+
+    try {
+      const { role } = validation.demoLoginSchema.parse(req.body);
+      if (!isDemoLoginRoleAllowed(role)) {
+        return res.status(404).json({ message: "Not found" });
+      }
+
+      const demoEmails = {
+        ARTIST: "artist1@tattoorecord.com",
+        STUDIO: "studio1@tattoorecord.com",
+        ENTHUSIAST: "enthusiast1@tattoorecord.com",
+        ADMIN: "admin@tattoorecord.com",
+      } as const;
+      const user = await storage.getUserByEmail(demoEmails[role]);
+
+      if (!user || user.role !== role) {
+        return res.status(404).json({ message: "Demo account not found" });
+      }
+      if (user.isBanned) {
+        return res.status(403).json({ message: "Your account has been suspended" });
+      }
+
+      const token = generateToken(user.id);
+      res.json({
+        token,
+        user: {
+          id: user.id,
+          username: user.username,
+          email: user.email,
+          role: user.role,
+          isVerified: user.isVerified,
+          verificationStatus: user.verificationStatus,
+        },
+      });
     } catch (error: any) {
       sendError(res, error);
     }

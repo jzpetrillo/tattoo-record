@@ -15,14 +15,7 @@ import { apiRequest } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import { Palette, Building2, Heart, Shield } from "lucide-react";
 
-// Dev-only quick-login: emails only — passwords are randomised at seed time and
-// printed to the console. Enter the seed-output password manually after clicking.
-const DEMO_ACCOUNT_EMAILS = {
-  ARTIST:     "artist1@tattoorecord.com",
-  STUDIO:     "studio1@tattoorecord.com",
-  ENTHUSIAST: "enthusiast1@tattoorecord.com",
-  ADMIN:      "admin@tattoorecord.com",
-} as const;
+const DEMO_ROLES = ["ARTIST", "STUDIO", "ENTHUSIAST", "ADMIN"] as const;
 
 const loginSchema = z.object({
   email: z.string().email("Invalid email address"),
@@ -74,6 +67,21 @@ export default function Auth() {
     },
   });
 
+  const demoLoginMutation = useMutation({
+    mutationFn: async (role: (typeof DEMO_ROLES)[number]) => {
+      const res = await apiRequest("POST", "/api/auth/demo-login", { role });
+      return res.json();
+    },
+    onSuccess: (data) => {
+      setAuth(data.user, data.token);
+      setLocation("/");
+      toast({ title: "Welcome back!", description: "You have signed in to the demo account." });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Demo login failed", description: error.message, variant: "destructive" });
+    },
+  });
+
   const registerMutation = useMutation({
     mutationFn: async (data: z.infer<typeof registerSchema>) => {
       const res = await apiRequest("POST", "/api/auth/register", data);
@@ -89,14 +97,8 @@ export default function Auth() {
     },
   });
 
-  // Pre-fills the email field; the developer must enter the password from `npm run seed` output.
-  const handleQuickLogin = (role: keyof typeof DEMO_ACCOUNT_EMAILS) => {
-    loginForm.setValue("email", DEMO_ACCOUNT_EMAILS[role]);
-    loginForm.setFocus("password");
-    toast({
-      title: "Email pre-filled",
-      description: "Enter the seed password printed by `npm run seed` to continue.",
-    });
+  const handleQuickLogin = (role: (typeof DEMO_ROLES)[number]) => {
+    demoLoginMutation.mutate(role);
   };
 
   return (
@@ -235,7 +237,7 @@ export default function Auth() {
             </Form>
           )}
 
-          {isLogin && import.meta.env.MODE !== 'production' && (
+          {isLogin && import.meta.env.VITE_DEMO_MODE === "true" && (
             <>
               <div className="relative my-6">
                 <Separator />
@@ -249,6 +251,7 @@ export default function Auth() {
                   variant="outline"
                   size="sm"
                   onClick={() => handleQuickLogin("ARTIST")}
+                  disabled={demoLoginMutation.isPending}
                   className="flex items-center gap-2"
                   data-testid="quick-login-artist"
                 >
@@ -259,6 +262,7 @@ export default function Auth() {
                   variant="outline"
                   size="sm"
                   onClick={() => handleQuickLogin("STUDIO")}
+                  disabled={demoLoginMutation.isPending}
                   className="flex items-center gap-2"
                   data-testid="quick-login-studio"
                 >
@@ -269,22 +273,26 @@ export default function Auth() {
                   variant="outline"
                   size="sm"
                   onClick={() => handleQuickLogin("ENTHUSIAST")}
+                  disabled={demoLoginMutation.isPending}
                   className="flex items-center gap-2"
                   data-testid="quick-login-enthusiast"
                 >
                   <Heart className="w-4 h-4" />
                   Enthusiast
                 </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleQuickLogin("ADMIN")}
-                  className="flex items-center gap-2"
-                  data-testid="quick-login-admin"
-                >
-                  <Shield className="w-4 h-4" />
-                  Admin
-                </Button>
+                {import.meta.env.MODE !== "production" && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleQuickLogin("ADMIN")}
+                    disabled={demoLoginMutation.isPending}
+                    className="flex items-center gap-2"
+                    data-testid="quick-login-admin"
+                  >
+                    <Shield className="w-4 h-4" />
+                    Admin
+                  </Button>
+                )}
               </div>
             </>
           )}

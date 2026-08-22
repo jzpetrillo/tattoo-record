@@ -88,6 +88,12 @@ Passwords are generated at seed time and printed to the console.
 Check the seed output for the admin and demo account passwords
 (seeded via `scripts/seed.ts`; see console output).
 
+For local development, one-click Artist, Studio, and Enthusiast demo login buttons
+can be enabled with `DEMO_MODE=true` and `VITE_DEMO_MODE=true`. Do not enable
+demo mode on a public production deployment: demo accounts grant real access,
+and the Admin demo account has full administrative privileges. Admin demo login
+is available only in non-production builds.
+
 5. **Start the development server**
 ```bash
 npm run dev

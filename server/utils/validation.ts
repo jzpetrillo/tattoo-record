@@ -1,11 +1,16 @@
 import { z } from "zod";
 import { insertStudioApprovalRequestSchema as _insertStudioApprovalRequestSchema } from "@shared/schema";
+import { DEMO_LOGIN_ROLES } from "../config/demo-mode";
 
 export const insertStudioApprovalRequestSchema = _insertStudioApprovalRequestSchema;
 
 export const loginSchema = z.object({
   email: z.string().email("Invalid email address"),
   password: z.string().min(6, "Password must be at least 6 characters"),
+});
+
+export const demoLoginSchema = z.object({
+  role: z.enum(DEMO_LOGIN_ROLES),
 });
 
 export const registerSchema = z.object({

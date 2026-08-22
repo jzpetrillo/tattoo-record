@@ -155,6 +155,19 @@ account is never created with a randomly generated, console-visible password.
 
 ---
 
+## Demo Login Safety
+
+One-click demo login is disabled by default. To enable the Artist, Studio, and
+Enthusiast demo buttons on a deployed instance, set both `DEMO_MODE=true` on the
+server and `VITE_DEMO_MODE=true` for the client build.
+
+Do not enable demo mode on a public production deployment. Demo login grants
+access to seeded accounts, and the Admin demo account has full administrative
+privileges. Admin demo login is intentionally limited to non-production builds.
+Leave both variables unset or false for a normal production launch.
+
+---
+
 ## Test Accounts
 
 Passwords are generated at seed time and printed to the console.

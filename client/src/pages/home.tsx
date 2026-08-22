@@ -6,27 +6,14 @@ import SuggestedUsers from "@/components/layout/suggested-users";
 import PostFeed from "@/components/posts/post-feed";
 import ForYouRail from "@/components/for-you/for-you-rail";
 import { useAuth } from "@/hooks/use-auth";
-import { Link, useLocation } from "wouter";
+import { Link } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { Star, ChevronLeft, ChevronRight, AlertCircle } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 
-/**
- * Dev-only quick-login: emails only — passwords are randomised at seed time and
- * printed to the console. Clicking a button redirects to /auth with the email
- * pre-filled; enter the seed-output password manually.
- */
-const DEMO_ACCOUNT_EMAILS = {
-  ARTIST:     "artist1@tattoorecord.com",
-  STUDIO:     "studio1@tattoorecord.com",
-  ENTHUSIAST: "enthusiast1@tattoorecord.com",
-  ADMIN:      "admin@tattoorecord.com",
-} as const;
-
 export default function Home() {
   const { user } = useAuth();
-  const [, setLocation] = useLocation();
   const [featuredScrollPosition, setFeaturedScrollPosition] = useState(0);
 
   const { data: featuredPosts = [], isLoading: featuredLoading, isError: featuredError, refetch: refetchFeatured } = useQuery<any[]>({
@@ -46,13 +33,6 @@ export default function Home() {
     }
   };
 
-  // Redirects to /auth with the email pre-filled via query param.
-  // The developer must enter the password from `npm run seed` console output.
-  const handleQuickLogin = (role: keyof typeof DEMO_ACCOUNT_EMAILS) => {
-    const email = encodeURIComponent(DEMO_ACCOUNT_EMAILS[role]);
-    setLocation(`/auth?email=${email}`);
-  };
-
   if (!user) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center px-6">
@@ -64,42 +44,6 @@ export default function Home() {
             A Platform for Tattoo Artists & Enthusiasts
           </p>
           
-          {import.meta.env.MODE !== 'production' && (
-          <div className="mb-12">
-            <p className="text-xs uppercase tracking-wider opacity-40 mb-4">Quick Demo Login</p>
-            <div className="flex gap-4 justify-center flex-wrap">
-              <button
-                onClick={() => handleQuickLogin("ARTIST")}
-                className="px-6 py-2 border border-foreground/40 hover:border-foreground hover:bg-foreground hover:text-background transition-all uppercase text-xs tracking-wider"
-                data-testid="quick-login-artist"
-              >
-                Demo Artist
-              </button>
-              <button
-                onClick={() => handleQuickLogin("STUDIO")}
-                className="px-6 py-2 border border-foreground/40 hover:border-foreground hover:bg-foreground hover:text-background transition-all uppercase text-xs tracking-wider"
-                data-testid="quick-login-studio"
-              >
-                Demo Studio
-              </button>
-              <button
-                onClick={() => handleQuickLogin("ENTHUSIAST")}
-                className="px-6 py-2 border border-foreground/40 hover:border-foreground hover:bg-foreground hover:text-background transition-all uppercase text-xs tracking-wider"
-                data-testid="quick-login-enthusiast"
-              >
-                Demo Enthusiast
-              </button>
-              <button
-                onClick={() => handleQuickLogin("ADMIN")}
-                className="px-6 py-2 border border-foreground/40 hover:border-foreground hover:bg-foreground hover:text-background transition-all uppercase text-xs tracking-wider"
-                data-testid="quick-login-admin"
-              >
-                Demo Admin
-              </button>
-            </div>
-          </div>
-          )}
-
           <Link href="/auth">
             <button className="px-8 py-3 border border-foreground hover:bg-foreground hover:text-background transition-all uppercase text-sm tracking-wider" data-testid="button-enter">
               Enter
