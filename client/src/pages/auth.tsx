@@ -31,9 +31,14 @@ const registerSchema = z.object({
 
 export default function Auth() {
   const [isLogin, setIsLogin] = useState(true);
-  const [, setLocation] = useLocation();
+  const [location, setLocation] = useLocation();
   const { user, setAuth } = useAuth();
   const { toast } = useToast();
+
+  useEffect(() => {
+    const mode = new URLSearchParams(window.location.search).get("mode");
+    setIsLogin(mode !== "register");
+  }, [location]);
 
   // Redirect authenticated users to home
   useEffect(() => {

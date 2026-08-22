@@ -11,6 +11,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Star, ChevronLeft, ChevronRight, AlertCircle } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import Landing from "@/pages/landing";
 
 export default function Home() {
   const { user } = useAuth();
@@ -34,24 +35,7 @@ export default function Home() {
   };
 
   if (!user) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center px-6">
-        <div className="text-center max-w-4xl">
-          <h1 className="editorial-title mb-8">
-            TATTOO RECORD
-          </h1>
-          <p className="text-lg uppercase tracking-wide mb-8 opacity-60">
-            A Platform for Tattoo Artists & Enthusiasts
-          </p>
-          
-          <Link href="/auth">
-            <button className="px-8 py-3 border border-foreground hover:bg-foreground hover:text-background transition-all uppercase text-sm tracking-wider" data-testid="button-enter">
-              Enter
-            </button>
-          </Link>
-        </div>
-      </div>
-    );
+    return <Landing />;
   }
 
   return (
