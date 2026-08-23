@@ -1,0 +1,73 @@
+Final pre-launch fixes for "Tattoo Record" (Express + Drizzle + Postgres/Neon; React/Vite/Wouter/shadcn client, "Press" theme). Do phases in order. Run `npm run check` + `npm run build` at the end. Verify each with the checks noted.
+
+=====================================================
+PHASE 1 — SECURITY BLOCKERS
+=====================================================
+
+1.1 Booking write is a privilege-escalation hole (CONFIRMED LIVE: a client set their own booking paymentStatus=FULLY_PAID and changed totalPriceCents 50000->1).
+server/routes.ts PUT /api/bookings/:id (~933-996): today only `status` is validated and the rest of req.body is spread into updateBooking. 
+- Create `updateBookingSchema` in server/utils/validation.ts allowing ONLY client-safe fields: title, description, scheduledAt (future), durationMinutes, referenceImages, notes, reminderPreference, and status (validated against the 5-state enum + the existing role/transition rules).
+- EXPLICITLY reject/ignore: paymentStatus, depositPaidAt, fullPaymentAt, totalPriceCents, depositCents, artistId, clientId, flashSaleId. paymentStatus may ONLY change via the artist-only /mark-deposit-paid and /mark-fully-paid endpoints.
+- Parse req.body through the schema; never spread raw body into updateBooking.
+VERIFY: as the client, PUT {paymentStatus:"FULLY_PAID"} or {totalPriceCents:1} → those fields do NOT change (ignored or 400); status transitions still work.
+
+1.2 /ws/live has NO authentication (stream hijack + identity spoofing).
+server/services/websocket-live.ts: the connection handler gates only on eventId and sets `ws.userId = payload.userId` from the client.
+- Import and call `extractAndVerifyToken(req)` (from websocket.ts) in the /ws/live connection handler exactly like /ws does; close 4401 if no valid token.
+- Set ws.userId from the verified token; IGNORE any client-supplied payload.userId in handleJoin/handleLiveComment/handleLiveReaction.
+- Gate handleStreamStart/handleStreamEnd on `event.hostId === ws.userId` (mirror the HTTP /api/live-events/:id/start|end host check).
+VERIFY: connecting to /ws/live without a token is rejected; a non-host cannot start/end another host's stream over the socket.
+
+1.3 Banned users retain full access (ban is cosmetic).
+server/middleware/auth.ts requireAuth (~38): currently rejects only `deletedAt`. Also reject `user.isBanned` (401/403). AND in POST /api/auth/login (server/routes.ts ~100-119), return 403 for a banned user instead of minting a token.
+VERIFY: ban a throwaway user (admin), confirm their existing token and a fresh login both get 403; unban restores access.
+
+1.4 Booking read IDOR.
+server/routes.ts GET /api/bookings (~889) and GET /api/bookings/:id (~903): scope to the caller.
+- GET /api/bookings: force `clientId=req.userId OR artistId=req.userId` unless req.userRole==="ADMIN" (ignore attacker-supplied ids for non-admins).
+- GET /api/bookings/:id: after fetch, 403 unless booking.artistId===req.userId || booking.clientId===req.userId || admin.
+VERIFY: a user cannot read a booking they aren't party to.
+
+1.5 (MEDIUM, same area) PUT /api/portfolio/:id and PUT /api/flash-sales/:id take raw body — add update schemas that exclude ownership/counter columns (artistId, bookedSlots, isActive), and re-check flashPrice<originalPrice. GET /api/posts/:id: if visibility==="FOLLOWERS", require auth + (author/follower/admin).
+
+=====================================================
+PHASE 2 — LIVE STREAMING (broken feature)
+=====================================================
+client/src/components/live/live-stream-card.tsx uses Font Awesome (`<i className="fas fa-...">`) which is never loaded → invisible LIVE dot/eye/play; and the card has no onClick and there is NO viewer route.
+- Replace all Font Awesome icons with lucide-react (Circle, Eye, Play).
+- EITHER add a stream-viewer route + page that joins /ws/live and renders comments/reactions, and make the card navigate to it — OR, if not shipping Live for v1, hide the Live nav entry (sidebar-nav + mobile-nav) and the "Go Live" action behind a flag so users don't hit a dead feature. Pick one; state which.
+
+=====================================================
+PHASE 3 — MOBILE + BROKEN LINKS (HIGH)
+=====================================================
+3.1 client/src/pages/flash-sales.tsx:93 — the real data grid is `grid grid-cols-3 gap-px` (unreadable at 375px). Change to match the skeleton: `grid-cols-1 md:grid-cols-2 lg:grid-cols-3` with normal gaps.
+3.2 client/src/pages/admin.tsx filter rows (~650-673, ~820-841): `Input w-64` + `Select w-40` in a non-wrapping flex overflow mobile. Make `flex-col sm:flex-row`, full-width inputs on mobile.
+3.3 client/src/pages/bookings.tsx:487 TabsList — remove the fixed `h-12` so wrapped tabs don't clip on mobile (use `h-auto` / min-height).
+3.4 Profile "Message" deep link: client/src/pages/profile.tsx:382 navigates to `/messages?user=${id}` but messages.tsx reads `withUserId`. Change to `/messages?withUserId=${id}` AND ensure messages.tsx opens/creates that conversation (set selectedUser, not just selectedConversation).
+3.5 Share-to-DM shape mismatch: post-card.tsx (~302) reads `conv.id`/`conv.participants.find(...)`, but the /api/conversations items are `conv.conversation.id` with `conv.participants` (see conversation-list.tsx). Reconcile to the real shape so it doesn't POST to /conversations/undefined/messages.
+3.6 index.html:5 — remove `maximum-scale=1` (re-enable pinch-zoom, a11y).
+
+=====================================================
+PHASE 4 — CONSISTENCY + POLISH
+=====================================================
+4.1 Bookings page ignores the Press theme: client/src/pages/bookings.tsx hardcodes bg-white/text-black/border-black + dead `dark:` classes (there is no dark mode). Replace with tokens: bg-background, text-foreground, border-border, muted-foreground. So it stops rendering stark white.
+4.2 Add error states to list views that currently swallow errors into "empty": post-feed, reels, explore, flash-sales, jobs, notifications, conversation-list, stories-bar, home featured, search. Read `isError` and show a retry message (pattern already in ai-recommendations.tsx / job-detail.tsx).
+4.3 Admin destructive actions without confirm — add AlertDialog to Delete Post (admin.tsx ~913), Delete Job (~986), Delete Flash Sale (~1125), matching Delete User.
+4.4 Dead-ends: either wire or hide — story reply bar + Heart/Send (story-viewer.tsx ~91), "Your story" tile (stories-bar.tsx:29), profile "Book Now"/"View Jobs" param preselect (bookings/jobs read ?artist=/?studio=), and settings.tsx "Delete Account" (currently just a toast — hide it or implement).
+4.5 Design leaks: replace the Instagram-gradient story ring (stories-bar.tsx ~58) with the cobalt ring; add sharp-corner overrides for rounded-xl/2xl/full leaks (chat bubbles, upload dropzones, portfolio pills) or extend tailwind radius overrides.
+4.6 Route-guard AI: guard the /ai-recommendations route/page with VITE_AI_ENABLED (nav is gated but the direct URL isn't).
+4.7 Consistency of error messages: audit remaining per-route catch blocks that return raw `error.message` (register/login/posts/portfolio/jobs/flash-sales/livestream/studio-approvals/stories/admin) — return generic messages for non-Zod/DB errors so no table/column text leaks.
+
+=====================================================
+PHASE 5 — LIVE-DATA ACTIONS (cannot be done in code — must run against the deployment)
+=====================================================
+- ROTATE the compromised admin password: `[REDACTED — rotate via SEED_ADMIN_PASSWORD env var before redeploying]` still logs in on the live DB. Re-seed with SEED_ADMIN_PASSWORD set, or run an UPDATE that sets a new bcrypt hash for all seed accounts. Confirm Test1234! no longer authenticates.
+- Clean up leftover E2E test bookings (titles starting "E2E") via admin.
+- Confirm the earlier repair ran: studio11 verification_status, artist1 bio.
+
+=====================================================
+FINAL GATES
+=====================================================
+- `npm run check` + `npm run build` pass; `npm run test` (Playwright) passes.
+- Re-verify: client cannot forge booking payment/price; /ws/live rejects no-token; banned user blocked; booking read scoped to caller; Test1234! dead; flash-sales readable at 375px.
+Summarize every file changed.

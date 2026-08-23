@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "Tattoo Record"
+description = "The Tattoo Record community platform for tattoo artists, studios, and enthusiasts, with portfolios, social feeds, bookings, messaging, live events, and discovery tools."
+version = "1.0.0"
+id = "artifacts/tattoo-record"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 18854
+
+[services.development]
+run = "pnpm --filter @workspace/tattoo-record run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/tattoo-record", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/tattoo-record/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "18854"
+BASE_PATH = "/"

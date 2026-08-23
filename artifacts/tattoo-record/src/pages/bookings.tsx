@@ -1,0 +1,763 @@
+import { useState } from "react";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { useAuth } from "@/hooks/use-auth";
+import { useToast } from "@/hooks/use-toast";
+import { queryClient, apiRequest } from "@/lib/queryClient";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
+import { Calendar, Clock, Plus, CheckCircle, XCircle, DollarSign, CreditCard, Bell } from "lucide-react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { format } from "date-fns";
+import SidebarNav from "@/components/layout/sidebar-nav";
+import MobileNav from "@/components/layout/mobile-nav";
+import { BookingCardSkeleton } from "@/components/ui/skeletons";
+import { EmptyState } from "@/components/ui/empty-state";
+import { StatusBadge } from "@/components/ui/status-badge";
+
+const bookingSchema = z.object({
+  artistId: z.string().min(1, "Artist is required"),
+  title: z.string().min(1, "Title is required"),
+  description: z.string().optional(),
+  scheduledAt: z.string().min(1, "Date and time required"),
+  durationMinutes: z.coerce.number().min(30).default(120),
+  depositCents: z.coerce.number().optional(),
+  totalPriceCents: z.coerce.number().optional(),
+  reminderPreference: z.enum(["NONE", "DAY_BEFORE", "WEEK_BEFORE", "BOTH"]).default("DAY_BEFORE"),
+  notes: z.string().optional(),
+});
+
+type BookingFormData = z.infer<typeof bookingSchema>;
+
+type BookingStatus = "PENDING" | "APPROVED" | "REJECTED" | "COMPLETED" | "CANCELLED";
+type PaymentStatus = "UNPAID" | "DEPOSIT_PAID" | "FULLY_PAID" | "REFUNDED";
+
+export default function BookingsPage() {
+  const { user, token } = useAuth();
+  const { toast } = useToast();
+  const [statusFilter, setStatusFilter] = useState<string>("ALL");
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
+
+  const { data: bookings = [], isLoading } = useQuery<any[]>({
+    queryKey: ["/api/bookings", { status: statusFilter }],
+    queryFn: async () => {
+      const url = statusFilter === "ALL" 
+        ? "/api/bookings" 
+        : `/api/bookings?status=${statusFilter}`;
+      const res = await fetch(url, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error("Failed to fetch bookings");
+      return res.json();
+    },
+    enabled: !!token,
+  });
+
+  const { data: artists = [] } = useQuery<any[]>({
+    queryKey: ["/api/users", { type: "ARTIST" }],
+    queryFn: async () => {
+      const res = await fetch("/api/users?type=ARTIST", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error("Failed to fetch artists");
+      return res.json();
+    },
+    enabled: !!token && createDialogOpen,
+    staleTime: 0,
+  });
+
+  const form = useForm<BookingFormData>({
+    resolver: zodResolver(bookingSchema),
+    defaultValues: {
+      artistId: "",
+      title: "",
+      description: "",
+      scheduledAt: "",
+      durationMinutes: 120,
+      depositCents: 0,
+      totalPriceCents: 0,
+      reminderPreference: "DAY_BEFORE",
+      notes: "",
+    },
+  });
+
+  const createMutation = useMutation({
+    mutationFn: async (data: BookingFormData) => {
+      return apiRequest("POST", "/api/bookings", {
+        ...data,
+        scheduledAt: new Date(data.scheduledAt).toISOString(),
+      });
+    },
+    onSuccess: () => {
+      toast({ title: "Booking created", description: "Your booking request has been sent" });
+      queryClient.refetchQueries({ queryKey: ["/api/bookings"] });
+      setCreateDialogOpen(false);
+      form.reset();
+    },
+    onError: (error: Error) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const updateStatusMutation = useMutation({
+    mutationFn: async ({ id, status }: { id: string; status: BookingStatus }) => {
+      return apiRequest("PUT", `/api/bookings/${id}`, { status });
+    },
+    onSuccess: () => {
+      queryClient.refetchQueries({ queryKey: ["/api/bookings"] });
+      toast({ title: "Booking updated" });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return apiRequest("DELETE", `/api/bookings/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.refetchQueries({ queryKey: ["/api/bookings"] });
+      toast({ title: "Booking cancelled" });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const markDepositPaidMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return apiRequest("POST", `/api/bookings/${id}/mark-deposit-paid`);
+    },
+    onSuccess: () => {
+      queryClient.refetchQueries({ queryKey: ["/api/bookings"] });
+      toast({ title: "Deposit marked as paid" });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const markFullyPaidMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return apiRequest("POST", `/api/bookings/${id}/mark-fully-paid`);
+    },
+    onSuccess: () => {
+      queryClient.refetchQueries({ queryKey: ["/api/bookings"] });
+      toast({ title: "Marked as fully paid" });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const requestCancellationMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return apiRequest("POST", `/api/bookings/${id}/cancellation-request`);
+    },
+    onSuccess: () => {
+      queryClient.refetchQueries({ queryKey: ["/api/bookings"] });
+      toast({ title: "Cancellation requested", description: "The artist will be notified of your request." });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const cancellationResponseMutation = useMutation({
+    mutationFn: async ({ id, approve }: { id: string; approve: boolean }) => {
+      return apiRequest("POST", `/api/bookings/${id}/cancellation-response`, { approve });
+    },
+    onSuccess: (_data, variables) => {
+      queryClient.refetchQueries({ queryKey: ["/api/bookings"] });
+      toast({ title: variables.approve ? "Cancellation approved" : "Cancellation request rejected" });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    },
+  });
+
+  // Server handles filtering via status query parameter
+
+
+  const formatPrice = (cents?: number) => {
+    if (!cents) return "N/A";
+    return `$${(cents / 100).toFixed(2)}`;
+  };
+
+  const onSubmit = (data: BookingFormData) => {
+    createMutation.mutate(data);
+  };
+
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-background">
+        <SidebarNav />
+        <div className="lg:ml-64">
+          <div className="flex items-center justify-center h-screen">
+            <p className="text-foreground">Please log in to view bookings</p>
+          </div>
+        </div>
+        <MobileNav />
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-background">
+      <SidebarNav />
+      
+      <main className="lg:ml-64 pb-20 lg:pb-8 pt-4 max-w-6xl mx-auto px-4">
+        <div className="flex items-center justify-between mb-6">
+          <h1 className="text-2xl font-bold mb-1" data-testid="page-title">
+            Bookings
+          </h1>
+            
+            {user.role !== "STUDIO" && (
+              <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button 
+                    data-testid="button-create-booking"
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    New Booking
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="bg-background border-border max-w-2xl">
+                  <DialogHeader>
+                    <DialogTitle className="text-foreground uppercase tracking-tight">
+                      Create Booking
+                    </DialogTitle>
+                  </DialogHeader>
+                  
+                  <Form {...form}>
+                    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                      <FormField
+                        control={form.control}
+                        name="artistId"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="text-foreground">Artist</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value}>
+                              <FormControl>
+                                <SelectTrigger 
+                                  className="bg-background border-border text-foreground"
+                                  data-testid="select-artist"
+                                >
+                                  <SelectValue placeholder="Select an artist" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent className="bg-background border-border">
+                                {artists.map((artist: any) => (
+                                  <SelectItem key={artist.id} value={artist.id}>
+                                    {artist.username} - {artist.profile?.displayName}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="title"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="text-foreground">Title</FormLabel>
+                            <FormControl>
+                              <Input
+                                {...field}
+                                className="bg-background border-border text-foreground"
+                                placeholder="e.g., Rose Sleeve Tattoo"
+                                data-testid="input-booking-title"
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="description"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="text-foreground">Description</FormLabel>
+                            <FormControl>
+                              <Textarea
+                                {...field}
+                                className="bg-background border-border text-foreground resize-none"
+                                placeholder="Describe your tattoo idea..."
+                                rows={3}
+                                data-testid="textarea-booking-description"
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <div className="grid grid-cols-2 gap-4">
+                        <FormField
+                          control={form.control}
+                          name="scheduledAt"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel className="text-foreground">Date & Time</FormLabel>
+                              <FormControl>
+                                <Input
+                                  {...field}
+                                  type="datetime-local"
+                                  className="bg-background border-border text-foreground"
+                                  data-testid="input-scheduled-at"
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={form.control}
+                          name="durationMinutes"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel className="text-foreground">Duration (minutes)</FormLabel>
+                              <FormControl>
+                                <Input
+                                  {...field}
+                                  type="number"
+                                  min="30"
+                                  step="30"
+                                  className="bg-background border-border text-foreground"
+                                  data-testid="input-duration"
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4">
+                        <FormField
+                          control={form.control}
+                          name="depositCents"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel className="text-foreground">Deposit ($)</FormLabel>
+                              <FormControl>
+                                <Input
+                                  {...field}
+                                  type="number"
+                                  min="0"
+                                  step="0.01"
+                                  className="bg-background border-border text-foreground"
+                                  placeholder="0.00"
+                                  data-testid="input-deposit"
+                                  onChange={(e) => field.onChange(Math.round(parseFloat(e.target.value || "0") * 100))}
+                                  value={field.value ? (field.value / 100).toFixed(2) : ""}
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={form.control}
+                          name="totalPriceCents"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel className="text-foreground">Total Price ($)</FormLabel>
+                              <FormControl>
+                                <Input
+                                  {...field}
+                                  type="number"
+                                  min="0"
+                                  step="0.01"
+                                  className="bg-background border-border text-foreground"
+                                  placeholder="0.00"
+                                  data-testid="input-total-price"
+                                  onChange={(e) => field.onChange(Math.round(parseFloat(e.target.value || "0") * 100))}
+                                  value={field.value ? (field.value / 100).toFixed(2) : ""}
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+
+                      <FormField
+                        control={form.control}
+                        name="reminderPreference"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="text-foreground">
+                              <Bell className="w-4 h-4 inline mr-2" />
+                              Reminder
+                            </FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value}>
+                              <FormControl>
+                                <SelectTrigger 
+                                  className="bg-background border-border text-foreground"
+                                  data-testid="select-reminder"
+                                >
+                                  <SelectValue placeholder="When to remind you" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent className="bg-background border-border">
+                                <SelectItem value="NONE">No reminder</SelectItem>
+                                <SelectItem value="DAY_BEFORE">1 day before</SelectItem>
+                                <SelectItem value="WEEK_BEFORE">1 week before</SelectItem>
+                                <SelectItem value="BOTH">Both (1 week and 1 day)</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="notes"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="text-foreground">Notes</FormLabel>
+                            <FormControl>
+                              <Textarea
+                                {...field}
+                                className="bg-background border-border text-foreground resize-none"
+                                placeholder="Any additional notes..."
+                                rows={2}
+                                data-testid="textarea-booking-notes"
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <div className="flex justify-end gap-3 pt-4">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => setCreateDialogOpen(false)}
+                          className="border-border text-foreground"
+                          data-testid="button-cancel-booking"
+                        >
+                          Cancel
+                        </Button>
+                        <Button
+                          type="submit"
+                          disabled={createMutation.isPending}
+                          data-testid="button-submit-booking"
+                        >
+                          {createMutation.isPending ? "Creating..." : "Create Booking"}
+                        </Button>
+                      </div>
+                    </form>
+                  </Form>
+                </DialogContent>
+              </Dialog>
+            )}
+        </div>
+
+        <Tabs value={statusFilter} onValueChange={setStatusFilter} className="mb-6">
+          <TabsList className="bg-background border border-border h-auto min-h-[44px] flex-wrap sm:flex-nowrap">
+            <TabsTrigger value="ALL" className="min-h-[44px] px-3 sm:px-4 data-[state=active]:bg-cobalt data-[state=active]:text-white" data-testid="tab-all">
+              All
+            </TabsTrigger>
+            <TabsTrigger value="PENDING" className="min-h-[44px] px-3 sm:px-4 data-[state=active]:bg-cobalt data-[state=active]:text-white" data-testid="tab-pending">
+              Pending
+            </TabsTrigger>
+            <TabsTrigger value="APPROVED" className="min-h-[44px] px-3 sm:px-4 data-[state=active]:bg-cobalt data-[state=active]:text-white" data-testid="tab-approved">
+              Approved
+            </TabsTrigger>
+            <TabsTrigger value="COMPLETED" className="min-h-[44px] px-3 sm:px-4 data-[state=active]:bg-cobalt data-[state=active]:text-white" data-testid="tab-completed">
+              Completed
+            </TabsTrigger>
+            <TabsTrigger value="REJECTED" className="min-h-[44px] px-3 sm:px-4 data-[state=active]:bg-cobalt data-[state=active]:text-white" data-testid="tab-rejected">
+              Rejected
+            </TabsTrigger>
+            <TabsTrigger value="CANCELLED" className="min-h-[44px] px-3 sm:px-4 data-[state=active]:bg-cobalt data-[state=active]:text-white" data-testid="tab-cancelled">
+              Cancelled
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
+
+        {isLoading ? (
+          <div className="grid gap-4">
+            {[1, 2, 3].map((i) => <BookingCardSkeleton key={i} />)}
+          </div>
+        ) : bookings.length === 0 ? (
+          <EmptyState
+            icon={Calendar}
+            title="No bookings found"
+            description={statusFilter === "ALL" ? "Create your first booking to get started." : `No ${statusFilter.toLowerCase()} bookings.`}
+          />
+        ) : (
+          <div className="grid gap-4">
+            {bookings.map((booking: any) => {
+              const isArtist = booking.artistId === user.id;
+              const isClient = booking.clientId === user.id;
+
+              return (
+                <Card key={booking.id} className="bg-background border-border p-6" data-testid={`card-booking-${booking.id}`}>
+                    <div className="flex items-start justify-between mb-4">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-3 mb-2 flex-wrap">
+                          <h3 className="text-xl font-bold text-foreground uppercase tracking-tight" data-testid={`text-booking-title-${booking.id}`}>
+                            {booking.title}
+                          </h3>
+                          <StatusBadge status={booking.status} type="booking" data-testid={`badge-status-${booking.id}`} />
+                          {(booking.depositCents || booking.totalPriceCents) && (
+                            <StatusBadge status={booking.paymentStatus || "UNPAID"} type="payment" data-testid={`badge-payment-${booking.id}`} />
+                          )}
+                        </div>
+                        
+                        {booking.description && (
+                          <p className="text-muted-foreground mb-3" data-testid={`text-description-${booking.id}`}>
+                            {booking.description}
+                          </p>
+                        )}
+
+                        <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
+                          <div className="flex items-center gap-2">
+                            <Calendar className="w-4 h-4" />
+                            <span data-testid={`text-scheduled-${booking.id}`}>
+                              {format(new Date(booking.scheduledAt), "PPp")}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Clock className="w-4 h-4" />
+                            <span data-testid={`text-duration-${booking.id}`}>
+                              {booking.durationMinutes} min
+                            </span>
+                          </div>
+                          {booking.depositCents && (
+                            <div className="flex items-center gap-2">
+                              <DollarSign className="w-4 h-4" />
+                              <span data-testid={`text-deposit-${booking.id}`}>
+                                Deposit: {formatPrice(booking.depositCents)}
+                              </span>
+                            </div>
+                          )}
+                          {booking.totalPriceCents && (
+                            <div className="flex items-center gap-2">
+                              <DollarSign className="w-4 h-4" />
+                              <span data-testid={`text-total-${booking.id}`}>
+                                Total: {formatPrice(booking.totalPriceCents)}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+
+                        {booking.notes && (
+                          <div className="mt-3 p-3 bg-muted border border-border">
+                            <p className="text-sm text-muted-foreground" data-testid={`text-notes-${booking.id}`}>
+                              <strong className="text-foreground">Notes:</strong> {booking.notes}
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="flex gap-2 justify-end pt-4 border-t border-border">
+                      {isArtist && booking.status === "PENDING" && (
+                        <>
+                          <Button
+                            size="sm"
+                            onClick={() => updateStatusMutation.mutate({ id: booking.id, status: "APPROVED" })}
+                            disabled={updateStatusMutation.isPending}
+                            data-testid={`button-approve-${booking.id}`}
+                          >
+                            <CheckCircle className="w-4 h-4 mr-1" />
+                            Approve
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => updateStatusMutation.mutate({ id: booking.id, status: "REJECTED" })}
+                            disabled={updateStatusMutation.isPending}
+                            data-testid={`button-reject-${booking.id}`}
+                          >
+                            <XCircle className="w-4 h-4 mr-1" />
+                            Reject
+                          </Button>
+                        </>
+                      )}
+
+                      {isArtist && booking.status === "APPROVED" && (
+                        <Button
+                          size="sm"
+                          onClick={() => updateStatusMutation.mutate({ id: booking.id, status: "COMPLETED" })}
+                          disabled={updateStatusMutation.isPending}
+                          data-testid={`button-complete-${booking.id}`}
+                        >
+                          <CheckCircle className="w-4 h-4 mr-1" />
+                          Mark Complete
+                        </Button>
+                      )}
+
+                      {isArtist && booking.status === "APPROVED" && booking.depositCents > 0 && booking.paymentStatus === "UNPAID" && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => markDepositPaidMutation.mutate(booking.id)}
+                          disabled={markDepositPaidMutation.isPending}
+                          data-testid={`button-mark-deposit-paid-${booking.id}`}
+                        >
+                          <CreditCard className="w-4 h-4 mr-1" />
+                          Deposit Received
+                        </Button>
+                      )}
+
+                      {isArtist && booking.status === "APPROVED" && booking.totalPriceCents > 0 &&
+                       (booking.paymentStatus === "UNPAID" || booking.paymentStatus === "DEPOSIT_PAID") && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => markFullyPaidMutation.mutate(booking.id)}
+                          disabled={markFullyPaidMutation.isPending}
+                          data-testid={`button-mark-fully-paid-${booking.id}`}
+                        >
+                          <CreditCard className="w-4 h-4 mr-1" />
+                          Mark Paid
+                        </Button>
+                      )}
+
+                      {isClient && booking.status === "PENDING" && (
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="border-border text-foreground"
+                              disabled={deleteMutation.isPending}
+                              data-testid={`button-cancel-${booking.id}`}
+                            >
+                              <XCircle className="w-4 h-4 mr-1" />
+                              Cancel Booking
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Cancel Booking</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Are you sure you want to cancel this booking? This action cannot be undone.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Keep Booking</AlertDialogCancel>
+                              <AlertDialogAction
+                                onClick={() => deleteMutation.mutate(booking.id)}
+                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                data-testid={`button-confirm-cancel-${booking.id}`}
+                              >
+                                Yes, Cancel
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      )}
+
+                      {isClient && booking.status === "APPROVED" && !booking.cancellationRequested && (
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="border-border text-foreground"
+                              disabled={requestCancellationMutation.isPending}
+                              data-testid={`button-request-cancel-${booking.id}`}
+                            >
+                              <XCircle className="w-4 h-4 mr-1" />
+                              Request Cancellation
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Request Cancellation</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                This will send a cancellation request to the artist. They can choose to approve or reject it.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Keep Booking</AlertDialogCancel>
+                              <AlertDialogAction
+                                onClick={() => requestCancellationMutation.mutate(booking.id)}
+                                data-testid={`button-confirm-request-cancel-${booking.id}`}
+                              >
+                                Send Request
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      )}
+
+                      {isClient && booking.status === "APPROVED" && booking.cancellationRequested && (
+                        <span
+                          className="text-sm text-muted-foreground italic"
+                          data-testid={`text-cancel-pending-${booking.id}`}
+                        >
+                          Cancellation request pending…
+                        </span>
+                      )}
+
+                      {isArtist && booking.status === "APPROVED" && booking.cancellationRequested && (
+                        <>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => cancellationResponseMutation.mutate({ id: booking.id, approve: true })}
+                            disabled={cancellationResponseMutation.isPending}
+                            className="border-border text-foreground"
+                            data-testid={`button-approve-cancel-${booking.id}`}
+                          >
+                            <CheckCircle className="w-4 h-4 mr-1" />
+                            Approve Cancellation
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => cancellationResponseMutation.mutate({ id: booking.id, approve: false })}
+                            disabled={cancellationResponseMutation.isPending}
+                            className="border-border text-foreground"
+                            data-testid={`button-reject-cancel-${booking.id}`}
+                          >
+                            <XCircle className="w-4 h-4 mr-1" />
+                            Reject Cancellation
+                          </Button>
+                        </>
+                      )}
+                    </div>
+                  </Card>
+                );
+              })}
+            </div>
+          )}
+      </main>
+
+      <MobileNav />
+    </div>
+  );
+}
