@@ -1,1 +1,2 @@
 - [Expo mobile preview routing](expo-mobile-preview-routing.md) — Browser UI checks must use the Expo development domain, not the shared artifact route.
+- [React type-version boundaries](react-type-version-boundaries.md) — Duplicate React 19 type minors can make compatible refs appear incompatible at dependency boundaries.
