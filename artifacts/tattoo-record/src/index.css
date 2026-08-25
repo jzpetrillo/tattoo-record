@@ -23,9 +23,9 @@
   --input: 45 9% 73%;
   --ring: 236 91% 56%;
   --radius: 0rem;
-  --font-sans: 'Architects Daughter', sans-serif;
-  --font-serif: 'Space Grotesk', sans-serif;
-  --font-mono: 'Space Mono', 'Courier New', monospace;
+  --font-sans: Arial, Helvetica, sans-serif;
+  --font-serif: Georgia, 'Times New Roman', serif;
+  --font-mono: 'SFMono-Regular', Consolas, 'Liberation Mono', 'Courier New', monospace;
 }
 
 @layer base {
@@ -60,7 +60,7 @@
     font-size: clamp(2rem, 8vw, 6rem);
     line-height: 0.9;
     letter-spacing: -0.04em;
-    font-family: 'Space Grotesk', sans-serif;
+    font-family: var(--font-sans);
     font-weight: 700;
   }
   
@@ -128,7 +128,7 @@
   }
 
   .press-nameplate {
-    font-family: 'Space Grotesk', sans-serif;
+    font-family: var(--font-sans);
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: -0.04em;
@@ -136,7 +136,7 @@
   }
 
   .meta {
-    font-family: 'Space Mono', monospace;
+    font-family: var(--font-mono);
     text-transform: uppercase;
     letter-spacing: 0.06em;
     color: hsl(60 3% 40%);
