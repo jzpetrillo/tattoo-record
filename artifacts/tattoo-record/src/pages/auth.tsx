@@ -313,9 +313,124 @@ export default function Auth() {
                 </Button>
               </form>
             </Form>
-          )}
+           ) : authView === "forgot" ? (
+             resetEmailSent ? (
+               <div className="space-y-4 text-center">
+                 <p className="text-sm text-muted-foreground">
+                   If an account exists for that email, a password reset link is on its way.
+                 </p>
+                 <Button
+                   type="button"
+                   variant="outline"
+                   className="w-full"
+                   onClick={() => {
+                     setAuthView("login");
+                     setResetEmailSent(false);
+                   }}
+                 >
+                   Back to sign in
+                 </Button>
+               </div>
+             ) : (
+               <Form {...forgotPasswordForm}>
+                 <form
+                   onSubmit={forgotPasswordForm.handleSubmit((data) => forgotPasswordMutation.mutate(data))}
+                   className="space-y-4"
+                 >
+                   <FormField
+                     control={forgotPasswordForm.control}
+                     name="email"
+                     render={({ field }) => (
+                       <FormItem>
+                         <FormLabel>Email</FormLabel>
+                         <FormControl>
+                           <Input
+                             type="email"
+                             placeholder="your@email.com"
+                             autoComplete="email"
+                             {...field}
+                             data-testid="input-forgot-email"
+                           />
+                         </FormControl>
+                         <FormMessage />
+                       </FormItem>
+                     )}
+                   />
+                   <Button
+                     type="submit"
+                     className="w-full"
+                     disabled={forgotPasswordMutation.isPending}
+                     data-testid="button-send-reset"
+                   >
+                     {forgotPasswordMutation.isPending ? "Sending..." : "Send reset link"}
+                   </Button>
+                   <button
+                     type="button"
+                     onClick={() => setAuthView("login")}
+                     className="w-full text-sm text-primary hover:underline"
+                   >
+                     Back to sign in
+                   </button>
+                 </form>
+               </Form>
+             )
+           ) : (
+             <Form {...resetPasswordForm}>
+               <form
+                 onSubmit={resetPasswordForm.handleSubmit((data) => resetPasswordMutation.mutate(data))}
+                 className="space-y-4"
+               >
+                 <FormField
+                   control={resetPasswordForm.control}
+                   name="password"
+                   render={({ field }) => (
+                     <FormItem>
+                       <FormLabel>New password</FormLabel>
+                       <FormControl>
+                         <Input
+                           type="password"
+                           placeholder="••••••••"
+                           autoComplete="new-password"
+                           {...field}
+                           data-testid="input-reset-password"
+                         />
+                       </FormControl>
+                       <FormMessage />
+                     </FormItem>
+                   )}
+                 />
+                 <FormField
+                   control={resetPasswordForm.control}
+                   name="confirmPassword"
+                   render={({ field }) => (
+                     <FormItem>
+                       <FormLabel>Confirm new password</FormLabel>
+                       <FormControl>
+                         <Input
+                           type="password"
+                           placeholder="••••••••"
+                           autoComplete="new-password"
+                           {...field}
+                           data-testid="input-reset-password-confirm"
+                         />
+                       </FormControl>
+                       <FormMessage />
+                     </FormItem>
+                   )}
+                 />
+                 <Button
+                   type="submit"
+                   className="w-full"
+                   disabled={resetPasswordMutation.isPending}
+                   data-testid="button-reset-password"
+                 >
+                   {resetPasswordMutation.isPending ? "Updating..." : "Update password"}
+                 </Button>
+               </form>
+             </Form>
+           )}
 
-          {isLogin && import.meta.env.VITE_DEMO_MODE === "true" && (
+           {authView === "login" && import.meta.env.VITE_DEMO_MODE === "true" && (
             <>
               <div className="relative my-6">
                 <Separator />
@@ -363,17 +478,29 @@ export default function Auth() {
           )}
 
           <div className="mt-4 text-center space-y-2">
-            <button
-              onClick={() => {
-                setIsLogin(!isLogin);
-                loginForm.reset();
-                registerForm.reset();
-              }}
-              className="text-sm text-primary hover:underline block w-full"
-              data-testid="button-toggle-auth"
-            >
-              {isLogin ? "Don't have an account? Sign up" : "Already have an account? Sign in"}
-            </button>
+             {authView === "login" || authView === "register" ? (
+               <button
+                 onClick={() => {
+                   setAuthView(authView === "login" ? "register" : "login");
+                   loginForm.reset();
+                   registerForm.reset();
+                 }}
+                 className="text-sm text-primary hover:underline block w-full"
+                 data-testid="button-toggle-auth"
+               >
+                 {authView === "login" ? "Don't have an account? Sign up" : "Already have an account? Sign in"}
+               </button>
+             ) : (
+               <button
+                 onClick={() => {
+                   setAuthView("login");
+                   setResetEmailSent(false);
+                 }}
+                 className="text-sm text-primary hover:underline block w-full"
+               >
+                 Back to sign in
+               </button>
+             )}
           </div>
         </CardContent>
       </Card>
