@@ -1,0 +1,1 @@
+- [Expo mobile preview routing](expo-mobile-preview-routing.md) — Browser UI checks must use the Expo development domain, not the shared artifact route.

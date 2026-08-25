@@ -2,8 +2,8 @@ import { Platform } from "react-native";
 
 const configuredDomain = process.env.EXPO_PUBLIC_API_URL || process.env.EXPO_PUBLIC_DOMAIN;
 const API_BASE = configuredDomain
-  ? configuredDomain.startsWith("http") ? configuredDomain : `https://${configuredDomain}`
-  : Platform.OS === "web" ? "" : "http://localhost";
+  ? (configuredDomain.startsWith("http") ? configuredDomain : `https://${configuredDomain}`).replace(/\/+$/, "")
+  : "";
 
 export class ApiError extends Error {
   status: number;
@@ -20,6 +20,9 @@ export function setUnauthorizedHandler(handler: (() => void) | null) {
 }
 
 export async function api<T>(path: string, options: RequestInit = {}, token?: string | null): Promise<T> {
+  if (!API_BASE && Platform.OS !== "web") {
+    throw new Error("Mobile API configuration is missing. Rebuild with EXPO_PUBLIC_DOMAIN or EXPO_PUBLIC_API_URL.");
+  }
   const headers = new Headers(options.headers);
   if (options.body && !(options.body instanceof FormData)) headers.set("Content-Type", "application/json");
   if (token) headers.set("Authorization", `Bearer ${token}`);
