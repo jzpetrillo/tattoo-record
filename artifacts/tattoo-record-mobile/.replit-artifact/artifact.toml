@@ -1,0 +1,24 @@
+kind = "mobile"
+previewPath = "/tattoo-record-mobile/"
+title = "Tattoo Record Mobile"
+description = "A native Expo companion for Tattoo Record, bringing the community feed, artist discovery, portfolios, messaging, bookings, jobs, notifications, saved work, and account tools to phones."
+version = "1.0.0"
+id = "artifacts/tattoo-record-mobile"
+router = "expo-domain"
+
+[[services]]
+name = "expo"
+ensurePreviewReachable = "/status"
+paths = [ "/tattoo-record-mobile/" ]
+localPort = 24638
+
+[services.development]
+run = "pnpm --filter @workspace/tattoo-record-mobile run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/tattoo-record-mobile", "run", "build" ]
+run = [ "pnpm", "--filter", "@workspace/tattoo-record-mobile", "run", "serve" ]
+
+[services.env]
+PORT = "24638"
+BASE_PATH = "/tattoo-record-mobile/"

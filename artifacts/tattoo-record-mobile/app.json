@@ -1,0 +1,48 @@
+{
+  "expo": {
+    "name": "Tattoo Record Mobile",
+    "slug": "tattoo-record-mobile",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/icon.png",
+    "scheme": "tattoo-record-mobile",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/images/icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#EDEBE4"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.tattoorecord.mobile",
+      "infoPlist": {
+        "NSPhotoLibraryUsageDescription": "Tattoo Record uses your photo library to publish tattoo work and portfolio images.",
+        "NSCameraUsageDescription": "Tattoo Record uses your camera to capture tattoo work for your portfolio."
+      }
+    },
+    "android": {
+      "package": "com.tattoorecord.mobile",
+      "permissions": ["CAMERA", "READ_MEDIA_IMAGES", "READ_MEDIA_VIDEO"]
+    },
+    "web": {
+      "favicon": "./assets/images/icon.png"
+    },
+    "plugins": [
+      [
+        "expo-router",
+        {
+          "origin": "https://replit.com/"
+        }
+      ],
+      "expo-font",
+      "expo-image-picker",
+      "expo-secure-store",
+      "expo-web-browser"
+    ],
+    "experiments": {
+      "typedRoutes": true,
+      "reactCompiler": true
+    }
+  }
+}

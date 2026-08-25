@@ -16,4 +16,3 @@ export const HealthCheckResponse = zod.object({
   "status": zod.string()
 })
 
-
