@@ -1,6 +1,7 @@
 // @ts-nocheck
 import type { Express } from "express";
 import { createServer, type Server } from "http";
+import { createHash, randomBytes } from "crypto";
 import bcrypt from "bcrypt";
 import multer from "multer";
 import rateLimit from "express-rate-limit";
@@ -23,6 +24,7 @@ import { embed } from "../services/ai/index";
 import { startDigestScheduler } from "../services/digest";
 import { initDatabase } from "../db-init";
 import { isDemoLoginEnabled, isDemoLoginRoleAllowed } from "../config/demo-mode";
+import { sendPasswordResetEmail } from "../services/password-reset-email";
 
 // Strip password hash before sending user objects to clients
 function safeUser<T extends { hashedPassword?: string }>(user: T): Omit<T, "hashedPassword"> {
@@ -132,6 +134,116 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const token = generateToken(user.id);
       res.json({ token, user: { id: user.id, username: user.username, email: user.email, role: user.role, isVerified: user.isVerified, verificationStatus: user.verificationStatus } });
     } catch (error: any) {
+      sendError(res, error);
+    }
+  });
+
+  app.post("/api/auth/forgot-password", authLimiter, async (req, res) => {
+    const genericResponse = {
+      message: "If an account exists for that email, a password reset link is on its way.",
+    };
+
+    try {
+      const { email } = validation.forgotPasswordSchema.parse(req.body);
+      const normalizedEmail = email.trim().toLowerCase();
+      const result = await pool.query<{ id: string; email: string; is_banned: boolean }>(
+        `SELECT id, email, is_banned
+         FROM users
+         WHERE LOWER(email) = $1
+         LIMIT 1`,
+        [normalizedEmail],
+      );
+      const user = result.rows[0];
+
+      if (!user || user.is_banned) {
+        return res.json(genericResponse);
+      }
+
+      const rawToken = randomBytes(32).toString("hex");
+      const tokenHash = createHash("sha256").update(rawToken).digest("hex");
+      await pool.query(
+        `DELETE FROM password_reset_tokens
+         WHERE user_id = $1 OR expires_at <= NOW()`,
+        [user.id],
+      );
+      await pool.query(
+        `INSERT INTO password_reset_tokens (token_hash, user_id, expires_at)
+         VALUES ($1, $2, NOW() + INTERVAL '30 minutes')`,
+        [tokenHash, user.id],
+      );
+
+      const protocol = req.get("x-forwarded-proto")?.split(",")[0]?.trim() || req.protocol;
+      const baseUrl = process.env.APP_URL?.replace(/\/$/, "") || `${protocol}://${req.get("host")}`;
+      const resetUrl = `${baseUrl}/auth?mode=reset&token=${encodeURIComponent(rawToken)}`;
+
+      try {
+        await sendPasswordResetEmail(user.email, resetUrl);
+      } catch (emailError) {
+        await pool.query(
+          "DELETE FROM password_reset_tokens WHERE token_hash = $1",
+          [tokenHash],
+        );
+        throw emailError;
+      }
+
+      return res.json(genericResponse);
+    } catch (error) {
+      sendError(res, error);
+    }
+  });
+
+  app.post("/api/auth/reset-password", authLimiter, async (req, res) => {
+    try {
+      const { token, password } = validation.resetPasswordSchema.parse(req.body);
+      const tokenHash = createHash("sha256").update(token).digest("hex");
+      const hashedPassword = await bcrypt.hash(password, 10);
+      const client = await pool.connect();
+
+      try {
+        await client.query("BEGIN");
+        const tokenResult = await client.query<{ user_id: string }>(
+          `SELECT user_id
+           FROM password_reset_tokens
+           WHERE token_hash = $1
+             AND used_at IS NULL
+             AND expires_at > NOW()
+           FOR UPDATE`,
+          [tokenHash],
+        );
+        const resetToken = tokenResult.rows[0];
+
+        if (!resetToken) {
+          await client.query("ROLLBACK");
+          return res.status(400).json({ message: "This password reset link is invalid or has expired." });
+        }
+
+        const updatedUser = await client.query(
+          `UPDATE users
+           SET hashed_password = $1, updated_at = NOW()
+           WHERE id = $2 AND is_banned = FALSE
+           RETURNING id`,
+          [hashedPassword, resetToken.user_id],
+        );
+        if (updatedUser.rowCount === 0) {
+          await client.query("ROLLBACK");
+          return res.status(400).json({ message: "This password reset link is invalid or has expired." });
+        }
+
+        await client.query(
+          `UPDATE password_reset_tokens
+           SET used_at = NOW()
+           WHERE user_id = $1 AND used_at IS NULL`,
+          [resetToken.user_id],
+        );
+        await client.query("COMMIT");
+        return res.json({ message: "Your password has been reset. You can now sign in." });
+      } catch (error) {
+        await client.query("ROLLBACK").catch(() => undefined);
+        throw error;
+      } finally {
+        client.release();
+      }
+    } catch (error) {
       sendError(res, error);
     }
   });

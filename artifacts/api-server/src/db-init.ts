@@ -216,5 +216,19 @@ export async function initDatabase() {
     console.warn("[db-init] Embedding column setup skipped:", err instanceof Error ? err.message : String(err));
   }
 
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS password_reset_tokens (
+      token_hash CHAR(64) PRIMARY KEY,
+      user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      expires_at TIMESTAMPTZ NOT NULL,
+      used_at TIMESTAMPTZ,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `);
+  await pool.query(`
+    CREATE INDEX IF NOT EXISTS password_reset_tokens_user_id_idx
+      ON password_reset_tokens (user_id)
+  `);
+
   await seedProductionAdmin();
 }

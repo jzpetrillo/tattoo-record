@@ -10,6 +10,15 @@ export const loginSchema = z.object({
   password: z.string().min(6, "Password must be at least 6 characters"),
 });
 
+export const forgotPasswordSchema = z.object({
+  email: z.string().email("Invalid email address"),
+});
+
+export const resetPasswordSchema = z.object({
+  token: z.string().regex(/^[a-f0-9]{64}$/, "Invalid or expired reset link"),
+  password: z.string().min(8, "Password must be at least 8 characters"),
+});
+
 export const demoLoginSchema = z.object({
   role: z.enum(DEMO_LOGIN_ROLES),
 });

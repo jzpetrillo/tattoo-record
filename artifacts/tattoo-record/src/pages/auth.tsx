@@ -15,7 +15,7 @@ import { apiRequest } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import { Palette, Building2, Heart } from "lucide-react";
 
-const DEMO_ROLES = ["ARTIST", "STUDIO", "ENTHUSIAST", "ADMIN"] as const;
+const DEMO_ROLES = ["ARTIST", "STUDIO", "ENTHUSIAST"] as const;
 
 const loginSchema = z.object({
   email: z.string().email("Invalid email address"),
@@ -29,16 +29,34 @@ const registerSchema = z.object({
   role: z.enum(["ARTIST", "STUDIO", "ENTHUSIAST"]),
 });
 
+const forgotPasswordSchema = z.object({
+  email: z.string().email("Enter a valid email address"),
+});
+
+const resetPasswordSchema = z.object({
+  password: z.string().min(8, "Password must be at least 8 characters"),
+  confirmPassword: z.string().min(1, "Please confirm your password"),
+}).refine((data) => data.password === data.confirmPassword, {
+  message: "Passwords do not match",
+  path: ["confirmPassword"],
+});
+
+type AuthView = "login" | "register" | "forgot" | "reset";
+
 export default function Auth() {
-  const [isLogin, setIsLogin] = useState(true);
+  const [authView, setAuthView] = useState<AuthView>("login");
+  const [resetEmailSent, setResetEmailSent] = useState(false);
   const [location, setLocation] = useLocation();
   const { user, setAuth } = useAuth();
   const { toast } = useToast();
+  const searchParams = new URLSearchParams(window.location.search);
+  const resetToken = searchParams.get("token") || "";
 
   useEffect(() => {
     const mode = new URLSearchParams(window.location.search).get("mode");
-    setIsLogin(mode !== "register");
-  }, [location]);
+    setAuthView(mode === "register" ? "register" : mode === "reset" && resetToken ? "reset" : "login");
+    setResetEmailSent(false);
+  }, [location, resetToken]);
 
   // Redirect authenticated users to home
   useEffect(() => {
@@ -55,6 +73,16 @@ export default function Auth() {
   const registerForm = useForm({
     resolver: zodResolver(registerSchema),
     defaultValues: { email: "", username: "", password: "", role: "ENTHUSIAST" as const },
+  });
+
+  const forgotPasswordForm = useForm({
+    resolver: zodResolver(forgotPasswordSchema),
+    defaultValues: { email: "" },
+  });
+
+  const resetPasswordForm = useForm({
+    resolver: zodResolver(resetPasswordSchema),
+    defaultValues: { password: "", confirmPassword: "" },
   });
 
   const loginMutation = useMutation({
@@ -102,21 +130,58 @@ export default function Auth() {
     },
   });
 
+  const forgotPasswordMutation = useMutation({
+    mutationFn: async (data: z.infer<typeof forgotPasswordSchema>) => {
+      const res = await apiRequest("POST", "/api/auth/forgot-password", data);
+      return res.json();
+    },
+    onSuccess: () => {
+      setResetEmailSent(true);
+    },
+    onError: (error: Error) => {
+      toast({ title: "Unable to request a reset link", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const resetPasswordMutation = useMutation({
+    mutationFn: async (data: z.infer<typeof resetPasswordSchema>) => {
+      const res = await apiRequest("POST", "/api/auth/reset-password", {
+        token: resetToken,
+        password: data.password,
+      });
+      return res.json();
+    },
+    onSuccess: () => {
+      resetPasswordForm.reset();
+      setLocation("/auth");
+      toast({ title: "Password reset", description: "Your password has been updated. You can now sign in." });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Unable to reset password", description: error.message, variant: "destructive" });
+    },
+  });
+
   const handleQuickLogin = (role: (typeof DEMO_ROLES)[number]) => {
     demoLoginMutation.mutate(role);
   };
+
+  const cardDescription = authView === "login"
+    ? "Sign in to your account"
+    : authView === "register"
+      ? "Create a new account"
+      : authView === "forgot"
+        ? "Request a password reset link"
+        : "Choose a new password";
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <Card className="w-full max-w-md">
         <CardHeader>
           <CardTitle className="text-2xl press-nameplate">Tattoo Record</CardTitle>
-          <CardDescription>
-            {isLogin ? "Sign in to your account" : "Create a new account"}
-          </CardDescription>
+            <CardDescription>{cardDescription}</CardDescription>
         </CardHeader>
         <CardContent>
-          {isLogin ? (
+           {authView === "login" ? (
             <Form {...loginForm}>
               <form onSubmit={loginForm.handleSubmit((data) => loginMutation.mutate(data))} className="space-y-4">
                 <FormField
@@ -148,9 +213,17 @@ export default function Auth() {
                 <Button type="submit" className="w-full" disabled={loginMutation.isPending} data-testid="button-login">
                   {loginMutation.isPending ? "Signing in..." : "Sign In"}
                 </Button>
+                <button
+                  type="button"
+                  onClick={() => setAuthView("forgot")}
+                  className="w-full text-sm text-primary hover:underline"
+                  data-testid="button-forgot-password"
+                >
+                  Forgot password?
+                </button>
               </form>
             </Form>
-          ) : (
+          ) : authView === "register" ? (
             <Form {...registerForm}>
               <form onSubmit={registerForm.handleSubmit((data) => registerMutation.mutate(data))} className="space-y-4">
                 <FormField
