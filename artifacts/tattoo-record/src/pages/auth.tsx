@@ -13,7 +13,7 @@ import { Separator } from "@/components/ui/separator";
 import { useAuth } from "@/hooks/use-auth";
 import { apiRequest } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
-import { Palette, Building2, Heart, Shield } from "lucide-react";
+import { Palette, Building2, Heart } from "lucide-react";
 
 const DEMO_ROLES = ["ARTIST", "STUDIO", "ENTHUSIAST", "ADMIN"] as const;
 
@@ -285,19 +285,6 @@ export default function Auth() {
                   <Heart className="w-4 h-4" />
                   Enthusiast
                 </Button>
-                {import.meta.env.MODE !== "production" && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleQuickLogin("ADMIN")}
-                    disabled={demoLoginMutation.isPending}
-                    className="flex items-center gap-2"
-                    data-testid="quick-login-admin"
-                  >
-                    <Shield className="w-4 h-4" />
-                    Admin
-                  </Button>
-                )}
               </div>
             </>
           )}
@@ -313,13 +300,6 @@ export default function Auth() {
               data-testid="button-toggle-auth"
             >
               {isLogin ? "Don't have an account? Sign up" : "Already have an account? Sign in"}
-            </button>
-            <button
-              onClick={() => setLocation("/admin")}
-              className="text-xs text-muted-foreground hover:text-foreground transition-colors"
-              data-testid="button-admin-link"
-            >
-              Admin Access
             </button>
           </div>
         </CardContent>
