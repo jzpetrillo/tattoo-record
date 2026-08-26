@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -14,7 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Separator } from "@/components/ui/separator";
-import { Lock, User, Trash2 } from "lucide-react";
+import { CheckCircle2, Lock, Mail, User, Trash2 } from "lucide-react";
 
 const profileSchema = z.object({
   firstName: z.string().max(50).optional(),
@@ -32,13 +32,37 @@ const passwordSchema = z.object({
   path: ["confirmPassword"],
 });
 
+const emailChangeSchema = z.object({
+  email: z.string().trim().email("Enter a valid email address"),
+});
+
 type ProfileFormValues = z.infer<typeof profileSchema>;
 type PasswordFormValues = z.infer<typeof passwordSchema>;
+type EmailChangeFormValues = z.infer<typeof emailChangeSchema>;
+
+function getApiErrorMessage(error: Error) {
+  const rawMessage = error.message;
+  const jsonStart = rawMessage.indexOf("{");
+  if (jsonStart >= 0) {
+    try {
+      const parsed = JSON.parse(rawMessage.slice(jsonStart));
+      if (typeof parsed.message === "string") return parsed.message;
+    } catch {
+      // Keep the original message when the response was not JSON.
+    }
+  }
+  return rawMessage;
+}
 
 export default function Settings() {
   const { user, token } = useAuth();
   const { toast } = useToast();
-  const [activeSection, setActiveSection] = useState<"profile" | "password" | "account">("profile");
+  const searchParams = new URLSearchParams(window.location.search);
+  const emailChangeConfirmed = searchParams.get("emailChanged") === "1";
+  const [activeSection, setActiveSection] = useState<"profile" | "password" | "account">(
+    searchParams.get("section") === "account" ? "account" : "profile",
+  );
+  const [pendingEmail, setPendingEmail] = useState<string | null>(null);
 
   const profileForm = useForm<ProfileFormValues>({
     resolver: zodResolver(profileSchema),
@@ -58,6 +82,22 @@ export default function Settings() {
       confirmPassword: "",
     },
   });
+
+  const emailChangeForm = useForm<EmailChangeFormValues>({
+    resolver: zodResolver(emailChangeSchema),
+    defaultValues: { email: "" },
+  });
+
+  const pendingEmailQuery = useQuery<{ pending: { email: string; expiresAt: string } | null }>({
+    queryKey: ["/api/auth/email-change-status", user?.id],
+    queryFn: async () => {
+      const res = await apiRequest("GET", "/api/auth/email-change-status", undefined, token!);
+      return res.json();
+    },
+    enabled: Boolean(token && user),
+  });
+
+  const displayedPendingEmail = pendingEmail ?? pendingEmailQuery.data?.pending?.email ?? null;
 
   const profileMutation = useMutation({
     mutationFn: async (data: ProfileFormValues) => {
@@ -95,6 +135,25 @@ export default function Settings() {
     },
     onError: (error: Error) => {
       toast({ variant: "destructive", description: error.message });
+    },
+  });
+
+  const emailChangeMutation = useMutation({
+    mutationFn: async (data: EmailChangeFormValues) => {
+      const res = await apiRequest("POST", "/api/auth/request-email-change", data, token!);
+      return res.json();
+    },
+    onSuccess: (data: { email: string }) => {
+      setPendingEmail(data.email);
+      emailChangeForm.reset();
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/email-change-status", user?.id] });
+      toast({
+        title: "Verification link sent",
+        description: `Check ${data.email} to finish changing your email address.`,
+      });
+    },
+    onError: (error: Error) => {
+      toast({ variant: "destructive", title: "Unable to change email", description: getApiErrorMessage(error) });
     },
   });
 
@@ -274,6 +333,76 @@ export default function Settings() {
                     <CardDescription>Manage your account data</CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-6">
+                    {emailChangeConfirmed && (
+                      <div
+                        className="flex items-start gap-2 rounded-md border border-primary/30 bg-primary/5 p-3 text-sm"
+                        data-testid="email-change-success"
+                      >
+                        <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                        <p>Your email address has been updated and verified.</p>
+                      </div>
+                    )}
+                    <div className="space-y-4">
+                      <div className="flex items-start gap-3">
+                        <Mail className="mt-0.5 h-4 w-4 text-muted-foreground" />
+                        <div>
+                          <p className="text-sm font-medium">Email address</p>
+                          <p className="text-sm text-muted-foreground" data-testid="text-current-email">
+                            {user?.email || "—"}
+                          </p>
+                        </div>
+                      </div>
+                      {displayedPendingEmail && (
+                        <div
+                          className="flex items-start gap-2 rounded-md border border-primary/30 bg-primary/5 p-3 text-sm"
+                          data-testid="email-change-pending"
+                        >
+                          <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                          <p>
+                            A verification link was sent to <strong>{displayedPendingEmail}</strong>. It expires within 30 minutes.
+                            Requesting another link will invalidate this one.
+                          </p>
+                        </div>
+                      )}
+                      <Form {...emailChangeForm}>
+                        <form
+                          onSubmit={emailChangeForm.handleSubmit((data) => emailChangeMutation.mutate(data))}
+                          className="space-y-4"
+                        >
+                          <FormField
+                            control={emailChangeForm.control}
+                            name="email"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>New email address</FormLabel>
+                                <FormControl>
+                                  <Input
+                                    type="email"
+                                    placeholder="new@email.com"
+                                    autoComplete="email"
+                                    data-testid="input-new-email"
+                                    {...field}
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          <Button
+                            type="submit"
+                            disabled={emailChangeMutation.isPending}
+                            data-testid="button-request-email-change"
+                          >
+                            {emailChangeMutation.isPending
+                              ? "Sending…"
+                              : displayedPendingEmail
+                                ? "Send another verification link"
+                                : "Send verification link"}
+                          </Button>
+                        </form>
+                      </Form>
+                    </div>
+                    <Separator />
                     <div>
                       <p className="text-sm font-medium mb-1">Username</p>
                       <p className="text-sm text-muted-foreground" data-testid="text-username">@{user?.username}</p>

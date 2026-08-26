@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
-interface User {
+export interface User {
   id: string;
   username: string;
   email: string;
@@ -12,6 +12,7 @@ interface User {
   website?: string;
   avatarUrl?: string;
   isVerified?: boolean;
+  emailVerifiedAt?: string;
   verificationStatus?: string;
 }
 

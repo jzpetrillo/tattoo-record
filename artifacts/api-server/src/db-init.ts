@@ -145,7 +145,51 @@ async function seedProductionAdmin() {
   }
 }
 
+async function ensureCaseInsensitiveEmailUniqueness() {
+  const client = await pool.connect();
+
+  try {
+    await client.query("BEGIN");
+    await client.query("LOCK TABLE users IN SHARE ROW EXCLUSIVE MODE");
+
+    const collisions = await client.query<{ normalized_email: string }>(
+      `SELECT LOWER(TRIM(email)) AS normalized_email
+       FROM users
+       GROUP BY LOWER(TRIM(email))
+       HAVING COUNT(*) > 1
+       LIMIT 1`,
+    );
+    if (collisions.rows[0]) {
+      throw new Error(
+        "Cannot enforce case-insensitive email uniqueness because existing user emails collide after normalization.",
+      );
+    }
+
+    await client.query(`
+      UPDATE users
+      SET email = LOWER(TRIM(email)),
+          updated_at = NOW()
+      WHERE email <> LOWER(TRIM(email))
+    `);
+    await client.query(`
+      CREATE UNIQUE INDEX IF NOT EXISTS users_email_lower_unique_idx
+        ON users (LOWER(email))
+    `);
+    await client.query("COMMIT");
+  } catch (error) {
+    await client.query("ROLLBACK").catch(() => undefined);
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+
 export async function initDatabase() {
+  await pool.query(`
+    ALTER TABLE users
+      ADD COLUMN IF NOT EXISTS email_verified_at TIMESTAMPTZ
+  `);
+
   // Create csp_violations table for persisting browser CSP reports
   try {
     await pool.query(`
@@ -283,5 +327,21 @@ export async function initDatabase() {
       ON password_reset_tokens (user_id)
   `);
 
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS email_change_tokens (
+      token_hash CHAR(64) PRIMARY KEY,
+      user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      new_email VARCHAR(255) NOT NULL,
+      expires_at TIMESTAMPTZ NOT NULL,
+      used_at TIMESTAMPTZ,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `);
+  await pool.query(`
+    CREATE INDEX IF NOT EXISTS email_change_tokens_user_id_idx
+      ON email_change_tokens (user_id)
+  `);
+
+  await ensureCaseInsensitiveEmailUniqueness();
   await seedProductionAdmin();
 }

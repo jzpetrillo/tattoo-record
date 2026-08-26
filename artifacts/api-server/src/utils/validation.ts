@@ -6,12 +6,12 @@ import { DEMO_LOGIN_ROLES } from "../config/demo-mode";
 export const insertStudioApprovalRequestSchema = _insertStudioApprovalRequestSchema;
 
 export const loginSchema = z.object({
-  email: z.string().email("Invalid email address"),
+  email: z.string().trim().email("Invalid email address").transform((email) => email.toLowerCase()),
   password: z.string().min(6, "Password must be at least 6 characters"),
 });
 
 export const forgotPasswordSchema = z.object({
-  email: z.string().email("Invalid email address"),
+  email: z.string().trim().email("Invalid email address").transform((email) => email.toLowerCase()),
 });
 
 export const resetPasswordSchema = z.object({
@@ -19,12 +19,20 @@ export const resetPasswordSchema = z.object({
   password: z.string().min(8, "Password must be at least 8 characters"),
 });
 
+export const requestEmailChangeSchema = z.object({
+  email: z.string().trim().email("Invalid email address").transform((email) => email.toLowerCase()),
+});
+
+export const confirmEmailChangeSchema = z.object({
+  token: z.string().regex(/^[a-f0-9]{64}$/, "Invalid or expired email verification link"),
+});
+
 export const demoLoginSchema = z.object({
   role: z.enum(DEMO_LOGIN_ROLES),
 });
 
 export const registerSchema = z.object({
-  email: z.string().email("Invalid email address"),
+  email: z.string().trim().email("Invalid email address").transform((email) => email.toLowerCase()),
   username: z.string().min(3, "Username must be at least 3 characters").max(50),
   password: z.string().min(6, "Password must be at least 6 characters"),
   role: z.enum(["ARTIST", "STUDIO", "ENTHUSIAST"]).default("ENTHUSIAST"),

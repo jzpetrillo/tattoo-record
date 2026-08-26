@@ -24,7 +24,7 @@ import { embed } from "../services/ai/index";
 import { startDigestScheduler } from "../services/digest";
 import { initDatabase } from "../db-init";
 import { isDemoLoginEnabled, isDemoLoginRoleAllowed } from "../config/demo-mode";
-import { sendPasswordResetEmail } from "../services/password-reset-email";
+import { sendEmailChangeVerificationEmail, sendPasswordResetEmail } from "../services/password-reset-email";
 
 // Strip password hash before sending user objects to clients
 function safeUser<T extends { hashedPassword?: string }>(user: T): Omit<T, "hashedPassword"> {
@@ -42,6 +42,34 @@ function sendError(res: any, error: any): void {
     console.error("[route-error]", error);
     res.status(500).json({ message: "An unexpected error occurred" });
   }
+}
+
+function getCanonicalAppUrl(): string {
+  const configuredUrl = process.env.APP_URL;
+  const developmentUrl =
+    process.env.NODE_ENV !== "production" && process.env.REPLIT_DEV_DOMAIN
+      ? `https://${process.env.REPLIT_DEV_DOMAIN}`
+      : undefined;
+  const candidate = configuredUrl || developmentUrl;
+
+  if (!candidate) {
+    throw new Error("APP_URL must be configured for emailed security links.");
+  }
+
+  const appUrl = new URL(candidate);
+  const isDevelopmentLocalhost =
+    process.env.NODE_ENV !== "production" &&
+    appUrl.protocol === "http:" &&
+    (appUrl.hostname === "localhost" || appUrl.hostname === "127.0.0.1");
+  if (appUrl.protocol !== "https:" && !isDevelopmentLocalhost) {
+    throw new Error("APP_URL must use HTTPS.");
+  }
+  if (appUrl.username || appUrl.password || appUrl.search || appUrl.hash) {
+    throw new Error("APP_URL must be a clean public origin without credentials, query, or fragment.");
+  }
+
+  appUrl.pathname = appUrl.pathname.replace(/\/+$/, "");
+  return appUrl.toString().replace(/\/$/, "");
 }
 
 const ALLOWED_MIME_TYPES = new Set([
@@ -62,6 +90,23 @@ const authLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   message: { message: "Too many attempts, please try again later." },
+});
+
+const emailChangeIpLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: process.env.NODE_ENV === "production" ? 20 : 200,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { message: "Too many email change requests. Please try again later." },
+});
+
+const emailChangeAccountLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: process.env.NODE_ENV === "production" ? 5 : 100,
+  keyGenerator: (req: AuthRequest) => req.userId || "unauthenticated",
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { message: "Too many email change requests. Please try again later." },
 });
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -109,6 +154,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const token = generateToken(user.id);
       res.json({ token, user: { id: user.id, username: user.username, email: user.email, role: user.role, verificationStatus: user.verificationStatus } });
     } catch (error: any) {
+      if (
+        error?.code === "23505" &&
+        ["users_email_unique", "users_email_lower_unique_idx"].includes(error?.constraint)
+      ) {
+        return res.status(400).json({ message: "Email already registered" });
+      }
+      if (error?.code === "23505" && error?.constraint === "users_username_unique") {
+        return res.status(400).json({ message: "Username already taken" });
+      }
       sendError(res, error);
     }
   });
@@ -172,8 +226,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         [tokenHash, user.id],
       );
 
-      const protocol = req.get("x-forwarded-proto")?.split(",")[0]?.trim() || req.protocol;
-      const baseUrl = process.env.APP_URL?.replace(/\/$/, "") || `${protocol}://${req.get("host")}`;
+      const baseUrl = getCanonicalAppUrl();
       const resetUrl = `${baseUrl}/auth?mode=reset&token=${encodeURIComponent(rawToken)}`;
 
       try {
@@ -247,6 +300,251 @@ export async function registerRoutes(app: Express): Promise<Server> {
       sendError(res, error);
     }
   });
+
+  app.post(
+    "/api/auth/request-email-change",
+    emailChangeIpLimiter,
+    requireAuth,
+    emailChangeAccountLimiter,
+    async (req: AuthRequest, res) => {
+    try {
+      const { email: newEmail } = validation.requestEmailChangeSchema.parse(req.body);
+      const client = await pool.connect();
+      const rawToken = randomBytes(32).toString("hex");
+      const tokenHash = createHash("sha256").update(rawToken).digest("hex");
+
+      try {
+        await client.query("BEGIN");
+
+        const currentUserResult = await client.query<{ id: string; email: string }>(
+          `SELECT id, email
+           FROM users
+           WHERE id = $1 AND is_banned = FALSE AND deleted_at IS NULL
+           FOR UPDATE`,
+          [req.userId],
+        );
+        const currentUser = currentUserResult.rows[0];
+        if (!currentUser) {
+          await client.query("ROLLBACK");
+          return res.status(404).json({ message: "User not found" });
+        }
+
+        if (currentUser.email.toLowerCase() === newEmail) {
+          await client.query("ROLLBACK");
+          return res.status(400).json({ message: "That is already your current email address." });
+        }
+
+        const existingUserResult = await client.query<{ id: string }>(
+          `SELECT id
+           FROM users
+           WHERE LOWER(email) = $1
+           LIMIT 1`,
+          [newEmail],
+        );
+        if (existingUserResult.rows[0]) {
+          await client.query("ROLLBACK");
+          return res.status(409).json({ message: "That email address is already in use." });
+        }
+
+        // Locking the user row makes repeat requests deterministic: only the
+        // latest committed request remains pending for this account.
+        await client.query(
+          `DELETE FROM email_change_tokens
+           WHERE user_id = $1 OR expires_at <= NOW()`,
+          [req.userId],
+        );
+        await client.query(
+          `INSERT INTO email_change_tokens (token_hash, user_id, new_email, expires_at)
+           VALUES ($1, $2, $3, NOW() + INTERVAL '30 minutes')`,
+          [tokenHash, req.userId, newEmail],
+        );
+        await client.query("COMMIT");
+      } catch (error) {
+        await client.query("ROLLBACK").catch(() => undefined);
+        throw error;
+      } finally {
+        client.release();
+      }
+
+      const baseUrl = getCanonicalAppUrl();
+      const verificationUrl = `${baseUrl}/verify-email-change?token=${encodeURIComponent(rawToken)}`;
+
+      try {
+        await sendEmailChangeVerificationEmail(newEmail, verificationUrl);
+      } catch (emailError) {
+        await pool.query("DELETE FROM email_change_tokens WHERE token_hash = $1", [tokenHash]);
+        console.error("[email-change] Verification email delivery failed", {
+          error: emailError instanceof Error ? emailError.message : "Unknown email delivery error",
+        });
+        return res.status(502).json({
+          message: "We could not send the verification email. Please try again.",
+        });
+      }
+
+      return res.json({
+        message: "A verification link has been sent to your new email address.",
+        email: newEmail,
+        expiresInMinutes: 30,
+      });
+    } catch (error) {
+      sendError(res, error);
+    }
+  });
+
+  app.get("/api/auth/email-change-status", requireAuth, async (req: AuthRequest, res) => {
+    try {
+      const pendingResult = await pool.query<{ new_email: string; expires_at: Date }>(
+        `SELECT new_email, expires_at
+         FROM email_change_tokens
+         WHERE user_id = $1
+           AND used_at IS NULL
+           AND expires_at > NOW()
+         ORDER BY created_at DESC
+         LIMIT 1`,
+        [req.userId],
+      );
+      const pending = pendingResult.rows[0];
+      return res.json({
+        pending: pending
+          ? { email: pending.new_email, expiresAt: pending.expires_at }
+          : null,
+      });
+    } catch (error) {
+      sendError(res, error);
+    }
+  });
+
+  app.post("/api/auth/confirm-email-change", async (req, res) => {
+    try {
+      const { token } = validation.confirmEmailChangeSchema.parse(req.body);
+      const tokenHash = createHash("sha256").update(token).digest("hex");
+      const client = await pool.connect();
+
+      try {
+        await client.query("BEGIN");
+        const tokenResult = await client.query<{
+          user_id: string;
+          new_email: string;
+          used_at: Date | null;
+          expires_at: Date;
+        }>(
+          `SELECT user_id, new_email, used_at, expires_at
+           FROM email_change_tokens
+           WHERE token_hash = $1
+           FOR UPDATE`,
+          [tokenHash],
+        );
+        const emailChange = tokenResult.rows[0];
+
+        if (
+          !emailChange ||
+          emailChange.used_at ||
+          new Date(emailChange.expires_at).getTime() <= Date.now()
+        ) {
+          await client.query("ROLLBACK");
+          return res.status(400).json({ message: "This email verification link is invalid or has expired." });
+        }
+
+        const userResult = await client.query<{
+          id: string;
+          is_banned: boolean;
+          deleted_at: Date | null;
+        }>(
+          `SELECT id, is_banned, deleted_at
+           FROM users
+           WHERE id = $1
+           FOR UPDATE`,
+          [emailChange.user_id],
+        );
+        const user = userResult.rows[0];
+        if (!user || user.is_banned || user.deleted_at) {
+          await client.query("ROLLBACK");
+          return res.status(400).json({ message: "This email verification link is invalid or has expired." });
+        }
+
+        const existingUserResult = await client.query<{ id: string }>(
+          `SELECT id
+           FROM users
+           WHERE LOWER(email) = $1 AND id <> $2
+           LIMIT 1`,
+          [emailChange.new_email.toLowerCase(), emailChange.user_id],
+        );
+        if (existingUserResult.rows[0]) {
+          await client.query("ROLLBACK");
+          return res.status(409).json({ message: "That email address is already in use. Request a new email change link." });
+        }
+
+        const updatedUserResult = await client.query<{
+          id: string;
+          email: string;
+          username: string;
+          role: string;
+          first_name: string | null;
+          last_name: string | null;
+          bio: string | null;
+          website: string | null;
+          avatar_url: string | null;
+          is_verified: boolean;
+          email_verified_at: Date | null;
+          verification_status: string | null;
+        }>(
+          `UPDATE users
+           SET email = $1, email_verified_at = NOW(), updated_at = NOW()
+           WHERE id = $2
+           RETURNING id, email, username, role, first_name, last_name, bio, website,
+                     avatar_url, is_verified, email_verified_at, verification_status`,
+          [emailChange.new_email, emailChange.user_id],
+        );
+        const updatedUser = updatedUserResult.rows[0];
+        if (!updatedUser) {
+          await client.query("ROLLBACK");
+          return res.status(400).json({ message: "This email verification link is invalid or has expired." });
+        }
+
+        await client.query(
+          `UPDATE email_change_tokens
+           SET used_at = NOW()
+           WHERE user_id = $1 AND used_at IS NULL`,
+          [emailChange.user_id],
+        );
+        await client.query("COMMIT");
+
+        return res.json({
+          message: "Your email address has been updated and verified.",
+          user: {
+            id: updatedUser.id,
+            email: updatedUser.email,
+            username: updatedUser.username,
+            role: updatedUser.role,
+            firstName: updatedUser.first_name,
+            lastName: updatedUser.last_name,
+            bio: updatedUser.bio,
+            website: updatedUser.website,
+            avatarUrl: updatedUser.avatar_url,
+            isVerified: updatedUser.is_verified,
+            emailVerifiedAt: updatedUser.email_verified_at,
+            verificationStatus: updatedUser.verification_status,
+          },
+        });
+      } catch (error: any) {
+        await client.query("ROLLBACK").catch(() => undefined);
+        if (
+          error?.code === "23505" &&
+          ["users_email_unique", "users_email_lower_unique_idx"].includes(error?.constraint)
+        ) {
+          return res.status(409).json({
+            message: "That email address is already in use. Request a new email change link.",
+          });
+        }
+        throw error;
+      } finally {
+        client.release();
+      }
+    } catch (error) {
+      sendError(res, error);
+    }
+    },
+  );
 
   app.post("/api/auth/demo-login", authLimiter, async (req, res) => {
     if (!isDemoLoginEnabled()) {

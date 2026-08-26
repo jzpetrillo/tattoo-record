@@ -1,10 +1,11 @@
 import { Switch, Route, useLocation, Router as WouterRouter } from "wouter";
 import { queryClient } from "./lib/queryClient";
-import { QueryClientProvider } from "@tanstack/react-query";
+import { apiRequest as queryApiRequest } from "./lib/queryClient";
+import { QueryClientProvider, useQuery } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useEffect } from "react";
-import { useAuth } from "@/hooks/use-auth";
+import { useAuth, type User } from "@/hooks/use-auth";
 import NotFound from "@/pages/not-found";
 import Home from "@/pages/home";
 import Search from "@/pages/search";
@@ -24,6 +25,7 @@ import FlashSales from "@/pages/flash-sales";
 import Bookings from "@/pages/bookings";
 import AIRecommendations from "@/pages/ai-recommendations";
 import Settings from "@/pages/settings";
+import VerifyEmailChange from "@/pages/verify-email-change";
 
 function AdminRoute() {
   const { user, token } = useAuth();
@@ -61,6 +63,29 @@ function AuthExpiryListener() {
   return null;
 }
 
+function AuthUserHydrator() {
+  const { user, token, setAuth } = useAuth();
+  const { data } = useQuery<User>({
+    queryKey: ["/api/users/me", "auth-hydration", user?.id],
+    queryFn: async () => {
+      const res = await queryApiRequest("GET", "/api/users/me");
+      return res.json();
+    },
+    enabled: Boolean(token && user?.id),
+    staleTime: 0,
+    refetchInterval: 60_000,
+    refetchOnWindowFocus: true,
+  });
+
+  useEffect(() => {
+    if (data && token) {
+      setAuth(data, token);
+    }
+  }, [data, token, setAuth]);
+
+  return null;
+}
+
 function Router() {
   return (
     <Switch>
@@ -83,6 +108,7 @@ function Router() {
       <Route path="/bookings">{() => <ProtectedRoute component={Bookings} />}</Route>
       <Route path="/ai-recommendations">{() => <ProtectedRoute component={AIRecommendations} />}</Route>
       <Route path="/settings">{() => <ProtectedRoute component={Settings} />}</Route>
+      <Route path="/verify-email-change" component={VerifyEmailChange} />
       <Route path="/auth" component={Auth} />
       <Route path="/admin">{() => <AdminRoute />}</Route>
       <Route component={NotFound} />
@@ -95,6 +121,7 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <AuthExpiryListener />
+        <AuthUserHydrator />
         <Toaster />
         <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
           <Router />

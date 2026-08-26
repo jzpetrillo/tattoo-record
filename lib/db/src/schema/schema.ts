@@ -126,6 +126,7 @@ export const users = pgTable("users", {
   tiktok: varchar("tiktok", { length: 100 }),
   twitter: varchar("twitter", { length: 100 }),
   isVerified: boolean("is_verified").notNull().default(false),
+  emailVerifiedAt: timestamp("email_verified_at", { withTimezone: true }),
   isBanned: boolean("is_banned").notNull().default(false),
   verificationStatus: approvalStatusEnum("verification_status"),
   location: jsonb("location").$type<{
@@ -139,7 +140,20 @@ export const users = pgTable("users", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
   deletedAt: timestamp("deleted_at")
-});
+}, (table) => ({
+  emailLowerUnique: uniqueIndex("users_email_lower_unique_idx").on(sql`lower(${table.email})`),
+}));
+
+export const emailChangeTokens = pgTable("email_change_tokens", {
+  tokenHash: varchar("token_hash", { length: 64 }).primaryKey(),
+  userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  newEmail: varchar("new_email", { length: 255 }).notNull(),
+  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+  usedAt: timestamp("used_at", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => ({
+  userIdIdx: index("email_change_tokens_user_id_idx").on(table.userId),
+}));
 
 export const studioProfiles = pgTable("studio_profiles", {
   id: uuid("id").primaryKey().defaultRandom(),
