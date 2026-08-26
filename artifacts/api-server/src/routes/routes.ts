@@ -111,17 +111,22 @@ const emailChangeAccountLimiter = rateLimit({
 
 export async function registerRoutes(app: Express): Promise<Server> {
   const httpServer = createServer(app);
+  const isTestEnvironment = process.env.NODE_ENV === "test";
 
   // Setup WebSockets
-  setupMessageWebSocket(httpServer);
-  setupLiveWebSocket(httpServer);
+  if (!isTestEnvironment) {
+    setupMessageWebSocket(httpServer);
+    setupLiveWebSocket(httpServer);
+  }
 
   // Initialise DB extensions & AI infrastructure
   await initDatabase();
 
   // Start background jobs
-  startStoryCleanupScheduler();
-  if (flags.aiDigest) startDigestScheduler();
+  if (!isTestEnvironment) {
+    startStoryCleanupScheduler();
+    if (flags.aiDigest) startDigestScheduler();
+  }
 
   // Authentication Routes
   app.post("/api/auth/register", authLimiter, async (req, res) => {

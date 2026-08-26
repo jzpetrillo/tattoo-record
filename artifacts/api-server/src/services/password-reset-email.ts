@@ -2,6 +2,18 @@ import { ReplitConnectors } from "@replit/connectors-sdk";
 
 const DEFAULT_FROM = "Tattoo Record <onboarding@resend.dev>";
 
+type EmailChangeDelivery = (to: string, verificationUrl: string) => Promise<void>;
+
+let emailChangeDeliveryOverride: EmailChangeDelivery | undefined;
+
+/**
+ * Provides an in-process test seam for email-change verification.
+ * Production callers leave this unset and use the Resend connector below.
+ */
+export function setEmailChangeDeliveryOverride(delivery: EmailChangeDelivery | undefined) {
+  emailChangeDeliveryOverride = delivery;
+}
+
 export async function sendPasswordResetEmail(to: string, resetUrl: string) {
   const connectors = new ReplitConnectors();
   const response = await connectors.proxy("resend", "/emails", {
@@ -37,6 +49,11 @@ export async function sendPasswordResetEmail(to: string, resetUrl: string) {
 }
 
 export async function sendEmailChangeVerificationEmail(to: string, verificationUrl: string) {
+  if (emailChangeDeliveryOverride) {
+    await emailChangeDeliveryOverride(to, verificationUrl);
+    return;
+  }
+
   const connectors = new ReplitConnectors();
   const response = await connectors.proxy("resend", "/emails", {
     method: "POST",
