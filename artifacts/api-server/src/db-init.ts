@@ -37,59 +37,112 @@ async function seedProductionAdmin() {
   const config = getSeedAdminConfig();
   if (!config) return;
 
-  const existingByEmail = await pool.query<{
-    id: string;
-    username: string;
-    role: string;
-  }>(
-    "SELECT id, username, role FROM users WHERE email = $1 LIMIT 1",
-    [config.email],
-  );
+  const client = await pool.connect();
 
-  if (existingByEmail.rows[0]) {
-    if (existingByEmail.rows[0].role !== "ADMIN") {
-      throw new Error("Production seed admin email already belongs to a non-admin user.");
-    }
-    console.log("[db-init] Seed admin already exists");
-    return;
-  }
+  try {
+    await client.query("BEGIN");
 
-  const existingByUsername = await pool.query<{ id: string }>(
-    "SELECT id FROM users WHERE username = $1 LIMIT 1",
-    [config.username],
-  );
-  if (existingByUsername.rows[0]) {
-    throw new Error("Production seed admin username is already in use.");
-  }
-
-  const hashedPassword = await bcrypt.hash(config.password, 12);
-  const inserted = await pool.query(
-    `INSERT INTO users (
-       email,
-       username,
-       hashed_password,
-       role,
-       is_verified
-     )
-     VALUES ($1, $2, $3, 'ADMIN', TRUE)
-     ON CONFLICT DO NOTHING
-     RETURNING id`,
-    [config.email, config.username, hashedPassword],
-  );
-
-  if (inserted.rowCount === 0) {
-    const conflictingUser = await pool.query<{ role: string }>(
-      "SELECT role FROM users WHERE email = $1 OR username = $2 LIMIT 1",
+    const existingIdentities = await client.query<{
+      id: string;
+      email: string;
+      username: string;
+      role: string;
+      hashed_password: string;
+      is_verified: boolean;
+    }>(
+      `SELECT id, email, username, role, hashed_password, is_verified
+       FROM users
+       WHERE email = $1 OR username = $2
+       ORDER BY created_at ASC`,
       [config.email, config.username],
     );
-    if (conflictingUser.rows[0]?.role !== "ADMIN") {
-      throw new Error("Production seed admin could not be created because its identity is already in use.");
-    }
-    console.log("[db-init] Seed admin already exists");
-    return;
-  }
 
-  console.log("[db-init] Seed admin created");
+    const existingByEmail = existingIdentities.rows.find(
+      (user) => user.email === config.email,
+    );
+    const existingByUsername = existingIdentities.rows.find(
+      (user) => user.username === config.username,
+    );
+
+    if (existingByEmail && existingByEmail.role !== "ADMIN") {
+      throw new Error("Production seed admin email already belongs to a non-admin user.");
+    }
+    if (existingByUsername && existingByUsername.role !== "ADMIN") {
+      throw new Error("Production seed admin username is already in use.");
+    }
+    if (
+      existingByEmail &&
+      existingByUsername &&
+      existingByEmail.id !== existingByUsername.id
+    ) {
+      throw new Error(
+        "Production seed admin email and username belong to different users.",
+      );
+    }
+
+    const existingAdmin = existingByEmail ?? existingByUsername;
+
+    if (existingAdmin) {
+      const passwordMatches = await bcrypt.compare(
+        config.password,
+        existingAdmin.hashed_password,
+      );
+      const identityNeedsUpdate =
+        existingAdmin.email !== config.email ||
+        existingAdmin.username !== config.username ||
+        !existingAdmin.is_verified ||
+        !passwordMatches;
+
+      if (!identityNeedsUpdate) {
+        await client.query("COMMIT");
+        console.log("[db-init] Seed admin already exists");
+        return;
+      }
+
+      const hashedPassword = passwordMatches
+        ? existingAdmin.hashed_password
+        : await bcrypt.hash(config.password, 12);
+      await client.query(
+        `UPDATE users
+         SET email = $1,
+             username = $2,
+             hashed_password = $3,
+             role = 'ADMIN',
+             is_verified = TRUE
+         WHERE id = $4`,
+        [config.email, config.username, hashedPassword, existingAdmin.id],
+      );
+      await client.query("COMMIT");
+      console.log("[db-init] Seed admin reconciled");
+      return;
+    }
+
+    const hashedPassword = await bcrypt.hash(config.password, 12);
+    const inserted = await client.query(
+      `INSERT INTO users (
+         email,
+         username,
+         hashed_password,
+         role,
+         is_verified
+       )
+       VALUES ($1, $2, $3, 'ADMIN', TRUE)
+       RETURNING id`,
+      [config.email, config.username, hashedPassword],
+    );
+
+    if (inserted.rowCount === 0) {
+      throw new Error("Production seed admin could not be created.");
+    }
+
+    await client.query("COMMIT");
+    console.log("[db-init] Seed admin created");
+  } catch (error) {
+    await client.query("ROLLBACK");
+    throw error;
+  } finally {
+    client.release();
+  }
 }
 
 export async function initDatabase() {
