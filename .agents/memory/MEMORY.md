@@ -1,2 +1,3 @@
 - [Expo mobile preview routing](expo-mobile-preview-routing.md) — Browser UI checks must use the Expo development domain, not the shared artifact route.
 - [React type-version boundaries](react-type-version-boundaries.md) — Duplicate React 19 type minors can make compatible refs appear incompatible at dependency boundaries.
+- [Production seed admin reconciliation](production-seed-admin-reconciliation.md) — Corrected seed credentials reconcile by stable username and abort on identity collisions.
