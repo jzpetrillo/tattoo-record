@@ -1,0 +1,45 @@
+Four improvements to "Tattoo Record" (Express + Drizzle server; React/Vite/Wouter/shadcn client, Press theme: paper #ECEAE2, ink #111, cobalt #2B37F5, Space Grotesk/Space Mono, 0px corners). Run `npm run check` + `npm run build` after. Mobile-responsive throughout.
+
+=== PART 1 — Default avatars everywhere ===
+Users often have no avatarUrl, leaving broken/blank avatars. Create ONE reusable <UserAvatar user={..} size=..> component (client/src/components/user-avatar.tsx) and use it EVERYWHERE an avatar renders (post-card, profile header, comments, conversation-list, suggested-users, connected-artist tiles, nav):
+- If user.avatarUrl exists → show the image (object-cover, sharp corners to match Press).
+- Else → render a deterministic initials block: user's initials (from firstName/lastName, else username[0]) on a cobalt background with paper text, Space Grotesk. Deterministic bg tint per user id is fine but keep it on-theme (cobalt/ink/paper only — NO rainbow, NO external avatar service like ui-avatars/dicebear).
+- Never call username[0] without a guard (handle empty/null).
+Replace all existing ad-hoc avatar/AvatarFallback usages with this component.
+
+=== PART 2 — Real, compelling empty feed ===
+client/src/components/posts/post-feed.tsx (and the logged-in home feed) currently show a bare "No posts yet". Replace with an onboarding empty state (Press-styled) that helps a new user act:
+- Headline + subcopy ("Your feed is empty — follow some artists to fill it.").
+- A "Suggested artists to follow" rail using GET /api/for-you (suggestedUsers) with follow buttons inline (reuse for-you-rail logic) — so a new user can populate their feed in one click.
+- A secondary CTA row: "Explore trending" → /explore, and (role-appropriate) "Share your first post" → /create.
+- Also add a proper isError state (retry) so a failed feed load doesn't look identical to empty.
+When suggestions are unavailable, fall back to the Explore CTA. Verify it looks good on mobile.
+
+=== PART 3 — Graceful image-upload UX (works once Cloudinary keys are set) ===
+The /api/upload path 500s when Cloudinary isn't configured. Make failures clear instead of silent:
+- server/services/cloudinary.ts: export isCloudinaryConfigured() (true only if all three CLOUDINARY_* envs are present). In the /api/upload route (server/routes.ts ~1424), if not configured return 503 {"message":"Image uploads are temporarily unavailable."} instead of a 500.
+- client: in create-post-modal.tsx, settings.tsx (avatar/banner upload), and anywhere uploadFile() is used, surface the server message as an error toast, and re-enable the form (don't leave it stuck in "Sharing…"). If uploads are unavailable, disable the file picker with a short note rather than letting the user pick a file that will fail.
+- Add avatar + banner upload to settings.tsx Edit Profile if not already wired (uses the same uploadFile → PUT /api/users/me { avatarUrl }/{ bannerImageUrl }). NOTE: the update path must map to the real column bannerImageUrl (not bannerUrl).
+Do NOT hardcode keys; this part just makes the app behave well with or without them.
+
+=== PART 4 — Full studio ↔ artist connections (extend what exists) ===
+Backend already has: studioApprovalRequests (studioId, artistId, status, note), POST /api/studio-approvals (ARTIST requests), PUT /:id/approve|reject (STUDIO, ownership-checked), GET /api/studios/:studioId/artists, GET /api/artists/:artistId/studio. Extend to support BOTH directions and make connections linkable on public profiles.
+
+4a. Add studio-initiated invites:
+- shared/schema.ts: add `initiatedBy` enum column to studioApprovalRequests: ["ARTIST","STUDIO"] (default "ARTIST"); db:push.
+- Allow a STUDIO to POST /api/studio-approvals with { artistId, note } and initiatedBy="STUDIO" (currently the route is ARTIST-only — branch on role: ARTIST supplies studioId, STUDIO supplies artistId).
+- Approval authorization = the COUNTERPARTY: if initiatedBy="ARTIST", the studio approves/rejects (as today); if initiatedBy="STUDIO", the ARTIST approves/rejects. Update the approve/reject routes to check the correct party (not just requireRole STUDIO). Notify the counterparty on invite and on decision.
+- Prevent duplicate pending requests between the same studio+artist (either direction).
+
+4b. UI — requests/invites:
+- Studio profile/settings: an "Invite artist" flow (search artists via /api/search, send invite) — mirror the existing StudioConnectionDialog but studio→artist.
+- Both roles need an inbox for pending incoming requests/invites (accept/decline) — surface in notifications and on the profile's own view. (Notifications already exist; add APPROVAL-type entries for invites.)
+
+4c. Public profile display (linkable — the key ask):
+- On a STUDIO's public profile: a "Artists" section listing approved connected artists as UserAvatar + name tiles, EACH LINKED to /u/{artist.username}. Use the VIEWED profile's id (works when viewing other studios, not just your own — currently the query uses the logged-in user's id; change to the profile being viewed).
+- On an ARTIST's public profile: show "Works at {studio}" linked to /u/{studio.username} (make the existing "Connected to" block a real link, viewable on others' profiles too).
+- Ensure /api/studios/:id/artists and /api/artists/:id/studio return public user columns (no email/hash) — verify.
+
+VERIFY: default avatars render for users with no image; empty feed shows suggested artists + follow works; uploading an image with Cloudinary unset shows a clear "unavailable" message (no silent 500); with Cloudinary set, image posts + avatar upload succeed; a studio can invite an artist and the artist can accept; approved artists appear on the studio's public profile and link to the artist's profile, and vice-versa.
+
+Summarize files changed/added.
