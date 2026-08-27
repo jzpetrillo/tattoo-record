@@ -1,0 +1,71 @@
+Pre-launch cleanup for "Tattoo Record" (pnpm monorepo: web = artifacts/tattoo-record/src, API = artifacts/api-server/src, DB schema = lib/db/src/schema/schema.ts). Do phases in order. After each, run `pnpm run typecheck` and `pnpm run build`. Verify with the checks noted. Keep the "Press" theme (paper #ECEAE2, ink #111, cobalt #2B37F5, sharp 0px corners).
+
+=====================================================
+PHASE 1 — BLOCKERS
+=====================================================
+1.1 Restore the Press fonts (whole app currently renders in Arial).
+- artifacts/tattoo-record/src/index.css:26-28 — point tokens at the brand fonts:
+    --font-sans: 'Space Grotesk', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+    --font-mono: 'Space Mono', 'Courier New', monospace;
+- Load the fonts: add to the web app's index.html <head> (the same file the Vite app uses) the Google Fonts link for Space Grotesk (400,500,700) + Space Mono (400,700), OR self-host via @font-face. Remove the unrelated "Architects Daughter" font link if it's not used.
+- VERIFY (browser): document.fonts.check('16px "Space Grotesk"') === true; body/heading computed font-family starts with "Space Grotesk".
+
+1.2 Fix the unauthenticated email PII leak.
+- artifacts/api-server/src/routes/routes.ts:30-33 — safeUser() strips only hashedPassword. It's used on the PUBLIC GET /api/users/:id (routes.ts:652-665) whose storage.getUser() selects all columns. Return only public columns (id, username, role, firstName, lastName, bio, avatarUrl, bannerImageUrl, isVerified, verificationStatus, createdAt) for the non-self case — never email/hashedPassword. Keep email ONLY on the authenticated own-user path (/api/users/me).
+- Also: artifacts/api-server/src/storage.ts:936-942 getPendingUsers() returns full rows (hashedPassword) to the admin client — project to public columns + email (mirror the other admin queries; never the hash).
+- VERIFY: `GET /api/users/artist1` with no auth returns NO "email" and NO "hashedPassword"; /api/admin/pending-users contains no "hashedPassword".
+
+=====================================================
+PHASE 2 — DEAD-END FLOWS
+=====================================================
+2.1 Make studio↔artist connections linkable (requirement).
+- artifacts/tattoo-record/src/pages/profile.tsx:436-446 — wrap the artist's connected studio in <Link href={`/u/${studioConnection.studio.username}`}>.
+- profile.tsx:506-519 — wrap each connected-artist tile in <Link href={`/u/${artist.username}`}>. Guard against a `{}`/empty studioConnection so an artist with no studio still sees the "Connect to Studio" dialog (profile.tsx:436 vs 449).
+
+2.2 Fix profile → Message deep link + new-conversation path.
+- messages.tsx:19-30 — when arriving with ?withUserId=, set BOTH the selected user and (create-or-open) the conversation; if no conversation exists yet, create one so a first-contact message works. ChatWindow must receive otherwise otherUser (chat-window.tsx:75) so the header shows the real name, not "Select a conversation".
+
+2.3 Reels never play video — media-type case mismatch.
+- reels.tsx:65 — media type is stored uppercase ("VIDEO"). Compare case-insensitively (e.g. type?.toLowerCase() === "video") so the <video> branch renders.
+
+2.4 Shared post links 404.
+- Either add a `/posts/:id` post-detail route+page in App.tsx (GET /api/posts/:id exists) OR stop generating `${origin}/posts/${id}` share URLs (post-card.tsx:117) and point notification "View" (notifications.tsx:187) somewhere real.
+
+2.5 Studio-connection search sends no auth header.
+- studio-connection-dialog.tsx:24 — use the app's apiRequest (with Authorization) instead of a bare fetch, so /api/search returns results. Also it renders studio.email which the API never returns — switch to username/name.
+
+2.6 Add a shared UserAvatar and drop the external host.
+- Create artifacts/tattoo-record/src/components/user-avatar.tsx: if avatarUrl → <img> (object-cover, sharp corners); else initials on cobalt/paper (Space Grotesk), guarded for empty username. Replace ALL ad-hoc avatars AND every ui-avatars.com usage (admin.tsx:599,701; chat-window.tsx:77,142; job-detail.tsx:490) and the missing-avatar spots (post-card.tsx:159-161,254-255; home.tsx:162-163; profile header). No external avatar host.
+
+2.7 Settings profile save + field mismatch.
+- settings.tsx:112 — invalidate the correct key `["/api/users/me"]` (not "/api/auth/me") so changes reflect immediately.
+- artifacts/api-server/src/utils/validation.ts:199-217 — updateUserSchema uses fields the users table lacks: rename bannerUrl→bannerImageUrl; drop specialties/styles/hourlyRateCents/address (or route them to artistProfiles). Confirm PUT /api/users/me persists bio + banner.
+
+2.8 Add missing isError branches (errors currently render as "empty"): bookings.tsx:50, saved-posts.tsx:35, search.tsx:19, live-events.tsx:31, admin.tsx sections, profile.tsx queries. Show a retry, not a false empty state. Encode the search query (search.tsx:20 — `#tribal` currently breaks); use encodeURIComponent.
+
+=====================================================
+PHASE 3 — REMOVE ABANDONED CODE
+=====================================================
+3.1 Delete `.migration-backup/` (188 files, zero references). FIRST diff its routes.ts against artifacts/api-server/src/routes/routes.ts to confirm no wanted logic was stranded, then `git rm -r .migration-backup`.
+3.2 Delete the empty root husks: client/, server/, shared/.
+3.3 Remove `artifacts/mockup-sandbox/` from the shipped workspace — delete it, or move it out of the `artifacts/*` glob in pnpm-workspace.yaml so it's not typechecked/built pre-launch.
+3.4 Resolve the duplicate API layer: either adopt @workspace/api-client-react (+@workspace/api-zod) app-wide, or remove them and their unused deps from artifacts/tattoo-record & tattoo-record-mobile package.json. Ship ONE client.
+3.5 Mount the error boundary: wrap the app in components/error-boundary.tsx (App.tsx), or delete it. Delete unused page-layout.tsx and marquee.tsx if not adopted. Remove the dead SONNET const (ai/index.ts:5,185) and the unused `useEffect` import (explore.tsx:1).
+3.6 Remove the 7 `@ts-nocheck` pragmas in artifacts/api-server/src (incl. routes.ts:1, index.ts) and fix the real type errors they mask — do this LAST so typecheck reflects reality.
+3.7 Orphaned tables (consultation_requests, story_highlights(+items), post_shares): decide per table — wire a minimal UI or drop from schema.ts. Default: leave in schema with a `// TODO: unimplemented` comment if undecided (don't silently ship dead tables).
+
+=====================================================
+PHASE 4 — POLISH
+=====================================================
+4.1 Sharp corners: replace rounded-lg/xl/2xl and stray gradients with sharp/flat to match Press — chat bubbles (chat-window.tsx:151-152), dropzones + tabs (create-post-modal.tsx:160,200,225,250,289,300), post-card.tsx:154, home.tsx:55,61, profile.tsx:638, for-you-rail.tsx:129,174. (Or add explicit radius overrides.)
+4.2 Touch targets: give feed actions (post-card.tsx:187-217) and home arrows (home.tsx:96-109) min-h/w-[44px] + padding.
+4.3 Remove hardcoded "Online" presence (chat-window.tsx:116-117, conversation-list.tsx:121) — show real presence or nothing.
+4.4 Empty feed: add a CTA (Explore / Share your first post) to post-feed.tsx:25-33. Fix landing footer links (landing.tsx:185-186) to real /explore and /jobs routes.
+4.5 Job-apply: handle PG unique-violation (code 23505) as 409 (not 500) in the apply route; add portfolioSnapshot to jobApplySchema (validation.ts:186) so it's not always empty.
+
+=====================================================
+FINAL GATES
+=====================================================
+- `pnpm run typecheck` (with @ts-nocheck removed) and `pnpm run build` pass; `pnpm test` passes.
+- Fonts: Space Grotesk renders. `GET /api/users/:id` (no auth) has no email/hash. Connections are clickable. Reels play video. .migration-backup / root husks / mockup-sandbox gone. Error boundary mounted.
+Summarize every file changed/deleted.
