@@ -10,7 +10,7 @@ import { db, pool } from "../db";
 import * as schema from "@workspace/db";
 import { storage } from "../storage";
 import { requireAuth, optionalAuth, requireRole, generateToken, type AuthRequest } from "../middleware/auth";
-import { uploadMedia, deleteMedia } from "../services/cloudinary";
+import { uploadMedia, deleteMedia, isCloudinaryConfigured } from "../services/cloudinary";
 import { generateTattooRecommendations } from "../services/ai/recommendations";
 import { setupMessageWebSocket, broadcastNewMessage } from "../services/websocket";
 import { setupLiveWebSocket } from "../services/websocket-live";
@@ -1881,7 +1881,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Upload Routes
-  app.post("/api/upload", requireAuth, upload.single("file"), async (req: AuthRequest, res) => {
+  app.get("/api/upload/status", requireAuth, (_req: AuthRequest, res) => {
+    res.json({ available: isCloudinaryConfigured() });
+  });
+
+  app.post("/api/upload", requireAuth, (req: AuthRequest, res, next) => {
+    if (!isCloudinaryConfigured()) {
+      return res.status(503).json({ message: "Image uploads are temporarily unavailable." });
+    }
+    upload.single("file")(req, res, next);
+  }, async (req: AuthRequest, res) => {
     try {
       if (!req.file) {
         return res.status(400).json({ message: "No file provided" });
@@ -1897,7 +1906,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const result = await uploadMedia(req.file.buffer, folder, resourceType);
       res.json(result);
     } catch (error: any) {
-      res.status(500).json({ message: "Internal server error" });
+      console.error("[upload] Media upload failed:", error);
+      res.status(502).json({ message: "Image upload failed. Please try again." });
     }
   });
 
@@ -1946,30 +1956,67 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Studio Approval Routes
-  app.post("/api/studio-approvals", requireAuth, requireRole(["ARTIST"]), async (req: AuthRequest, res) => {
+  app.post("/api/studio-approvals", requireAuth, async (req: AuthRequest, res) => {
     try {
+      const initiator = await storage.getUser(req.userId!);
+      if (!initiator || (initiator.role !== "ARTIST" && initiator.role !== "STUDIO")) {
+        return res.status(403).json({ message: "Only artists and studios can create connection requests." });
+      }
+      const studioId = initiator.role === "ARTIST" ? req.body.studioId : req.userId;
+      const artistId = initiator.role === "STUDIO" ? req.body.artistId : req.userId;
+      if (typeof studioId !== "string" || typeof artistId !== "string" || studioId === artistId) {
+        return res.status(400).json({ message: "A valid artist and studio are required." });
+      }
+      const counterparty = await storage.getUser(initiator.role === "ARTIST" ? studioId : artistId);
+      const expectedRole = initiator.role === "ARTIST" ? "STUDIO" : "ARTIST";
+      if (!counterparty || counterparty.role !== expectedRole) {
+        return res.status(400).json({ message: `The selected user is not a ${expectedRole.toLowerCase()}.` });
+      }
       const validated = validation.insertStudioApprovalRequestSchema.parse({
-        ...req.body,
-        artistId: req.userId,
-        status: "PENDING"
+        studioId,
+        artistId,
+        initiatedBy: initiator.role,
+        status: "PENDING",
+        note: req.body.note,
       });
       const request = await storage.createStudioApprovalRequest(validated);
+      await storage.createNotification({
+        userId: counterparty.id,
+        type: "APPROVAL",
+        payload: {
+          actorId: initiator.id,
+          requestId: request.id,
+          action: "STUDIO_CONNECTION_REQUEST",
+          initiatedBy: initiator.role,
+          note: request.note,
+          message: initiator.role === "ARTIST"
+            ? `${initiator.username} requested to connect with your studio.`
+            : `${initiator.username} invited you to connect with their studio.`,
+        },
+      });
       res.json(request);
     } catch (error: any) {
+      if (error?.code === "STUDIO_APPROVAL_ALREADY_CONNECTED") {
+        return res.status(409).json({ message: "These accounts are already connected." });
+      }
+      if (error?.code === "STUDIO_APPROVAL_PENDING_EXISTS" || error?.code === "23505") {
+        return res.status(409).json({ message: "A pending connection request already exists." });
+      }
       sendError(res, error);
     }
   });
 
   app.get("/api/studio-approvals", requireAuth, async (req: AuthRequest, res) => {
     try {
-      const filters: any = {};
-      
-      if (req.query.studioId) {
-        filters.studioId = req.query.studioId as string;
+      const currentUser = await storage.getUser(req.userId!);
+      if (!currentUser || (currentUser.role !== "ARTIST" && currentUser.role !== "STUDIO")) {
+        return res.status(403).json({ message: "Not authorized to view connection requests." });
       }
-      if (req.query.artistId) {
-        filters.artistId = req.query.artistId as string;
-      }
+      // Client filters can narrow the result but can never select a different
+      // participant's requests.
+      const filters: any = currentUser.role === "STUDIO"
+        ? { studioId: req.userId }
+        : { artistId: req.userId };
       if (req.query.status) {
         filters.status = req.query.status as string;
       }
@@ -1981,24 +2028,56 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/studio-approvals/:id/approve", requireAuth, requireRole(["STUDIO"]), async (req: AuthRequest, res) => {
+  app.put("/api/studio-approvals/:id/approve", requireAuth, async (req: AuthRequest, res) => {
     try {
       const approvalReq = await storage.getStudioApprovalRequestById(req.params.id);
       if (!approvalReq) return res.status(404).json({ message: "Request not found" });
-      if (approvalReq.studioId !== req.userId) return res.status(403).json({ message: "Not authorized" });
-      await storage.updateStudioApprovalStatus(req.params.id, "APPROVED");
+      if (approvalReq.status !== "PENDING") return res.status(409).json({ message: "Only pending requests can be approved." });
+      const isCounterparty = approvalReq.initiatedBy === "ARTIST"
+        ? approvalReq.studioId === req.userId
+        : approvalReq.artistId === req.userId;
+      if (!isCounterparty) return res.status(403).json({ message: "Not authorized" });
+      if (!await storage.updateStudioApprovalStatus(req.params.id, "APPROVED")) {
+        return res.status(409).json({ message: "Only pending requests can be approved." });
+      }
+      await storage.createNotification({
+        userId: approvalReq.initiatedBy === "ARTIST" ? approvalReq.artistId : approvalReq.studioId,
+        type: "APPROVAL",
+        payload: {
+          actorId: req.userId,
+          requestId: approvalReq.id,
+          action: "STUDIO_CONNECTION_APPROVED",
+          message: "Your studio connection was approved.",
+        },
+      });
       res.json({ message: "Request approved" });
     } catch (error: any) {
       sendError(res, error);
     }
   });
 
-  app.put("/api/studio-approvals/:id/reject", requireAuth, requireRole(["STUDIO"]), async (req: AuthRequest, res) => {
+  app.put("/api/studio-approvals/:id/reject", requireAuth, async (req: AuthRequest, res) => {
     try {
       const approvalReq = await storage.getStudioApprovalRequestById(req.params.id);
       if (!approvalReq) return res.status(404).json({ message: "Request not found" });
-      if (approvalReq.studioId !== req.userId) return res.status(403).json({ message: "Not authorized" });
-      await storage.updateStudioApprovalStatus(req.params.id, "REJECTED");
+      if (approvalReq.status !== "PENDING") return res.status(409).json({ message: "Only pending requests can be rejected." });
+      const isCounterparty = approvalReq.initiatedBy === "ARTIST"
+        ? approvalReq.studioId === req.userId
+        : approvalReq.artistId === req.userId;
+      if (!isCounterparty) return res.status(403).json({ message: "Not authorized" });
+      if (!await storage.updateStudioApprovalStatus(req.params.id, "REJECTED")) {
+        return res.status(409).json({ message: "Only pending requests can be rejected." });
+      }
+      await storage.createNotification({
+        userId: approvalReq.initiatedBy === "ARTIST" ? approvalReq.artistId : approvalReq.studioId,
+        type: "APPROVAL",
+        payload: {
+          actorId: req.userId,
+          requestId: approvalReq.id,
+          action: "STUDIO_CONNECTION_REJECTED",
+          message: "Your studio connection was declined.",
+        },
+      });
       res.json({ message: "Request rejected" });
     } catch (error: any) {
       sendError(res, error);

@@ -8,133 +8,86 @@ import { useToast } from "@/hooks/use-toast";
 import { queryClient } from "@/lib/queryClient";
 import { apiRequest } from "@/lib/api";
 import { useAuth } from "@/hooks/use-auth";
-import { Building2, Search } from "lucide-react";
+import UserAvatar from "@/components/user-avatar";
+import { Building2, Search, UserPlus } from "lucide-react";
 
 export function StudioConnectionDialog() {
   const [open, setOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedStudio, setSelectedStudio] = useState<any>(null);
+  const [selectedUser, setSelectedUser] = useState<any>(null);
   const [note, setNote] = useState("");
   const { toast } = useToast();
-  const { token } = useAuth();
+  const { token, user } = useAuth();
+  const isStudio = user?.role === "STUDIO";
+  const counterpartRole = isStudio ? "ARTIST" : "STUDIO";
 
-  const { data: searchResults } = useQuery<{ users: any[]; posts: any[]; hashtags: any[] }>({
-    queryKey: ["/api/search", searchQuery],
-    enabled: searchQuery.length > 2,
-    queryFn: () => fetch(`/api/search?q=${encodeURIComponent(searchQuery)}`).then(r => r.json()),
+  const { data: searchResults } = useQuery<{ users: any[] }>({
+    queryKey: ["/api/search", searchQuery, counterpartRole],
+    enabled: Boolean(token && searchQuery.length > 2),
+    queryFn: async () => {
+      const res = await apiRequest("GET", `/api/search?q=${encodeURIComponent(searchQuery)}`, undefined, token!);
+      return res.json();
+    },
   });
-
-  const studios = (searchResults?.users ?? []).filter((u: any) => u.role === "STUDIO");
+  const candidates = (searchResults?.users ?? []).filter((candidate: any) => candidate.role === counterpartRole);
 
   const requestMutation = useMutation({
-    mutationFn: async (data: any) => {
-      const res = await apiRequest("POST", "/api/studio-approvals", data, token!);
+    mutationFn: async () => {
+      const body = isStudio
+        ? { artistId: selectedUser.id, note: note || null }
+        : { studioId: selectedUser.id, note: note || null };
+      const res = await apiRequest("POST", "/api/studio-approvals", body, token!);
       return res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/studio-approvals"] });
-      toast({ description: "Connection request sent!" });
+      toast({ description: isStudio ? "Artist invite sent!" : "Connection request sent!" });
       setOpen(false);
-      setSelectedStudio(null);
+      setSelectedUser(null);
       setNote("");
       setSearchQuery("");
     },
-    onError: (error: any) => {
-      toast({ 
-        variant: "destructive",
-        description: error.message || "Failed to send request" 
-      });
-    },
+    onError: (error: Error) => toast({ variant: "destructive", description: error.message || "Failed to send request" }),
   });
 
-  const handleSendRequest = () => {
-    if (!selectedStudio) return;
-    requestMutation.mutate({
-      studioId: selectedStudio.id,
-      note: note || null,
-    });
-  };
+  if (user?.role !== "ARTIST" && user?.role !== "STUDIO") return null;
+  const label = isStudio ? "Invite Artist" : "Connect to Studio";
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button variant="outline" size="sm" data-testid="button-request-studio-connection">
-          <Building2 className="w-4 h-4 mr-2" />
-          Connect to Studio
+          {isStudio ? <UserPlus className="w-4 h-4 mr-2" /> : <Building2 className="w-4 h-4 mr-2" />}
+          {label}
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>Request Studio Connection</DialogTitle>
-        </DialogHeader>
-        
-        {!selectedStudio ? (
+        <DialogHeader><DialogTitle>{isStudio ? "Invite an Artist" : "Request Studio Connection"}</DialogTitle></DialogHeader>
+        {!selectedUser ? (
           <div className="space-y-4">
             <div className="relative">
               <Search className="absolute left-3 top-3 w-4 h-4 text-muted-foreground" />
-              <Input
-                placeholder="Search for studios..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10"
-                data-testid="input-search-studios"
-              />
+              <Input placeholder={`Search for ${counterpartRole.toLowerCase()}s...`} value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="pl-10" />
             </div>
-
-            {studios.length > 0 && (
-              <div className="space-y-2 max-h-64 overflow-y-auto">
-                {studios.map((studio: any) => (
-                  <button
-                    key={studio.id}
-                    onClick={() => setSelectedStudio(studio)}
-                    className="w-full p-3 text-left hover:bg-secondary rounded-md transition-colors"
-                    data-testid={`studio-option-${studio.id}`}
-                  >
-                    <div className="font-medium">{studio.username}</div>
-                    <div className="text-sm text-muted-foreground">{studio.email}</div>
-                  </button>
-                ))}
-              </div>
-            )}
+            <div className="space-y-2 max-h-64 overflow-y-auto">
+              {candidates.map((candidate: any) => (
+                <button key={candidate.id} onClick={() => setSelectedUser(candidate)} className="w-full p-3 text-left hover:bg-secondary rounded-md transition-colors flex gap-3 items-center" data-testid={`connection-option-${candidate.id}`}>
+                  <UserAvatar avatarUrl={candidate.avatarUrl} firstName={candidate.firstName} lastName={candidate.lastName} username={candidate.username} className="w-9 h-9" />
+                  <div><div className="font-medium">{candidate.username}</div><div className="text-sm text-muted-foreground">{candidate.role.toLowerCase()}</div></div>
+                </button>
+              ))}
+            </div>
           </div>
         ) : (
           <div className="space-y-4">
-            <div className="p-3 bg-secondary rounded-md">
-              <div className="font-medium">{selectedStudio.username}</div>
-              <div className="text-sm text-muted-foreground">{selectedStudio.email}</div>
+            <div className="p-3 bg-secondary rounded-md flex gap-3 items-center">
+              <UserAvatar avatarUrl={selectedUser.avatarUrl} firstName={selectedUser.firstName} lastName={selectedUser.lastName} username={selectedUser.username} className="w-10 h-10" />
+              <div className="font-medium">{selectedUser.username}</div>
             </div>
-
-            <div>
-              <label className="text-sm font-medium mb-2 block">Message (optional)</label>
-              <Textarea
-                placeholder="Introduce yourself and explain why you'd like to connect..."
-                value={note}
-                onChange={(e) => setNote(e.target.value)}
-                rows={4}
-                data-testid="textarea-connection-note"
-              />
-            </div>
-
+            <div><label className="text-sm font-medium mb-2 block">Message (optional)</label><Textarea value={note} onChange={(e) => setNote(e.target.value)} rows={4} data-testid="textarea-connection-note" /></div>
             <div className="flex gap-2">
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setSelectedStudio(null);
-                  setNote("");
-                }}
-                className="flex-1"
-                data-testid="button-back"
-              >
-                Back
-              </Button>
-              <Button
-                onClick={handleSendRequest}
-                disabled={requestMutation.isPending}
-                className="flex-1"
-                data-testid="button-send-request"
-              >
-                {requestMutation.isPending ? "Sending..." : "Send Request"}
-              </Button>
+              <Button variant="outline" onClick={() => { setSelectedUser(null); setNote(""); }} className="flex-1">Back</Button>
+              <Button onClick={() => requestMutation.mutate()} disabled={requestMutation.isPending} className="flex-1">{requestMutation.isPending ? "Sending..." : "Send"}</Button>
             </div>
           </div>
         )}

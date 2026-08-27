@@ -20,6 +20,7 @@ import { Link } from "wouter";
 import { JobCardSkeleton } from "@/components/ui/skeletons";
 import { EmptyState } from "@/components/ui/empty-state";
 import { StatusBadge } from "@/components/ui/status-badge";
+import UserAvatar from "@/components/user-avatar";
 
 const createJobSchema = z.object({
   title: z.string().min(1, "Title is required").max(255),
@@ -258,9 +259,7 @@ export default function Jobs() {
               <Link key={item.job.id} href={`/jobs/${item.job.id}`}>
                 <Card className="p-6 cursor-pointer hover:shadow-md transition-shadow border-border" data-testid={`job-${item.job.id}`}>
                   <div className="flex items-start gap-4">
-                    <div className="w-12 h-12 bg-secondary flex items-center justify-center flex-shrink-0 font-semibold text-sm">
-                      {item.studio.username[0].toUpperCase()}
-                    </div>
+                    <UserAvatar {...item.studio} className="w-12 h-12 flex-shrink-0" />
                     <div className="flex-1 min-w-0">
                       <div className="flex items-start justify-between gap-2 mb-1">
                         <div className="min-w-0">

@@ -9,6 +9,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { ExploreGridSkeleton } from "@/components/ui/skeletons";
 import { EmptyState } from "@/components/ui/empty-state";
+import UserAvatar from "@/components/user-avatar";
 
 type UserType = "ALL" | "STUDIO" | "ARTIST" | "ENTHUSIAST";
 
@@ -294,20 +295,7 @@ export default function Explore() {
                   data-testid={`user-card-${user.id}`}
                 >
                   <div className="group bg-background cursor-pointer relative overflow-hidden aspect-square">
-                    {user.avatarUrl ? (
-                      <img
-                        src={user.avatarUrl}
-                        alt={user.username}
-                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                        loading="lazy"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center bg-secondary">
-                        <span className="text-6xl font-bold text-muted-foreground/50">
-                          {user.username?.[0]?.toUpperCase()}
-                        </span>
-                      </div>
-                    )}
+                    <UserAvatar {...user} className="w-full h-full border-0 transition-transform duration-500 group-hover:scale-105" />
                     {/* index */}
                     <span className="absolute top-1 left-1.5 font-mono text-[10px] text-white/70 leading-none">{String(idx + 1).padStart(2, "0")}</span>
                     {/* verified */}

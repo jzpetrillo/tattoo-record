@@ -4,6 +4,7 @@ import { useState } from "react";
 import CreatePostModal from "@/components/posts/create-post-modal";
 import { useAuth } from "@/hooks/use-auth";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import UserAvatar from "@/components/user-avatar";
 
 export default function MobileNav() {
   const [location, setLocation] = useLocation();
@@ -100,13 +101,7 @@ export default function MobileNav() {
           {user && (
             <div className="p-4 border-b border-border">
               <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-full bg-secondary flex items-center justify-center">
-                  {user.avatarUrl ? (
-                    <img src={user.avatarUrl} alt={user.username} className="w-full h-full rounded-full object-cover" />
-                  ) : (
-                    <span className="text-lg font-semibold">{user.username?.[0]?.toUpperCase()}</span>
-                  )}
-                </div>
+                <UserAvatar {...user} className="w-12 h-12" />
                 <div className="flex-1 min-w-0">
                   <p className="font-semibold text-sm truncate">{user.username}</p>
                   <p className="text-xs text-muted-foreground truncate capitalize">{user.role?.toLowerCase()}</p>

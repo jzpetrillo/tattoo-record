@@ -7,6 +7,7 @@ import { Heart, Bookmark, UserPlus, ChevronRight, Sparkles } from "lucide-react"
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
+import UserAvatar from "@/components/user-avatar";
 
 interface RecommendedPost {
   post: {
@@ -129,17 +130,7 @@ export default function ForYouRail() {
                 <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
                 <div className="absolute bottom-0 left-0 right-0 p-4 text-white opacity-0 group-hover:opacity-100 transition-opacity">
                   <div className="flex items-center gap-2 mb-2">
-                    {heroPost.author.avatarUrl ? (
-                      <img
-                        src={heroPost.author.avatarUrl}
-                        alt={heroPost.author.username}
-                        className="w-8 h-8 rounded-full object-cover border border-white/30"
-                      />
-                    ) : (
-                      <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center text-sm font-semibold">
-                        {heroPost.author.username[0].toUpperCase()}
-                      </div>
-                    )}
+                    <UserAvatar {...heroPost.author} className="w-8 h-8 border-paper" />
                     <div>
                       <p className="font-semibold text-sm">{heroPost.author.displayName || heroPost.author.username}</p>
                       <p className="text-xs text-white/70">@{heroPost.author.username}</p>
@@ -204,17 +195,7 @@ export default function ForYouRail() {
               <div key={artist.id} className="flex-shrink-0 flex items-center gap-3" data-testid={`suggested-artist-${artist.id}`}>
                 <Link href={`/u/${artist.username}`}>
                   <div className="cursor-pointer">
-                    {artist.avatarUrl ? (
-                      <img
-                        src={artist.avatarUrl}
-                        alt={artist.username}
-                        className="w-10 h-10 rounded-full object-cover border border-border"
-                      />
-                    ) : (
-                      <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center text-sm font-semibold border border-border">
-                        {artist.username[0].toUpperCase()}
-                      </div>
-                    )}
+                    <UserAvatar {...artist} className="w-10 h-10" />
                   </div>
                 </Link>
                 <div className="min-w-0">

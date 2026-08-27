@@ -49,6 +49,7 @@ export const approvalStatusEnum = pgEnum("approval_status", [
   "APPROVED",
   "REJECTED"
 ]);
+export const approvalInitiatorEnum = pgEnum("approval_initiator", ["ARTIST", "STUDIO"]);
 export const bookingStatusEnum = pgEnum("booking_status", [
   "PENDING",
   "APPROVED",
@@ -356,13 +357,17 @@ export const studioApprovalRequests = pgTable("studio_approval_requests", {
   id: uuid("id").primaryKey().defaultRandom(),
   studioId: uuid("studio_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   artistId: uuid("artist_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  initiatedBy: approvalInitiatorEnum("initiated_by").notNull().default("ARTIST"),
   status: approvalStatusEnum("status").notNull().default("PENDING"),
   note: text("note"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow()
 }, (table) => ({
   studioIdx: index("studio_approval_requests_studio_idx").on(table.studioId),
-  artistIdx: index("studio_approval_requests_artist_idx").on(table.artistId)
+  artistIdx: index("studio_approval_requests_artist_idx").on(table.artistId),
+  pendingRelationshipUnique: uniqueIndex("studio_approval_requests_pending_relationship_unique")
+    .on(table.studioId, table.artistId)
+    .where(sql`${table.status} = 'PENDING'`)
 }));
 
 export const jobPostings = pgTable("job_postings", {

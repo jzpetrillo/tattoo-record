@@ -4,6 +4,7 @@ import { useState } from "react";
 import { AlertCircle } from "lucide-react";
 import StoryViewer from "./story-viewer";
 import { StorySkeleton } from "@/components/ui/skeletons";
+import UserAvatar from "@/components/user-avatar";
 
 export default function StoriesBar() {
   const { token } = useAuth();
@@ -53,13 +54,7 @@ export default function StoriesBar() {
             >
               <div className="w-16 h-16 rounded-full bg-cobalt p-0.5">
                 <div className="w-full h-full rounded-full bg-background p-0.5">
-                  <div className="w-full h-full rounded-full bg-secondary flex items-center justify-center overflow-hidden">
-                    {author.avatarUrl ? (
-                      <img src={author.avatarUrl} alt={author.username} className="w-full h-full object-cover" />
-                    ) : (
-                      <span className="text-sm font-semibold">{author.username[0].toUpperCase()}</span>
-                    )}
-                  </div>
+                  <UserAvatar {...author} className="w-full h-full" />
                 </div>
               </div>
               <span className="text-xs max-w-[64px] truncate">{author.username}</span>

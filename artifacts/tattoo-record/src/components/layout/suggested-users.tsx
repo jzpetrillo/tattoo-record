@@ -3,6 +3,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
+import UserAvatar from "@/components/user-avatar";
 
 export default function SuggestedUsers() {
   const { user, token } = useAuth();
@@ -41,13 +42,7 @@ export default function SuggestedUsers() {
         {suggestions.slice(0, 5).map((suggestedUser: any) => (
           <div key={suggestedUser.id} className="flex items-center justify-between" data-testid={`suggested-user-${suggestedUser.id}`}>
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center flex-shrink-0">
-                {suggestedUser.avatarUrl ? (
-                  <img src={suggestedUser.avatarUrl} alt={suggestedUser.username} className="w-full h-full rounded-full object-cover" />
-                ) : (
-                  <span className="text-xs font-semibold">{suggestedUser.username[0].toUpperCase()}</span>
-                )}
-              </div>
+              <UserAvatar {...suggestedUser} className="w-8 h-8 flex-shrink-0" />
               <div className="min-w-0">
                 <p className="text-sm font-semibold truncate">{suggestedUser.username}</p>
                 <p className="text-xs text-muted-foreground truncate">

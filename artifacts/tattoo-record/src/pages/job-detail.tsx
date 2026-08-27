@@ -22,6 +22,7 @@ import { ArrowLeft, MapPin, DollarSign, Briefcase, Building2, Edit, Trash2, User
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Link } from "wouter";
+import UserAvatar from "@/components/user-avatar";
 
 const applyJobSchema = z.object({
   coverLetter: z.string().min(50, "Cover letter must be at least 50 characters"),
@@ -486,12 +487,7 @@ export default function JobDetail() {
                     {applications.map((app: any) => (
                       <Card key={app.id} className="p-4" data-testid={`card-applicant-${app.id}`}>
                         <div className="flex items-start gap-3">
-                          <img
-                            src={app.artistAvatar || `https://ui-avatars.com/api/?name=${app.artistUsername}&background=000&color=fff`}
-                            alt={app.artistUsername}
-                            className="w-10 h-10 rounded-full object-cover flex-shrink-0"
-                            data-testid={`img-applicant-avatar-${app.id}`}
-                          />
+                          <UserAvatar avatarUrl={app.artistAvatar} displayName={app.artistDisplayName} username={app.artistUsername} className="w-10 h-10 flex-shrink-0" data-testid={`img-applicant-avatar-${app.id}`} />
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center justify-between mb-1">
                               <Link href={`/u/${app.artistUsername}`}>

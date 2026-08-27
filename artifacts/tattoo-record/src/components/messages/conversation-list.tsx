@@ -6,6 +6,7 @@ import { Search } from "lucide-react";
 import { MessageSkeleton } from "@/components/ui/skeletons";
 import { EmptyState } from "@/components/ui/empty-state";
 import { MessageCircle, AlertCircle } from "lucide-react";
+import UserAvatar from "@/components/user-avatar";
 
 export interface OtherUser {
   username: string;
@@ -107,17 +108,7 @@ export default function ConversationList({ onSelectConversation, selectedConvers
               >
                 <div className="flex items-center gap-3">
                   <div className="relative flex-shrink-0">
-                    {other?.avatarUrl ? (
-                      <img
-                        src={other.avatarUrl}
-                        alt={title}
-                        className="w-12 h-12 rounded-full object-cover"
-                      />
-                    ) : (
-                      <div className="w-12 h-12 rounded-full bg-secondary border border-border flex items-center justify-center text-sm font-semibold">
-                        {title[0]?.toUpperCase()}
-                      </div>
-                    )}
+                    <UserAvatar {...other} displayName={title} className="w-12 h-12" />
                     <span className="absolute bottom-0 right-0 w-3 h-3 bg-foreground border-2 border-card rounded-full" />
                   </div>
                   <div className="flex-1 min-w-0">

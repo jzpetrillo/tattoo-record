@@ -6,6 +6,7 @@ import MobileNav from "@/components/layout/mobile-nav";
 import { Heart, MessageCircle, Film, AlertCircle } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
+import UserAvatar from "@/components/user-avatar";
 
 export default function Reels() {
   const { token } = useAuth();
@@ -90,19 +91,7 @@ export default function Reels() {
                       {author.username ? (
                         <Link href={`/u/${author.username}`}>
                           <div className="flex items-center gap-2 mb-2" data-testid={`reel-author-${post.id}`}>
-                            <div className="w-6 h-6 bg-white/20 flex items-center justify-center overflow-hidden">
-                              {author.avatarUrl ? (
-                                <img
-                                  src={author.avatarUrl}
-                                  alt={author.username}
-                                  className="w-full h-full object-cover"
-                                />
-                              ) : (
-                                <span className="text-xs font-bold">
-                                  {author.username[0]?.toUpperCase()}
-                                </span>
-                              )}
-                            </div>
+                            <UserAvatar {...author} className="w-6 h-6 border-paper" />
                             <span className="text-xs font-medium truncate">
                               {author.username}
                             </span>

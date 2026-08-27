@@ -201,7 +201,7 @@ export const updateUserSchema = z.object({
   lastName: z.string().max(100).optional(),
   bio: z.string().max(1000).optional(),
   avatarUrl: z.string().url().optional().or(z.literal("")),
-  bannerUrl: z.string().url().optional().or(z.literal("")),
+  bannerImageUrl: z.string().url().optional().or(z.literal("")),
   location: z.object({
     city: z.string().optional(),
     country: z.string().optional(),

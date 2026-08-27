@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { createWebSocket, sendWebSocketMessage } from "@/lib/websocket";
 import { ArrowLeft, Send, MoreVertical } from "lucide-react";
+import UserAvatar from "@/components/user-avatar";
 
 interface OtherUser {
   username: string;
@@ -73,8 +74,6 @@ export default function ChatWindow({ conversationId, otherUser, onBack }: ChatWi
   };
 
   const displayName = otherUser?.username || "Select a conversation";
-  const avatarSrc = otherUser?.avatarUrl
-    || (otherUser?.username ? `https://ui-avatars.com/api/?name=${encodeURIComponent(otherUser.username)}&background=000&color=fff` : null);
 
   if (!conversationId) {
     return (
@@ -99,17 +98,7 @@ export default function ChatWindow({ conversationId, otherUser, onBack }: ChatWi
               <ArrowLeft className="w-5 h-5" />
             </Button>
           )}
-          {avatarSrc ? (
-            <img
-              src={avatarSrc}
-              alt={displayName}
-              className="w-10 h-10 rounded-full object-cover flex-shrink-0"
-            />
-          ) : (
-            <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center flex-shrink-0 text-sm font-semibold">
-              {displayName[0]?.toUpperCase()}
-            </div>
-          )}
+          <UserAvatar {...otherUser} displayName={displayName} className="w-10 h-10 flex-shrink-0" />
           <div>
             <h3 className="font-semibold text-sm sm:text-base" data-testid="text-chat-username">{displayName}</h3>
             <p className="text-xs text-muted-foreground flex items-center gap-1">
@@ -138,11 +127,7 @@ export default function ChatWindow({ conversationId, otherUser, onBack }: ChatWi
               data-testid={`message-${item.message.id}`}
             >
               {!isOwn && (
-                <img
-                  src={item.sender.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(item.sender.username)}&background=000&color=fff`}
-                  alt={item.sender.username}
-                  className="w-7 h-7 rounded-full flex-shrink-0 object-cover"
-                />
+                <UserAvatar {...item.sender} className="w-7 h-7 flex-shrink-0" />
               )}
               <div className={`max-w-[70%] ${isOwn ? "flex flex-col items-end" : ""}`}>
                 <div

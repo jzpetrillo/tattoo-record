@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useState, useEffect } from "react";
 import { X } from "lucide-react";
+import UserAvatar from "@/components/user-avatar";
 
 interface StoryViewerProps {
   userId: string;
@@ -48,11 +49,7 @@ export default function StoryViewer({ userId, onClose }: StoryViewerProps) {
 
         <div className="flex items-center justify-between px-4 py-3">
           <div className="flex items-center gap-3">
-            <img
-              src={currentStory.user.avatarUrl || `https://ui-avatars.com/api/?name=${currentStory.user.username}`}
-              alt={currentStory.user.username}
-              className="w-10 h-10 rounded-full ring-2 ring-white"
-            />
+            <UserAvatar {...currentStory.user} className="w-10 h-10 ring-2 ring-white" />
             <div>
               <p className="font-semibold text-white text-sm">{currentStory.user.username}</p>
               <p className="text-xs text-white/80">2h ago</p>

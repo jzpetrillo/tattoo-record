@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 import { apiRequest, uploadFile } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
@@ -29,6 +29,15 @@ export default function CreatePostModal({ open, onClose, defaultTab = "post" }: 
   const [files, setFiles] = useState<File[]>([]);
   const [visibility, setVisibility] = useState<"PUBLIC" | "FOLLOWERS">("PUBLIC");
   const [activeTab, setActiveTab] = useState<"post" | "story" | "reel">(defaultTab);
+  const uploadStatusQuery = useQuery<{ available: boolean }>({
+    queryKey: ["/api/upload/status"],
+    queryFn: async () => {
+      const res = await apiRequest("GET", "/api/upload/status", undefined, token!);
+      return res.json();
+    },
+    enabled: Boolean(token),
+  });
+  const uploadsAvailable = uploadStatusQuery.data?.available === true;
 
   const createPostMutation = useMutation({
     mutationFn: async () => {
@@ -168,14 +177,18 @@ export default function CreatePostModal({ open, onClose, defaultTab = "post" }: 
                 onChange={(e) => setFiles(Array.from(e.target.files || []))}
                 className="hidden"
                 id="post-file-upload"
+                disabled={!uploadsAvailable || isSubmitting}
                 data-testid="input-file-upload"
               />
               <label htmlFor="post-file-upload">
-                <Button type="button" asChild className="min-h-[44px]">
-                  <span>Select files</span>
+                <Button type="button" disabled={!uploadsAvailable || isSubmitting} className="min-h-[44px]">
+                  Select files
                 </Button>
               </label>
             </div>
+            {uploadStatusQuery.data && !uploadsAvailable && (
+              <p className="text-sm text-muted-foreground">Image uploads are temporarily unavailable.</p>
+            )}
 
             {files.length > 0 && (
               <p className="text-sm text-muted-foreground">{files.length} file(s) selected</p>
@@ -232,14 +245,18 @@ export default function CreatePostModal({ open, onClose, defaultTab = "post" }: 
                 onChange={(e) => setFiles(Array.from(e.target.files || []).slice(0, 1))}
                 className="hidden"
                 id="story-file-upload"
+                disabled={!uploadsAvailable || isSubmitting}
                 data-testid="input-story-upload"
               />
               <label htmlFor="story-file-upload">
-                <Button type="button" asChild className="min-h-[44px]">
-                  <span>Select file</span>
+                <Button type="button" disabled={!uploadsAvailable || isSubmitting} className="min-h-[44px]">
+                  Select file
                 </Button>
               </label>
             </div>
+            {uploadStatusQuery.data && !uploadsAvailable && (
+              <p className="text-sm text-muted-foreground">Image uploads are temporarily unavailable.</p>
+            )}
 
             {files.length > 0 && (
               <p className="text-sm text-muted-foreground">1 file selected</p>
@@ -257,14 +274,18 @@ export default function CreatePostModal({ open, onClose, defaultTab = "post" }: 
                 onChange={(e) => setFiles(Array.from(e.target.files || []).slice(0, 1))}
                 className="hidden"
                 id="reel-file-upload"
+                disabled={!uploadsAvailable || isSubmitting}
                 data-testid="input-reel-upload"
               />
               <label htmlFor="reel-file-upload">
-                <Button type="button" asChild className="min-h-[44px]">
-                  <span>Select video</span>
+                <Button type="button" disabled={!uploadsAvailable || isSubmitting} className="min-h-[44px]">
+                  Select video
                 </Button>
               </label>
             </div>
+            {uploadStatusQuery.data && !uploadsAvailable && (
+              <p className="text-sm text-muted-foreground">Image uploads are temporarily unavailable.</p>
+            )}
 
             {files.length > 0 && (
               <p className="text-sm text-muted-foreground">1 video selected</p>

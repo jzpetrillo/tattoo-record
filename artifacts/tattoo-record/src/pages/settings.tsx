@@ -5,7 +5,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/api";
+import { apiRequest, uploadFile } from "@/lib/api";
 import { queryClient } from "@/lib/queryClient";
 import SidebarNav from "@/components/layout/sidebar-nav";
 import MobileNav from "@/components/layout/mobile-nav";
@@ -63,6 +63,8 @@ export default function Settings() {
     searchParams.get("section") === "account" ? "account" : "profile",
   );
   const [pendingEmail, setPendingEmail] = useState<string | null>(null);
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [bannerFile, setBannerFile] = useState<File | null>(null);
 
   const profileForm = useForm<ProfileFormValues>({
     resolver: zodResolver(profileSchema),
@@ -98,18 +100,36 @@ export default function Settings() {
   });
 
   const displayedPendingEmail = pendingEmail ?? pendingEmailQuery.data?.pending?.email ?? null;
+  const uploadStatusQuery = useQuery<{ available: boolean }>({
+    queryKey: ["/api/upload/status"],
+    queryFn: async () => {
+      const res = await apiRequest("GET", "/api/upload/status", undefined, token!);
+      return res.json();
+    },
+    enabled: Boolean(token),
+  });
+  const uploadsAvailable = uploadStatusQuery.data?.available === true;
 
   const profileMutation = useMutation({
     mutationFn: async (data: ProfileFormValues) => {
-      const res = await apiRequest("PUT", "/api/users/profile", data, token!);
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.message || "Failed to update profile");
-      }
+      const avatarUrl = avatarFile
+        ? (await uploadFile(avatarFile, `avatars/${user!.id}`, token!)).url
+        : undefined;
+      const bannerImageUrl = bannerFile
+        ? (await uploadFile(bannerFile, `banners/${user!.id}`, token!)).url
+        : undefined;
+      const res = await apiRequest("PUT", "/api/users/me", {
+        ...data,
+        ...(avatarUrl ? { avatarUrl } : {}),
+        ...(bannerImageUrl ? { bannerImageUrl } : {}),
+      }, token!);
       return res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/users/me"] });
+      setAvatarFile(null);
+      setBannerFile(null);
       toast({ description: "Profile updated successfully." });
     },
     onError: (error: Error) => {
@@ -260,6 +280,37 @@ export default function Settings() {
                             </FormItem>
                           )}
                         />
+                        <div className="grid gap-4 sm:grid-cols-2">
+                          <div className="space-y-2">
+                            <label className="text-sm font-medium" htmlFor="avatar-upload">Profile photo</label>
+                            <Input
+                              id="avatar-upload"
+                              type="file"
+                              accept="image/*"
+                              disabled={!uploadsAvailable || profileMutation.isPending}
+                              onChange={(event) => setAvatarFile(event.target.files?.[0] ?? null)}
+                              data-testid="input-avatar-upload"
+                            />
+                            {avatarFile && <p className="text-xs text-muted-foreground">{avatarFile.name}</p>}
+                          </div>
+                          <div className="space-y-2">
+                            <label className="text-sm font-medium" htmlFor="banner-upload">Banner image</label>
+                            <Input
+                              id="banner-upload"
+                              type="file"
+                              accept="image/*"
+                              disabled={!uploadsAvailable || profileMutation.isPending}
+                              onChange={(event) => setBannerFile(event.target.files?.[0] ?? null)}
+                              data-testid="input-banner-upload"
+                            />
+                            {bannerFile && <p className="text-xs text-muted-foreground">{bannerFile.name}</p>}
+                          </div>
+                        </div>
+                        {uploadStatusQuery.data && !uploadsAvailable && (
+                          <p className="text-sm text-muted-foreground">
+                            Image uploads are temporarily unavailable.
+                          </p>
+                        )}
                         <Button type="submit" disabled={profileMutation.isPending} data-testid="button-save-profile">
                           {profileMutation.isPending ? "Saving…" : "Save Changes"}
                         </Button>

@@ -10,6 +10,7 @@ import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { NotificationSkeleton } from "@/components/ui/skeletons";
 import { EmptyState } from "@/components/ui/empty-state";
+import UserAvatar from "@/components/user-avatar";
 
 interface Notification {
   notification: {
@@ -302,13 +303,8 @@ export default function Notifications() {
                         onClick={() => handleNotificationClick(notification)}
                         className="flex-shrink-0"
                       >
-                        {notification.actor?.avatarUrl ? (
-                          <img
-                            src={notification.actor.avatarUrl}
-                            alt={notification.actor.username}
-                            className="w-12 h-12 rounded-full object-cover"
-                            data-testid={`img-avatar-${notification.notification.id}`}
-                          />
+                        {notification.actor ? (
+                          <UserAvatar {...notification.actor} className="w-12 h-12" data-testid={`img-avatar-${notification.notification.id}`} />
                         ) : (
                           <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center">
                             {getNotificationIcon(notification.notification.type, notification.notification.payload)}

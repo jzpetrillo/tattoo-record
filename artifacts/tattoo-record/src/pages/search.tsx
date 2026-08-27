@@ -9,6 +9,7 @@ import { Search as SearchIcon, Hash, FileImage, Sparkles } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import UserAvatar from "@/components/user-avatar";
 
 export default function Search() {
   const { token } = useAuth();
@@ -186,13 +187,7 @@ export default function Search() {
                               className="flex items-center gap-3 p-3 border border-border hover:bg-secondary transition-colors cursor-pointer"
                               data-testid={`user-result-${user.username}`}
                             >
-                              <div className="w-12 h-12 rounded-full bg-secondary flex items-center justify-center flex-shrink-0 overflow-hidden">
-                                {user.avatarUrl ? (
-                                  <img src={user.avatarUrl} alt={user.username} className="w-full h-full rounded-full object-cover" />
-                                ) : (
-                                  <span className="text-lg font-semibold">{user.username?.[0]?.toUpperCase()}</span>
-                                )}
-                              </div>
+                              <UserAvatar {...user} className="w-12 h-12 flex-shrink-0" />
                               <div className="flex-1 min-w-0">
                                 <p className="font-semibold truncate">{user.username}</p>
                                 <p className="text-sm text-muted-foreground truncate">

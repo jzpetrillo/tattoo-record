@@ -24,8 +24,17 @@ export async function apiRequest(
   });
 
   if (!res.ok) {
-    const text = (await res.text()) || res.statusText;
-    throw new Error(`${res.status}: ${text}`);
+    const text = await res.text();
+    let message = text || res.statusText;
+    try {
+      const body = JSON.parse(text) as { message?: unknown };
+      if (typeof body.message === "string" && body.message.trim()) {
+        message = body.message;
+      }
+    } catch {
+      // Non-JSON errors use their response text or HTTP status text.
+    }
+    throw new Error(message);
   }
 
   return res;

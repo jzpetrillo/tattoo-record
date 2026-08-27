@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Link } from "wouter";
+import UserAvatar from "@/components/user-avatar";
 
 interface PostCardProps {
   post: any;
@@ -156,9 +157,7 @@ export default function PostCard({ post, author, isLiked = false, isSaved = fals
       <div className="p-4 flex items-center gap-3">
         <Link href={`/u/${author.username}`} data-testid={`link-author-${post.id}`}>
           <div className="flex items-center gap-3 cursor-pointer hover:opacity-80">
-            <div className="w-10 h-10 bg-secondary border border-border flex items-center justify-center">
-              <span className="font-mono text-sm font-bold">{author.username[0].toUpperCase()}</span>
-            </div>
+            <UserAvatar {...author} className="w-10 h-10" />
             <div>
               <h3 className="font-semibold text-sm" data-testid={`text-author-${post.id}`}>
                 {author.username}
@@ -251,9 +250,7 @@ export default function PostCard({ post, author, isLiked = false, isSaved = fals
               <div className="space-y-4">
                 {comments?.map((item: any) => (
                   <div key={item.comment.id} className="flex gap-3">
-                    <div className="w-8 h-8 bg-secondary border border-border flex items-center justify-center flex-shrink-0">
-                      <span className="font-mono text-xs font-bold">{item.user.username[0].toUpperCase()}</span>
-                    </div>
+                    <UserAvatar {...item.user} className="w-8 h-8 flex-shrink-0" />
                     <div className="flex-1">
                       <p className="text-sm">
                         <span className="font-semibold mr-2">{item.user.username}</span>
@@ -313,11 +310,7 @@ export default function PostCard({ post, author, isLiked = false, isSaved = fals
                       disabled={shareMutation.isPending}
                       data-testid={`share-conversation-${convId}`}
                     >
-                      <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center">
-                        <span className="text-sm font-semibold">
-                          {otherParticipant?.username?.[0]?.toUpperCase() || '?'}
-                        </span>
-                      </div>
+                      <UserAvatar {...otherParticipant} className="w-10 h-10" />
                       <div className="flex-1 text-left">
                         <p className="font-semibold text-sm">{otherParticipant?.username || 'Unknown'}</p>
                         <p className="text-xs text-muted-foreground">{otherParticipant?.role || ''}</p>

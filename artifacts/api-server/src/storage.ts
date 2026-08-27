@@ -104,7 +104,7 @@ export interface IStorage {
   createStudioApprovalRequest(request: schema.InsertStudioApprovalRequest): Promise<schema.StudioApprovalRequest>;
   getStudioApprovalRequests(filters: { studioId?: string; artistId?: string; status?: string }): Promise<any[]>;
   getStudioApprovalRequestById(id: string): Promise<any>;
-  updateStudioApprovalStatus(id: string, status: string): Promise<void>;
+  updateStudioApprovalStatus(id: string, status: string): Promise<boolean>;
   getApprovedArtists(studioId: string): Promise<any[]>;
   getArtistStudio(artistId: string): Promise<any>;
   
@@ -824,11 +824,39 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createStudioApprovalRequest(request: schema.InsertStudioApprovalRequest) {
-    const [created] = await db
-      .insert(schema.studioApprovalRequests)
-      .values(request)
-      .returning();
-    return created;
+    return db.transaction(async (tx) => {
+      // The advisory lock closes the race even on installations where the
+      // partial unique index could not be created due to historical data.
+      await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${`${request.studioId}:${request.artistId}`}))`);
+      const [existing] = await tx
+        .select({
+          id: schema.studioApprovalRequests.id,
+          status: schema.studioApprovalRequests.status,
+        })
+        .from(schema.studioApprovalRequests)
+        .where(and(
+          eq(schema.studioApprovalRequests.studioId, request.studioId),
+          eq(schema.studioApprovalRequests.artistId, request.artistId),
+          inArray(schema.studioApprovalRequests.status, ["PENDING", "APPROVED"]),
+        ))
+        .limit(1);
+      if (existing) {
+        const error: any = new Error(
+          existing.status === "APPROVED"
+            ? "These accounts are already connected."
+            : "A pending connection request already exists.",
+        );
+        error.code = existing.status === "APPROVED"
+          ? "STUDIO_APPROVAL_ALREADY_CONNECTED"
+          : "STUDIO_APPROVAL_PENDING_EXISTS";
+        throw error;
+      }
+      const [created] = await tx
+        .insert(schema.studioApprovalRequests)
+        .values(request)
+        .returning();
+      return created;
+    });
   }
 
   async getStudioApprovalRequests(filters: { studioId?: string; artistId?: string; status?: string }) {
@@ -883,16 +911,20 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateStudioApprovalStatus(id: string, status: string) {
-    await db
+    const [updated] = await db
       .update(schema.studioApprovalRequests)
       .set({ status: status as any, updatedAt: new Date() })
-      .where(eq(schema.studioApprovalRequests.id, id));
+      .where(and(
+        eq(schema.studioApprovalRequests.id, id),
+        eq(schema.studioApprovalRequests.status, "PENDING"),
+      ))
+      .returning({ id: schema.studioApprovalRequests.id });
+    return Boolean(updated);
   }
 
   async getApprovedArtists(studioId: string) {
     return db
       .select({
-        request: schema.studioApprovalRequests,
         artist: publicUserColumns
       })
       .from(schema.studioApprovalRequests)
@@ -912,7 +944,6 @@ export class DatabaseStorage implements IStorage {
   async getArtistStudio(artistId: string) {
     const [result] = await db
       .select({
-        request: schema.studioApprovalRequests,
         studio: publicUserColumns
       })
       .from(schema.studioApprovalRequests)

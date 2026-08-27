@@ -1,4 +1,5 @@
 import { Circle, Eye, Play } from "lucide-react";
+import UserAvatar from "@/components/user-avatar";
 
 interface LiveStreamCardProps {
   event: any;
@@ -23,11 +24,7 @@ export default function LiveStreamCard({ event, host }: LiveStreamCardProps) {
 
         <div className="absolute bottom-0 inset-x-0 p-4">
           <div className="flex items-center gap-3 mb-2">
-            <img
-              src={host.avatarUrl || `https://ui-avatars.com/api/?name=${host.username}`}
-              alt={host.username}
-              className="w-10 h-10 rounded-full ring-2 ring-white"
-            />
+            <UserAvatar {...host} className="w-10 h-10 ring-2 ring-white" />
             <div className="flex-1">
               <h3 className="font-bold text-white text-sm" data-testid={`stream-title-${event.id}`}>{event.title}</h3>
               <p className="text-white/90 text-xs">

@@ -22,6 +22,7 @@ import { useToast } from "@/hooks/use-toast";
 import SidebarNav from "@/components/layout/sidebar-nav";
 import MobileNav from "@/components/layout/mobile-nav";
 import { useState } from "react";
+import UserAvatar from "@/components/user-avatar";
 
 type AdminSection = "overview" | "users" | "posts" | "jobs" | "flash-sales" | "bookings" | "verification" | "csp-violations";
 
@@ -595,11 +596,7 @@ export default function AdminDashboard() {
                           <CardContent className="p-6">
                             <div className="flex items-start justify-between gap-4">
                               <div className="flex items-start gap-4 flex-1">
-                                <img
-                                  src={userItem.avatarUrl || `https://ui-avatars.com/api/?name=${userItem.username}&background=000&color=fff`}
-                                  alt={userItem.username}
-                                  className="w-16 h-16 rounded-full object-cover"
-                                />
+                                <UserAvatar {...userItem} className="w-16 h-16" />
                                 <div className="flex-1">
                                   <div className="flex items-center gap-2 mb-1">
                                     <h3 className="font-semibold text-lg">{userItem.username}</h3>
@@ -697,11 +694,7 @@ export default function AdminDashboard() {
                       <CardContent className="p-4">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-4">
-                            <img
-                              src={userItem.avatarUrl || `https://ui-avatars.com/api/?name=${userItem.username}&background=000&color=fff`}
-                              alt={userItem.username}
-                              className="w-10 h-10 rounded-full object-cover"
-                            />
+                            <UserAvatar {...userItem} className="w-10 h-10" />
                             <div>
                               <div className="flex items-center gap-2">
                                 <span className="font-medium">{userItem.username}</span>

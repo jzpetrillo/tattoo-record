@@ -6,6 +6,14 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
+export function isCloudinaryConfigured(): boolean {
+  return [
+    process.env.CLOUDINARY_CLOUD_NAME,
+    process.env.CLOUDINARY_API_KEY,
+    process.env.CLOUDINARY_API_SECRET,
+  ].every((value) => typeof value === "string" && value.trim().length > 0);
+}
+
 export interface UploadResult {
   publicId: string;
   url: string;

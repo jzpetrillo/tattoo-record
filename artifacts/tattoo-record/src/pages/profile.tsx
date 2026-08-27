@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useParams, useLocation } from "wouter";
+import { Link } from "wouter";
 import { useState } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -16,6 +17,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { apiRequest as apiRequestLib, uploadFile } from "@/lib/api";
+import UserAvatar from "@/components/user-avatar";
 
 type TabType = "POSTS" | "VIDEOS" | "PORTFOLIO";
 
@@ -97,6 +99,15 @@ export default function Profile() {
     queryKey: [`/api/portfolio/${user?.id}`],
     enabled: !!token && !!user && activeTab === "PORTFOLIO",
   });
+  const { data: uploadStatus } = useQuery<{ available: boolean }>({
+    queryKey: ["/api/upload/status"],
+    queryFn: async () => {
+      const res = await apiRequestLib("GET", "/api/upload/status", undefined, token!);
+      return res.json();
+    },
+    enabled: Boolean(token && isOwnProfile),
+  });
+  const uploadsAvailable = uploadStatus?.available === true;
 
   const { data: studioConnection } = useQuery<{ studio?: UserProfile }>({
     queryKey: [`/api/artists/${user?.id}/studio`],
@@ -109,9 +120,18 @@ export default function Profile() {
   });
 
   const { data: pendingRequests } = useQuery<any[]>({
-    queryKey: [`/api/studio-approvals?studioId=${user?.id}&status=PENDING`],
-    enabled: !!token && !!user && user?.role === "STUDIO" && isOwnProfile,
+    queryKey: ["/api/studio-approvals", currentUser?.id, "PENDING"],
+    queryFn: async () => {
+      const res = await apiRequestLib("GET", "/api/studio-approvals?status=PENDING", undefined, token!);
+      return res.json();
+    },
+    enabled: !!token && !!user && isOwnProfile && (user?.role === "STUDIO" || user?.role === "ARTIST"),
   });
+  const incomingRequests = pendingRequests?.filter((item) =>
+    user?.role === "STUDIO"
+      ? item.request.initiatedBy === "ARTIST"
+      : item.request.initiatedBy === "STUDIO",
+  );
 
   // Check if current user follows this profile
   const { data: followStatus } = useQuery<{ isFollowing: boolean }>({
@@ -149,22 +169,29 @@ export default function Profile() {
 
   const approveMutation = useMutation({
     mutationFn: async (requestId: string) => {
-      return apiRequest("PUT", `/api/studio-approvals/${requestId}/approve`);
+      return apiRequestLib("PUT", `/api/studio-approvals/${requestId}/approve`, undefined, token!);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/studio-approvals"] });
       queryClient.invalidateQueries({ queryKey: [`/api/studios/${user?.id}/artists`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/artists/${user?.id}/studio`] });
       toast({ description: "Request approved!" });
+    },
+    onError: (error: Error) => {
+      toast({ description: error.message, variant: "destructive" });
     },
   });
 
   const rejectMutation = useMutation({
     mutationFn: async (requestId: string) => {
-      return apiRequest("PUT", `/api/studio-approvals/${requestId}/reject`);
+      return apiRequestLib("PUT", `/api/studio-approvals/${requestId}/reject`, undefined, token!);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/studio-approvals"] });
       toast({ description: "Request rejected" });
+    },
+    onError: (error: Error) => {
+      toast({ description: error.message, variant: "destructive" });
     },
   });
 
@@ -306,15 +333,20 @@ export default function Profile() {
 
           {/* Identity row */}
           <div className="px-6 py-6 border-b border-border">
-            <p className="meta text-xs mb-2">{user?.role}</p>
-            <h1 className="press-nameplate text-4xl md:text-6xl" data-testid="text-username">
-              {(user?.firstName && user?.lastName) ? `${user.firstName} ${user.lastName}` : user?.username}
-            </h1>
-            <div className="flex items-center gap-2 mt-2">
-              <span className="meta text-xs">@{user?.username}</span>
-              {user?.isVerified && (
-                <Star className="w-3.5 h-3.5 text-cobalt fill-current" data-testid="icon-verified" />
-              )}
+            <div className="flex items-start gap-4">
+              {user && <UserAvatar {...user} className="h-16 w-16 md:h-20 md:w-20 flex-shrink-0" data-testid="profile-avatar" />}
+              <div className="min-w-0">
+                <p className="meta text-xs mb-2">{user?.role}</p>
+                <h1 className="press-nameplate text-4xl md:text-6xl break-words" data-testid="text-username">
+                  {(user?.firstName && user?.lastName) ? `${user.firstName} ${user.lastName}` : user?.username}
+                </h1>
+                <div className="flex items-center gap-2 mt-2">
+                  <span className="meta text-xs">@{user?.username}</span>
+                  {user?.isVerified && (
+                    <Star className="w-3.5 h-3.5 text-cobalt fill-current" data-testid="icon-verified" />
+                  )}
+                </div>
+              </div>
             </div>
           </div>
 
@@ -438,8 +470,8 @@ export default function Profile() {
             <div className="flex items-center gap-3">
               <Building2 className="w-5 h-5 text-muted-foreground" />
               <div>
-                <p className="text-sm font-medium">Connected to</p>
-                <p className="text-lg font-semibold">{studioConnection.studio?.username}</p>
+                <p className="text-sm font-medium">Works at</p>
+                <Link href={`/u/${studioConnection.studio?.username}`} className="text-lg font-semibold hover:underline">{studioConnection.studio?.username}</Link>
               </div>
             </div>
           </div>
@@ -452,23 +484,25 @@ export default function Profile() {
           </div>
         )}
 
-        {/* Pending Requests (for Studios) */}
-        {user?.role === "STUDIO" && isOwnProfile && pendingRequests && pendingRequests.length > 0 && (
+        {isOwnProfile && user?.role === "STUDIO" && (
+          <div className="border-b border-border px-6 py-4"><StudioConnectionDialog /></div>
+        )}
+
+        {/* Incoming connection requests and invites */}
+        {isOwnProfile && (user?.role === "STUDIO" || user?.role === "ARTIST") && incomingRequests && incomingRequests.length > 0 && (
           <div className="border-b border-border px-6 py-4">
             <h3 className="meta text-xs mb-4 flex items-center gap-2">
               <Building2 className="w-4 h-4" />
-              Pending Artist Requests ({pendingRequests.length})
+              Pending Connection Requests ({incomingRequests.length})
             </h3>
             <div className="space-y-2">
-              {pendingRequests.map((item: any) => (
+              {incomingRequests.map((item: any) => (
                 <div key={item.request.id} className="flex items-center justify-between p-3 bg-secondary border border-border" data-testid={`pending-request-${item.request.id}`}>
                   <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 bg-background border border-border flex items-center justify-center">
-                      <span className="font-mono text-xs font-bold">{item.artist.username[0].toUpperCase()}</span>
-                    </div>
+                    <UserAvatar {...(user?.role === "STUDIO" ? item.artist : item.studio)} className="w-8 h-8" />
                     <div>
-                      <p className="font-medium">{item.artist.username}</p>
-                      <p className="text-xs text-muted-foreground">{item.artist.firstName} {item.artist.lastName}</p>
+                      <p className="font-medium">{(user?.role === "STUDIO" ? item.artist : item.studio).username}</p>
+                      {item.request.note && <p className="text-xs text-muted-foreground mt-1">{item.request.note}</p>}
                     </div>
                   </div>
                   <div className="flex gap-2">
@@ -504,18 +538,10 @@ export default function Profile() {
             <p className="meta text-xs mb-3">Artists</p>
             <div className="grid grid-cols-5 gap-px bg-border">
               {connectedArtists.slice(0, 10).map((item: any) => (
-                <div key={item.artist.id} className="flex flex-col items-center bg-background p-2" data-testid={`connected-artist-${item.artist.id}`}>
-                  <div className="w-full aspect-square bg-secondary border border-border overflow-hidden mb-1">
-                    {item.artist.avatarUrl ? (
-                      <img src={item.artist.avatarUrl} alt={item.artist.username} className="w-full h-full object-cover" />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center">
-                        <span className="font-mono text-sm font-bold">{item.artist.username[0].toUpperCase()}</span>
-                      </div>
-                    )}
-                  </div>
+                <Link href={`/u/${item.artist.username}`} key={item.artist.id} className="flex flex-col items-center bg-background p-2 hover:bg-secondary" data-testid={`connected-artist-${item.artist.id}`}>
+                  <UserAvatar {...item.artist} className="w-full h-auto aspect-square mb-1" />
                   <span className="meta text-[9px] truncate w-full text-center">{item.artist.username}</span>
-                </div>
+                </Link>
               ))}
             </div>
           </div>
@@ -821,9 +847,13 @@ export default function Profile() {
               <Input
                 type="file"
                 accept="image/*"
+                disabled={!uploadsAvailable || createPortfolioMutation.isPending || updatePortfolioMutation.isPending}
                 onChange={(e) => setPortfolioForm({ ...portfolioForm, imageFile: e.target.files?.[0] || null })}
                 data-testid="input-portfolio-image"
               />
+              {uploadStatus && !uploadsAvailable && (
+                <p className="text-xs text-muted-foreground mt-1">Image uploads are temporarily unavailable.</p>
+              )}
               {editingPortfolio && !portfolioForm.imageFile && (
                 <p className="text-xs text-muted-foreground mt-1">Leave empty to keep current image</p>
               )}
