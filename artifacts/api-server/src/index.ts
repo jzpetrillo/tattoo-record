@@ -1,4 +1,3 @@
-// @ts-nocheck
 import app from "./app";
 import { logger } from "./lib/logger";
 import { registerRoutes } from "./routes/routes";
@@ -19,12 +18,7 @@ if (Number.isNaN(port) || port <= 0) {
 
 registerRoutes(app)
   .then((server) => {
-    server.listen(port, (err) => {
-      if (err) {
-        logger.error({ err }, "Error listening on port");
-        process.exit(1);
-      }
-
+    server.listen(port, () => {
       logger.info({ port }, "Server listening");
     });
   })

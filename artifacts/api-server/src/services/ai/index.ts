@@ -2,7 +2,6 @@ import Anthropic from "@anthropic-ai/sdk";
 import crypto from "crypto";
 
 const HAIKU = "claude-haiku-4-5-20251001";
-const SONNET = "claude-sonnet-5";
 
 let anthropic: Anthropic | null = null;
 
@@ -182,4 +181,4 @@ export async function embed(text: string): Promise<number[]> {
   return vec;
 }
 
-export { HAIKU, SONNET };
+export { HAIKU };

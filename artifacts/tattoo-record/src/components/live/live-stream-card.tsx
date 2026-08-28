@@ -8,16 +8,16 @@ interface LiveStreamCardProps {
 
 export default function LiveStreamCard({ event, host }: LiveStreamCardProps) {
   return (
-    <article className="bg-card rounded-xl border border-border overflow-hidden hover-lift cursor-pointer" data-testid={`livestream-${event.id}`}>
+    <article className="bg-card border border-border overflow-hidden hover-lift cursor-pointer" data-testid={`livestream-${event.id}`}>
       <div className="relative aspect-video bg-secondary">
-        <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent"></div>
+        <div className="absolute inset-0 bg-black/55"></div>
 
-        <div className="absolute top-4 left-4 bg-destructive/95 backdrop-blur-sm px-3 py-1.5 rounded-full text-sm text-white font-bold flex items-center gap-2 animate-pulse">
+        <div className="absolute top-4 left-4 bg-destructive/95 backdrop-blur-sm px-3 py-1.5 text-sm text-white font-bold flex items-center gap-2 animate-pulse">
           <Circle className="w-2 h-2 fill-white" />
           LIVE
         </div>
 
-        <div className="absolute top-4 right-4 bg-black/70 backdrop-blur-sm px-3 py-1.5 rounded-full text-sm text-white font-medium flex items-center gap-2">
+        <div className="absolute top-4 right-4 bg-black/70 backdrop-blur-sm px-3 py-1.5 text-sm text-white font-medium flex items-center gap-2">
           <Eye className="w-4 h-4" />
           <span data-testid={`viewer-count-${event.id}`}>{event.viewerPeak || 0}</span>
         </div>

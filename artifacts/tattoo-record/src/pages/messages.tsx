@@ -5,6 +5,7 @@ import ChatWindow from "@/components/messages/chat-window";
 import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { useLocation } from "wouter";
+import { apiRequest } from "@/lib/queryClient";
 
 export default function Messages() {
   const [selectedConversation, setSelectedConversation] = useState<string | null>(null);
@@ -13,20 +14,29 @@ export default function Messages() {
   const [location] = useLocation();
 
   useEffect(() => {
-    const params = new URLSearchParams(location.split("?")[1]);
+    const params = new URLSearchParams(window.location.search);
     const withUserId = params.get("withUserId");
 
     if (withUserId && token) {
-      fetch(`/api/messages?withUserId=${withUserId}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      })
+      // The direct-message endpoint returns an existing conversation or creates
+      // one for a first contact. Going through apiRequest keeps deep links
+      // authenticated consistently.
+      apiRequest("GET", `/api/messages?withUserId=${encodeURIComponent(withUserId)}`)
         .then((res) => res.json())
         .then((data) => {
-          if (data.conversation) {
-            setSelectedConversation(data.conversation.id);
+          const conversation = data.conversation ?? data;
+          if (conversation?.id) {
+            const participants = data.participants ?? conversation.participants ?? [];
+            const other = participants.find((participant: OtherUser) => participant.id === withUserId)
+              ?? data.otherUser;
+            setSelectedConversation(conversation.id);
+            if (other?.username) setSelectedUser(other);
           }
         })
-        .catch(console.error);
+        .catch(() => {
+          setSelectedConversation(null);
+          setSelectedUser(null);
+        });
     }
   }, [location, token]);
 

@@ -13,7 +13,7 @@ import {
   Check, X, ShieldCheck, Users, Clock, CheckCircle2, XCircle, 
   LayoutDashboard, FileText, Briefcase, Zap, Calendar, Search,
   Trash2, Star, StarOff, Ban, UserPlus, Image, DollarSign,
-  UserCog, UserCheck, Power, Plus, Edit2, ShieldAlert
+  UserCog, UserCheck, Power, Plus, Edit2, ShieldAlert, AlertCircle
 } from "lucide-react";
 import { EmptyState } from "@/components/ui/empty-state";
 import { StatusBadge } from "@/components/ui/status-badge";
@@ -47,7 +47,7 @@ export default function AdminDashboard() {
   const [bookingStatusFilter, setBookingStatusFilter] = useState<string>("all");
 
   // Stats query
-  const { data: stats, isLoading: statsLoading } = useQuery({
+  const { data: stats, isLoading: statsLoading, isError: statsError, refetch: refetchStats } = useQuery({
     queryKey: ["/api/admin/stats"],
     queryFn: async () => {
       const res = await fetch("/api/admin/stats", {
@@ -61,7 +61,7 @@ export default function AdminDashboard() {
   });
 
   // Users for verification
-  const { data: verificationUsers, isLoading: verificationLoading } = useQuery({
+  const { data: verificationUsers, isLoading: verificationLoading, isError: verificationError, refetch: refetchVerification } = useQuery({
     queryKey: ["/api/admin/users", verificationTab.toUpperCase()],
     queryFn: async () => {
       const res = await fetch(`/api/admin/users?status=${verificationTab.toUpperCase()}`, {
@@ -75,7 +75,7 @@ export default function AdminDashboard() {
   });
 
   // All users query
-  const { data: allUsers, isLoading: usersLoading } = useQuery({
+  const { data: allUsers, isLoading: usersLoading, isError: usersError, refetch: refetchUsers } = useQuery({
     queryKey: ["/api/admin/all-users", userRoleFilter, userSearch],
     queryFn: async () => {
       const params = new URLSearchParams();
@@ -92,7 +92,7 @@ export default function AdminDashboard() {
   });
 
   // Posts query
-  const { data: posts, isLoading: postsLoading } = useQuery({
+  const { data: posts, isLoading: postsLoading, isError: postsError, refetch: refetchPosts } = useQuery({
     queryKey: ["/api/admin/posts"],
     queryFn: async () => {
       const res = await fetch("/api/admin/posts?limit=100", {
@@ -106,7 +106,7 @@ export default function AdminDashboard() {
   });
 
   // Jobs query
-  const { data: jobs, isLoading: jobsLoading } = useQuery({
+  const { data: jobs, isLoading: jobsLoading, isError: jobsError, refetch: refetchJobs } = useQuery({
     queryKey: ["/api/admin/jobs"],
     queryFn: async () => {
       const res = await fetch("/api/admin/jobs", {
@@ -120,7 +120,7 @@ export default function AdminDashboard() {
   });
 
   // Flash sales query
-  const { data: flashSales, isLoading: flashSalesLoading } = useQuery({
+  const { data: flashSales, isLoading: flashSalesLoading, isError: flashSalesError, refetch: refetchFlashSales } = useQuery({
     queryKey: ["/api/admin/flash-sales"],
     queryFn: async () => {
       const res = await fetch("/api/admin/flash-sales", {
@@ -134,7 +134,7 @@ export default function AdminDashboard() {
   });
 
   // Bookings query
-  const { data: bookings, isLoading: bookingsLoading } = useQuery({
+  const { data: bookings, isLoading: bookingsLoading, isError: bookingsError, refetch: refetchBookings } = useQuery({
     queryKey: ["/api/admin/bookings"],
     queryFn: async () => {
       const res = await fetch("/api/admin/bookings", {
@@ -148,7 +148,7 @@ export default function AdminDashboard() {
   });
 
   // CSP violations query
-  const { data: cspViolations, isLoading: cspLoading } = useQuery({
+  const { data: cspViolations, isLoading: cspLoading, isError: cspError, refetch: refetchCsp } = useQuery({
     queryKey: ["/api/admin/csp-violations"],
     queryFn: async () => {
       const res = await fetch("/api/admin/csp-violations", {
@@ -416,6 +416,27 @@ export default function AdminDashboard() {
     );
   }
 
+  const sectionErrors: Partial<Record<AdminSection, boolean>> = {
+    overview: statsError,
+    verification: verificationError,
+    users: usersError,
+    posts: postsError,
+    jobs: jobsError,
+    "flash-sales": flashSalesError,
+    bookings: bookingsError,
+    "csp-violations": cspError,
+  };
+  const sectionRefetchers: Partial<Record<AdminSection, () => unknown>> = {
+    overview: refetchStats,
+    verification: refetchVerification,
+    users: refetchUsers,
+    posts: refetchPosts,
+    jobs: refetchJobs,
+    "flash-sales": refetchFlashSales,
+    bookings: refetchBookings,
+    "csp-violations": refetchCsp,
+  };
+
   const adminNavItems = [
     { id: "overview", label: "Overview", icon: LayoutDashboard },
     { id: "verification", label: "Verification", icon: ShieldCheck },
@@ -458,6 +479,15 @@ export default function AdminDashboard() {
               </button>
             ))}
           </div>
+
+          {sectionErrors[activeSection] ? (
+            <div className="py-12 text-center text-muted-foreground">
+              <AlertCircle className="mx-auto mb-2 h-8 w-8" />
+              <p>Failed to load this admin section.</p>
+              <Button variant="link" onClick={() => sectionRefetchers[activeSection]?.()}>Try again</Button>
+            </div>
+          ) : (
+            <>
 
           {/* Overview Section */}
           {activeSection === "overview" && (
@@ -1370,6 +1400,8 @@ export default function AdminDashboard() {
                 </div>
               )}
             </div>
+          )}
+            </>
           )}
         </div>
       </div>

@@ -115,7 +115,9 @@ export default function PostCard({ post, author, isLiked = false, isSaved = fals
 
   const shareMutation = useMutation({
     mutationFn: async (conversationId: string) => {
-      const shareUrl = `${window.location.origin}/posts/${post.id}`;
+      // A profile is a durable, public destination for a shared post. There is
+      // no standalone post route yet, so never send recipients to a 404 URL.
+      const shareUrl = `${window.location.origin}/u/${encodeURIComponent(author.username)}`;
       const message = `Check out this post: ${shareUrl}`;
       await apiRequest("POST", `/api/conversations/${conversationId}/messages`, { body: message }, token!);
     },
@@ -152,7 +154,7 @@ export default function PostCard({ post, author, isLiked = false, isSaved = fals
   });
 
   return (
-    <article className="bg-card border border-border rounded-lg overflow-hidden" data-testid={`post-${post.id}`}>
+    <article className="bg-card border border-border overflow-hidden" data-testid={`post-${post.id}`}>
       {/* Post header with author info */}
       <div className="p-4 flex items-center gap-3">
         <Link href={`/u/${author.username}`} data-testid={`link-author-${post.id}`}>
@@ -186,21 +188,21 @@ export default function PostCard({ post, author, isLiked = false, isSaved = fals
             <button
               onClick={() => likeMutation.mutate(!liked)}
               disabled={likeMutation.isPending}
-              className={`hover:text-primary transition-colors ${liked ? 'text-foreground' : ''}`}
+              className={`hover:text-primary transition-colors min-h-[44px] min-w-[44px] inline-flex items-center justify-center touch-manipulation ${liked ? 'text-foreground' : ''}`}
               data-testid={`button-like-${post.id}`}
             >
               <Heart className={`w-6 h-6 ${liked ? 'fill-current' : ''}`} />
             </button>
             <button 
               onClick={() => setShowComments(true)}
-              className="hover:text-primary transition-colors" 
+              className="hover:text-primary transition-colors min-h-[44px] min-w-[44px] inline-flex items-center justify-center touch-manipulation"
               data-testid={`button-comment-${post.id}`}
             >
               <MessageCircle className="w-6 h-6" />
             </button>
             <button 
               onClick={() => setShowShareDialog(true)}
-              className="hover:text-primary transition-colors" 
+              className="hover:text-primary transition-colors min-h-[44px] min-w-[44px] inline-flex items-center justify-center touch-manipulation"
               data-testid={`button-share-${post.id}`}
             >
               <Send className="w-6 h-6" />
@@ -209,7 +211,7 @@ export default function PostCard({ post, author, isLiked = false, isSaved = fals
           <button
             onClick={() => saveMutation.mutate(!saved)}
             disabled={saveMutation.isPending}
-            className="hover:text-primary transition-colors"
+            className="hover:text-primary transition-colors min-h-[44px] min-w-[44px] inline-flex items-center justify-center touch-manipulation"
             data-testid={`button-save-${post.id}`}
           >
             <Bookmark className={`w-6 h-6 ${saved ? 'fill-current' : ''}`} />

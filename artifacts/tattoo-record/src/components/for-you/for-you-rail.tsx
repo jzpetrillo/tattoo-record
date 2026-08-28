@@ -127,7 +127,7 @@ export default function ForYouRail() {
                     <Sparkles className="w-12 h-12" />
                   </div>
                 )}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                <div className="absolute inset-0 bg-black/55 opacity-0 group-hover:opacity-100 transition-opacity" />
                 <div className="absolute bottom-0 left-0 right-0 p-4 text-white opacity-0 group-hover:opacity-100 transition-opacity">
                   <div className="flex items-center gap-2 mb-2">
                     <UserAvatar {...heroPost.author} className="w-8 h-8 border-paper" />
@@ -162,7 +162,7 @@ export default function ForYouRail() {
                       <Heart className="w-8 h-8" />
                     </div>
                   )}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                  <div className="absolute inset-0 bg-black/45 opacity-0 group-hover:opacity-100 transition-opacity" />
                   <div className="absolute bottom-0 left-0 right-0 p-2 text-white opacity-0 group-hover:opacity-100 transition-opacity">
                     <p className="font-medium text-xs truncate">@{item.author.username}</p>
                     <div className="flex items-center gap-2 text-[10px] text-white/70">

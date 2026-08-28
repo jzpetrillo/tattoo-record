@@ -13,7 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, Clock, Plus, CheckCircle, XCircle, DollarSign, CreditCard, Bell } from "lucide-react";
+import { Calendar, Clock, Plus, CheckCircle, XCircle, DollarSign, CreditCard, Bell, AlertCircle } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -44,10 +44,14 @@ type PaymentStatus = "UNPAID" | "DEPOSIT_PAID" | "FULLY_PAID" | "REFUNDED";
 export default function BookingsPage() {
   const { user, token } = useAuth();
   const { toast } = useToast();
+  const requestedArtistId = new URLSearchParams(window.location.search).get("artist") ?? "";
+  const preselectedArtistId = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(requestedArtistId)
+    ? requestedArtistId
+    : "";
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
-  const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [createDialogOpen, setCreateDialogOpen] = useState(Boolean(preselectedArtistId));
 
-  const { data: bookings = [], isLoading } = useQuery<any[]>({
+  const { data: bookings = [], isLoading, isError, refetch } = useQuery<any[]>({
     queryKey: ["/api/bookings", { status: statusFilter }],
     queryFn: async () => {
       const url = statusFilter === "ALL" 
@@ -84,7 +88,7 @@ export default function BookingsPage() {
   const form = useForm<BookingFormData>({
     resolver: zodResolver(bookingSchema),
     defaultValues: {
-      artistId: "",
+      artistId: preselectedArtistId,
       title: "",
       description: "",
       scheduledAt: "",
@@ -507,6 +511,12 @@ export default function BookingsPage() {
         {isLoading ? (
           <div className="grid gap-4">
             {[1, 2, 3].map((i) => <BookingCardSkeleton key={i} />)}
+          </div>
+        ) : isError ? (
+          <div className="py-12 text-center text-muted-foreground">
+            <AlertCircle className="mx-auto mb-2 h-8 w-8" />
+            <p>Failed to load bookings.</p>
+            <Button variant="link" onClick={() => refetch()}>Try again</Button>
           </div>
         ) : bookings.length === 0 ? (
           <EmptyState

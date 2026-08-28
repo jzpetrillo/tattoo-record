@@ -80,7 +80,11 @@ export interface IStorage {
   createJob(job: schema.InsertJobPosting): Promise<schema.JobPosting>;
   updateJob(id: string, updates: Partial<schema.JobPosting>): Promise<void>;
   deleteJob(id: string): Promise<void>;
-  applyToJob(jobId: string, artistId: string, data: any): Promise<void>;
+  applyToJob(
+    jobId: string,
+    artistId: string,
+    data: { coverLetter: string; portfolioSnapshot: Record<string, unknown>[] },
+  ): Promise<void>;
   getJobApplications(jobId: string): Promise<any[]>;
   
   // Livestream operations
@@ -610,7 +614,11 @@ export class DatabaseStorage implements IStorage {
       .where(eq(schema.jobPostings.id, id));
   }
 
-  async applyToJob(jobId: string, artistId: string, data: any) {
+  async applyToJob(
+    jobId: string,
+    artistId: string,
+    data: { coverLetter: string; portfolioSnapshot: Record<string, unknown>[] },
+  ) {
     const existing = await db
       .select({ id: schema.jobApplications.id })
       .from(schema.jobApplications)
@@ -966,7 +974,10 @@ export class DatabaseStorage implements IStorage {
   // Admin operations
   async getPendingUsers() {
     return db
-      .select()
+      .select({
+        ...publicUserColumns,
+        email: schema.users.email,
+      })
       .from(schema.users)
       .where(eq(schema.users.verificationStatus, 'PENDING'))
       .orderBy(desc(schema.users.createdAt));

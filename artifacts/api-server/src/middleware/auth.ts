@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 import { db } from "../db";
@@ -12,6 +11,8 @@ if (!_jwtSecret) {
 const JWT_SECRET: string = _jwtSecret;
 
 export interface AuthRequest extends Request {
+  params: Request["params"] & Record<string, string>;
+  param(name: string, defaultValue?: unknown): string;
   userId?: string;
   userRole?: string;
 }
@@ -20,11 +21,12 @@ export async function requireAuth(
   req: AuthRequest,
   res: Response,
   next: NextFunction
-) {
+): Promise<void> {
   try {
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
-      return res.status(401).json({ message: "Authentication required" });
+      res.status(401).json({ message: "Authentication required" });
+      return;
     }
 
     const token = authHeader.substring(7);
@@ -37,14 +39,16 @@ export async function requireAuth(
       .limit(1);
 
     if (!user || user.deletedAt || user.isBanned) {
-      return res.status(401).json({ message: "Invalid authentication" });
+      res.status(401).json({ message: "Invalid authentication" });
+      return;
     }
 
     req.userId = user.id;
     req.userRole = user.role;
     next();
+    return;
   } catch (error) {
-    return res.status(401).json({ message: "Invalid or expired token" });
+    res.status(401).json({ message: "Invalid or expired token" });
   }
 }
 
@@ -90,11 +94,12 @@ export async function optionalAuth(
 }
 
 export function requireRole(roles: string[]) {
-  return (req: AuthRequest, res: Response, next: NextFunction) => {
+  return (req: AuthRequest, res: Response, next: NextFunction): void => {
     if (!req.userRole || !roles.includes(req.userRole)) {
-      return res.status(403).json({ 
+      res.status(403).json({
         message: "Insufficient permissions for this action" 
       });
+      return;
     }
     next();
   };

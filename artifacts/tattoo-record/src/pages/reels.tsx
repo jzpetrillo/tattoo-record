@@ -63,7 +63,7 @@ export default function Reels() {
                   >
                     {post.media && post.media.length > 0 ? (
                       <div className="w-full h-full">
-                        {post.media[0].type === "video" ? (
+                        {String(post.media[0].type).toLowerCase() === "video" ? (
                           <video
                             src={post.media[0].url}
                             className="w-full h-full object-cover"

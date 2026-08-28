@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { LiveStreamCardSkeleton } from "@/components/ui/skeletons";
 import { EmptyState } from "@/components/ui/empty-state";
-import { Radio, Video } from "lucide-react";
+import { Radio, Video, AlertCircle } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -28,7 +28,7 @@ export default function LiveEvents() {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
 
-  const { data: liveEvents, isLoading } = useQuery<any[]>({
+  const { data: liveEvents, isLoading, isError, refetch } = useQuery<any[]>({
     queryKey: ["/api/livestream-events?status=LIVE"],
   });
 
@@ -85,6 +85,12 @@ export default function LiveEvents() {
         {isLoading ? (
           <div className="grid md:grid-cols-2 gap-6">
             {[1, 2, 3, 4].map((i) => <LiveStreamCardSkeleton key={i} />)}
+          </div>
+        ) : isError ? (
+          <div className="py-12 text-center text-muted-foreground">
+            <AlertCircle className="mx-auto mb-2 h-8 w-8" />
+            <p>Failed to load live events.</p>
+            <Button variant="link" onClick={() => refetch()}>Try again</Button>
           </div>
         ) : !liveEvents?.length ? (
           <EmptyState

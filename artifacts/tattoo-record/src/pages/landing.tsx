@@ -57,10 +57,10 @@ export default function Landing() {
             Tattoo Record
           </Link>
           <nav className="flex items-center gap-2" aria-label="Account actions">
-            <Button asChild variant="outline" size="sm" className="rounded-none border-foreground px-3 sm:px-4" data-testid="landing-sign-in">
+            <Button asChild variant="outline" size="sm" className="min-h-[44px] rounded-none border-foreground px-3 sm:px-4" data-testid="landing-sign-in">
               <Link href="/auth">Sign in</Link>
             </Button>
-            <Button asChild size="sm" className="rounded-none bg-cobalt px-3 text-white hover:bg-cobalt/90 sm:px-4" data-testid="landing-sign-up">
+            <Button asChild size="sm" className="min-h-[44px] rounded-none bg-cobalt px-3 text-white hover:bg-cobalt/90 sm:px-4" data-testid="landing-sign-up">
               <Link href="/auth?mode=register">Sign up</Link>
             </Button>
           </nav>
@@ -180,10 +180,10 @@ export default function Landing() {
         <div className="mx-auto flex max-w-7xl flex-col gap-6 px-4 py-8 sm:px-6 md:flex-row md:items-center md:justify-between lg:px-8">
           <p className="press-nameplate text-lg">Tattoo Record</p>
           <nav className="flex flex-wrap gap-x-5 gap-y-3 text-sm" aria-label="Footer navigation">
-            <Link href="/auth" className="hover:text-cobalt">Sign in</Link>
-            <Link href="/auth?mode=register" className="hover:text-cobalt">Sign up</Link>
-            <Link href="/auth" className="hover:text-cobalt">Explore</Link>
-            <Link href="/auth" className="hover:text-cobalt">Jobs</Link>
+            <Link href="/auth" className="inline-flex min-h-[44px] items-center hover:text-cobalt">Sign in</Link>
+            <Link href="/auth?mode=register" className="inline-flex min-h-[44px] items-center hover:text-cobalt">Sign up</Link>
+            <Link href="/explore" className="inline-flex min-h-[44px] items-center hover:text-cobalt">Explore</Link>
+            <Link href="/jobs" className="inline-flex min-h-[44px] items-center hover:text-cobalt">Jobs</Link>
           </nav>
           <p className="meta text-xs">© {new Date().getFullYear()}</p>
         </div>

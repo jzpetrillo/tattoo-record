@@ -9,17 +9,18 @@ export default function SuggestedUsers() {
   const { user, token } = useAuth();
   const { toast } = useToast();
 
-  const { data: suggestions } = useQuery<any[]>({
-    queryKey: ["/api/users/suggestions"],
+  const { data: recommendations } = useQuery<{ suggestedUsers?: any[] }>({
+    queryKey: ["/api/for-you"],
     enabled: !!token,
   });
+  const suggestions = recommendations?.suggestedUsers ?? [];
 
   const followMutation = useMutation({
     mutationFn: async (userId: string) => {
       await apiRequest("POST", `/api/users/${userId}/follow`);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/users/suggestions"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/for-you"] });
       toast({ title: "Success", description: "User followed" });
     },
     onError: (error: Error) => {

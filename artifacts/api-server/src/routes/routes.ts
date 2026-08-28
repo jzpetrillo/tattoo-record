@@ -1,4 +1,3 @@
-// @ts-nocheck
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { createHash, randomBytes } from "crypto";
@@ -27,9 +26,30 @@ import { isDemoLoginEnabled, isDemoLoginRoleAllowed } from "../config/demo-mode"
 import { sendEmailChangeVerificationEmail, sendPasswordResetEmail } from "../services/password-reset-email";
 
 // Strip password hash before sending user objects to clients
-function safeUser<T extends { hashedPassword?: string }>(user: T): Omit<T, "hashedPassword"> {
-  const { hashedPassword: _omit, ...safe } = user as any;
+function safeUser<T extends { hashedPassword?: unknown }>(user: T): Omit<T, "hashedPassword"> {
+  const { hashedPassword: _omit, ...safe } = user;
   return safe;
+}
+
+function publicUser(user: schema.User) {
+  return {
+    id: user.id,
+    username: user.username,
+    role: user.role,
+    firstName: user.firstName,
+    lastName: user.lastName,
+    bio: user.bio,
+    avatarUrl: user.avatarUrl,
+    bannerImageUrl: user.bannerImageUrl,
+    website: user.website,
+    instagram: user.instagram,
+    tiktok: user.tiktok,
+    twitter: user.twitter,
+    location: user.location,
+    isVerified: user.isVerified,
+    verificationStatus: user.verificationStatus,
+    createdAt: user.createdAt,
+  };
 }
 
 // Safe error responder: surfaces Zod validation messages (400) but returns a
@@ -649,7 +669,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/users/:id", async (req, res) => {
+  app.get("/api/users/:id", optionalAuth, async (req: AuthRequest, res) => {
     try {
       // Check if it's a UUID format (with hyphens) or a username
       const param = req.params.id;
@@ -662,7 +682,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!user) {
         return res.status(404).json({ message: "User not found" });
       }
-      res.json(safeUser(user));
+      res.json(req.userId === user.id ? safeUser(user) : publicUser(user));
     } catch (error: any) {
       res.status(500).json({ message: "Internal server error" });
     }
@@ -1152,10 +1172,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!withUserId) {
         return res.status(400).json({ message: "withUserId parameter required" });
       }
+      if (withUserId === req.userId) {
+        return res.status(400).json({ message: "You cannot message yourself" });
+      }
+
+      const otherUser = await storage.getUser(withUserId);
+      if (!otherUser) {
+        return res.status(404).json({ message: "User not found" });
+      }
       
       const conversation = await storage.getOrCreateConversation([req.userId!, withUserId]);
       const messages = await storage.getMessages(conversation.id, 50);
-      res.json({ conversation, messages });
+      res.json({ conversation, messages, otherUser: publicUser(otherUser) });
     } catch (error: any) {
       res.status(500).json({ message: "Internal server error" });
     }
@@ -1296,7 +1324,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (error?.name === "ZodError") {
         return res.status(400).json({ message: error.errors?.[0]?.message || "Validation failed" });
       }
-      if (error?.status === 409) {
+      if (error?.status === 409 || error?.code === "23505") {
         return res.status(409).json({ message: "You have already applied to this job" });
       }
       console.error("[job apply]", error);
@@ -1889,7 +1917,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     if (!isCloudinaryConfigured()) {
       return res.status(503).json({ message: "Image uploads are temporarily unavailable." });
     }
-    upload.single("file")(req, res, next);
+    Reflect.apply(upload.single("file"), undefined, [req, res, next]);
   }, async (req: AuthRequest, res) => {
     try {
       if (!req.file) {

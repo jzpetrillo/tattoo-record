@@ -26,6 +26,10 @@ import Bookings from "@/pages/bookings";
 import AIRecommendations from "@/pages/ai-recommendations";
 import Settings from "@/pages/settings";
 import VerifyEmailChange from "@/pages/verify-email-change";
+import { ErrorBoundary } from "@/components/error-boundary";
+
+const liveEnabled = import.meta.env.VITE_LIVE_ENABLED === "true";
+const aiEnabled = import.meta.env.VITE_AI_ENABLED === "true";
 
 function AdminRoute() {
   const { user, token } = useAuth();
@@ -51,6 +55,19 @@ function ProtectedRoute({ component: Component }: { component: React.ComponentTy
 
   if (!token) return null;
   return <Component />;
+}
+
+function FeatureRoute({
+  enabled,
+  component: Component,
+  requiresAuth = false,
+}: {
+  enabled: boolean;
+  component: React.ComponentType;
+  requiresAuth?: boolean;
+}) {
+  if (!enabled) return <NotFound />;
+  return requiresAuth ? <ProtectedRoute component={Component} /> : <Component />;
 }
 
 function AuthExpiryListener() {
@@ -97,8 +114,8 @@ function Router() {
       <Route path="/profile">{() => <ProtectedRoute component={Profile} />}</Route>
       <Route path="/profile/:username" component={Profile} />
       <Route path="/u/:username" component={Profile} />
-      <Route path="/live-events" component={LiveEvents} />
-      <Route path="/live" component={LiveEvents} />
+      <Route path="/live-events">{() => <FeatureRoute enabled={liveEnabled} component={LiveEvents} />}</Route>
+      <Route path="/live">{() => <FeatureRoute enabled={liveEnabled} component={LiveEvents} />}</Route>
       <Route path="/jobs/:id" component={JobDetail} />
       <Route path="/jobs" component={Jobs} />
       <Route path="/create">{() => <ProtectedRoute component={Create} />}</Route>
@@ -106,13 +123,22 @@ function Router() {
       <Route path="/saved">{() => <ProtectedRoute component={SavedPosts} />}</Route>
       <Route path="/flash-sales" component={FlashSales} />
       <Route path="/bookings">{() => <ProtectedRoute component={Bookings} />}</Route>
-      <Route path="/ai-recommendations">{() => <ProtectedRoute component={AIRecommendations} />}</Route>
+      <Route path="/ai-recommendations">{() => <FeatureRoute enabled={aiEnabled} component={AIRecommendations} requiresAuth />}</Route>
       <Route path="/settings">{() => <ProtectedRoute component={Settings} />}</Route>
       <Route path="/verify-email-change" component={VerifyEmailChange} />
       <Route path="/auth" component={Auth} />
       <Route path="/admin">{() => <AdminRoute />}</Route>
       <Route component={NotFound} />
     </Switch>
+  );
+}
+
+function RoutedApp() {
+  const [location] = useLocation();
+  return (
+    <ErrorBoundary resetKey={location}>
+      <Router />
+    </ErrorBoundary>
   );
 }
 
@@ -124,7 +150,7 @@ function App() {
         <AuthUserHydrator />
         <Toaster />
         <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
-          <Router />
+          <RoutedApp />
         </WouterRouter>
       </TooltipProvider>
     </QueryClientProvider>

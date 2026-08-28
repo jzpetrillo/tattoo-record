@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { z } from "zod/v4";
 import { insertStudioApprovalRequestSchema as _insertStudioApprovalRequestSchema } from "@workspace/db";
 import { DEMO_LOGIN_ROLES } from "../config/demo-mode";
@@ -185,6 +184,7 @@ export const updateFlashSaleSchema = z.object({
 
 export const jobApplySchema = z.object({
   coverLetter: z.string().min(10, "Cover letter must be at least 10 characters").max(5000),
+  portfolioSnapshot: z.array(z.record(z.string(), z.unknown())).default([]),
 });
 
 export const aiRecommendationSchema = z.object({
@@ -209,9 +209,5 @@ export const updateUserSchema = z.object({
     lng: z.number().optional(),
   }).optional(),
   website: z.string().url().optional().or(z.literal("")),
-  socialHandles: z.record(z.string()).optional(),
-  specialties: z.array(z.string()).optional(),
-  styles: z.array(z.string()).optional(),
-  hourlyRateCents: z.number().int().nonnegative().optional(),
-  address: z.string().max(500).optional(),
+  socialHandles: z.record(z.string(), z.string()).optional(),
 });

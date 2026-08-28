@@ -9,6 +9,7 @@ import { ArrowLeft, Send, MoreVertical } from "lucide-react";
 import UserAvatar from "@/components/user-avatar";
 
 interface OtherUser {
+  id?: string;
   username: string;
   avatarUrl?: string | null;
 }
@@ -101,10 +102,6 @@ export default function ChatWindow({ conversationId, otherUser, onBack }: ChatWi
           <UserAvatar {...otherUser} displayName={displayName} className="w-10 h-10 flex-shrink-0" />
           <div>
             <h3 className="font-semibold text-sm sm:text-base" data-testid="text-chat-username">{displayName}</h3>
-            <p className="text-xs text-muted-foreground flex items-center gap-1">
-              <span className="w-1.5 h-1.5 bg-foreground rounded-full inline-block"></span>
-              Online
-            </p>
           </div>
         </div>
         <Button variant="ghost" size="icon" className="min-h-[44px] min-w-[44px]">
@@ -133,8 +130,8 @@ export default function ChatWindow({ conversationId, otherUser, onBack }: ChatWi
                 <div
                   className={`px-3 py-2 text-sm ${
                     isOwn
-                      ? "bg-foreground text-background rounded-2xl rounded-br-sm"
-                      : "bg-secondary border border-border rounded-2xl rounded-bl-sm"
+                      ? "bg-foreground text-background"
+                      : "bg-secondary border border-border"
                   }`}
                 >
                   {item.message.body}

@@ -49,6 +49,10 @@ export default function Jobs() {
   const { user, token } = useAuth();
   const { toast } = useToast();
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const requestedStudioId = new URLSearchParams(window.location.search).get("studio") ?? "";
+  const studioFilter = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(requestedStudioId)
+    ? requestedStudioId
+    : "";
 
   const { data: jobs, isLoading, isError, refetch } = useQuery<any[]>({
     queryKey: ["/api/jobs"],
@@ -91,6 +95,9 @@ export default function Jobs() {
     if (min && max) return `${min} - ${max}`;
     return min || max;
   };
+  const visibleJobs = studioFilter
+    ? (jobs ?? []).filter((item: any) => item.job?.studioId === studioFilter)
+    : (jobs ?? []);
 
   return (
     <div className="min-h-screen bg-background">
@@ -247,15 +254,15 @@ export default function Jobs() {
             <p className="text-muted-foreground mb-2">Failed to load jobs</p>
             <button onClick={() => refetch()} className="text-sm text-primary underline">Try again</button>
           </div>
-        ) : !jobs?.length ? (
+        ) : visibleJobs.length === 0 ? (
           <EmptyState
             icon={Briefcase}
-            title="No jobs posted yet"
-            description="Check back soon for new opportunities in the tattoo industry."
+            title={studioFilter ? "No jobs from this studio yet" : "No jobs posted yet"}
+            description={studioFilter ? "This studio does not have an open role right now." : "Check back soon for new opportunities in the tattoo industry."}
           />
         ) : (
           <div className="space-y-4">
-            {jobs?.map((item: any) => (
+            {visibleJobs.map((item: any) => (
               <Link key={item.job.id} href={`/jobs/${item.job.id}`}>
                 <Card className="p-6 cursor-pointer hover:shadow-md transition-shadow border-border" data-testid={`job-${item.job.id}`}>
                   <div className="flex items-start gap-4">

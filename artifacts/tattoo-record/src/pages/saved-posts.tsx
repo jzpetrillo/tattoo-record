@@ -2,7 +2,8 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 import PostCard from "@/components/posts/post-card";
-import { Bookmark } from "lucide-react";
+import { Bookmark, AlertCircle } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import SidebarNav from "@/components/layout/sidebar-nav";
 import MobileNav from "@/components/layout/mobile-nav";
 import { FeedSkeleton } from "@/components/ui/skeletons";
@@ -32,7 +33,7 @@ export default function SavedPostsPage() {
   const { token } = useAuth();
   const [selectedCollection, setSelectedCollection] = useState<string | null>(null);
 
-  const { data: savedPosts = [], isLoading } = useQuery<SavedPostItem[]>({
+  const { data: savedPosts = [], isLoading, isError, refetch } = useQuery<SavedPostItem[]>({
     queryKey: ["/api/saved-posts"],
     enabled: !!token,
   });
@@ -89,6 +90,12 @@ export default function SavedPostsPage() {
 
         {isLoading ? (
           <FeedSkeleton count={3} />
+        ) : isError ? (
+          <div className="py-12 text-center text-muted-foreground">
+            <AlertCircle className="mx-auto mb-2 h-8 w-8" />
+            <p>Failed to load saved posts.</p>
+            <Button variant="link" onClick={() => refetch()}>Try again</Button>
+          </div>
         ) : filteredPosts.length === 0 ? (
           <EmptyState
             icon={Bookmark}

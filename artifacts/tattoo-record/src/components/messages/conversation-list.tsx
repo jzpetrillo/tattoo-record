@@ -9,6 +9,7 @@ import { MessageCircle, AlertCircle } from "lucide-react";
 import UserAvatar from "@/components/user-avatar";
 
 export interface OtherUser {
+  id?: string;
   username: string;
   avatarUrl?: string | null;
 }
@@ -97,6 +98,7 @@ export default function ConversationList({ onSelectConversation, selectedConvers
                 key={conv.conversation.id}
                 onClick={() =>
                   onSelectConversation(conv.conversation.id, {
+                    id: other?.id,
                     username: other?.username ?? title,
                     avatarUrl: other?.avatarUrl ?? null,
                   })
@@ -107,9 +109,8 @@ export default function ConversationList({ onSelectConversation, selectedConvers
                 data-testid={`conversation-${conv.conversation.id}`}
               >
                 <div className="flex items-center gap-3">
-                  <div className="relative flex-shrink-0">
+                  <div className="flex-shrink-0">
                     <UserAvatar {...other} displayName={title} className="w-12 h-12" />
-                    <span className="absolute bottom-0 right-0 w-3 h-3 bg-foreground border-2 border-card rounded-full" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between mb-0.5">

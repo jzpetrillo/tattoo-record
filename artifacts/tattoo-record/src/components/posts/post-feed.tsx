@@ -63,7 +63,9 @@ export default function PostFeed() {
         <div className="border border-ink bg-paper px-4 py-10 sm:p-12 text-center">
           <p className="press-nameplate text-2xl sm:text-3xl text-ink">Your feed is empty</p>
           <p className="mt-3 text-sm text-ink/70 max-w-md mx-auto">
-            Follow some artists to fill it.
+            Follow artists and studios to make this a personal stream of new
+            work. Explore the community or publish something of your own to
+            get the conversation started.
           </p>
           {suggestedUsers.length > 0 && (
             <div className="mt-7 text-left max-w-lg mx-auto">

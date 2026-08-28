@@ -52,13 +52,13 @@ export default function Home() {
 
         <div className="max-w-[630px] mx-auto lg:pt-8 px-4 lg:px-0">
           {/* Stories Bar */}
-          <div className="border border-border rounded-lg mb-4 bg-background mt-4 lg:mt-0">
+          <div className="border border-border mb-4 bg-background mt-4 lg:mt-0">
             <StoriesBar />
           </div>
 
           {/* Featured Error */}
           {featuredError && (
-            <div className="mb-4 text-center py-6 border border-border rounded-lg">
+            <div className="mb-4 text-center py-6 border border-border">
               <AlertCircle className="w-6 h-6 mx-auto mb-2 text-muted-foreground" />
               <p className="text-sm text-muted-foreground mb-1">Failed to load featured posts</p>
               <button onClick={() => refetchFeatured()} className="text-sm text-primary underline">Try again</button>
@@ -67,7 +67,7 @@ export default function Home() {
 
           {/* Featured Content Loading */}
           {featuredLoading && (
-            <Card className="mb-4 p-4 border-border">
+            <Card className="mb-4 p-4 border-border rounded-none">
               <div className="flex items-center gap-2 mb-3">
                 <Skeleton className="w-5 h-5 rounded" />
                 <Skeleton className="h-4 w-24" />
@@ -86,7 +86,7 @@ export default function Home() {
 
           {/* Featured Content */}
           {!featuredLoading && featuredPosts.length > 0 && (
-            <Card className="mb-4 p-4 border-border" data-testid="featured-section">
+            <Card className="mb-4 p-4 border-border rounded-none" data-testid="featured-section">
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-2">
                   <Star className="w-5 h-5 text-foreground fill-current" />
@@ -95,14 +95,14 @@ export default function Home() {
                 <div className="flex gap-2">
                   <button
                     onClick={() => scrollFeatured('left')}
-                    className="p-1 hover:bg-secondary rounded transition-colors"
+                    className="min-h-[44px] min-w-[44px] inline-flex items-center justify-center hover:bg-secondary transition-colors touch-manipulation"
                     data-testid="featured-scroll-left"
                   >
                     <ChevronLeft className="w-5 h-5" />
                   </button>
                   <button
                     onClick={() => scrollFeatured('right')}
-                    className="p-1 hover:bg-secondary rounded transition-colors"
+                    className="min-h-[44px] min-w-[44px] inline-flex items-center justify-center hover:bg-secondary transition-colors touch-manipulation"
                     data-testid="featured-scroll-right"
                   >
                     <ChevronRight className="w-5 h-5" />

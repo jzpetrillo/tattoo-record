@@ -126,7 +126,6 @@ export default function Settings() {
       return res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
       queryClient.invalidateQueries({ queryKey: ["/api/users/me"] });
       setAvatarFile(null);
       setBannerFile(null);

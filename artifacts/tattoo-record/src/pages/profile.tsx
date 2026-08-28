@@ -2,7 +2,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import SidebarNav from "@/components/layout/sidebar-nav";
 import MobileNav from "@/components/layout/mobile-nav";
 import { useAuth } from "@/hooks/use-auth";
-import { Building2, Check, X, MapPin, Globe, Star, Film, Image as ImageIcon, MessageCircle, Heart, Briefcase, Palette, UserPlus, UserMinus, Calendar, Loader2, Plus, Edit, Trash2 } from "lucide-react";
+import { Building2, Check, X, MapPin, Globe, Star, Film, Image as ImageIcon, MessageCircle, Heart, Briefcase, Palette, UserPlus, UserMinus, Calendar, Loader2, Plus, Edit, Trash2, AlertCircle } from "lucide-react";
 import { StudioConnectionDialog } from "@/components/studio-connection-dialog";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
@@ -24,7 +24,7 @@ type TabType = "POSTS" | "VIDEOS" | "PORTFOLIO";
 interface UserProfile {
   id: string;
   username: string;
-  email: string;
+  email?: string;
   role: "ARTIST" | "STUDIO" | "ENTHUSIAST" | "ADMIN";
   firstName?: string;
   lastName?: string;
@@ -73,33 +73,33 @@ export default function Profile() {
   });
 
   // Fetch profile user data if viewing another user's profile
-  const { data: profileUserData, isLoading: isLoadingProfile } = useQuery<UserProfile>({
+  const { data: profileUserData, isLoading: isLoadingProfile, isError: profileError, refetch: refetchProfile } = useQuery<UserProfile>({
     queryKey: [`/api/users/${username}`],
-    enabled: !!username && !!token,
+    enabled: !!username,
   });
 
   // Use profile user if viewing another user, otherwise use logged-in user
   const user: UserProfile | null = username && profileUserData ? profileUserData : currentUser as UserProfile | null;
   const isOwnProfile = !username || username === currentUser?.username;
 
-  const { data: userStats } = useQuery<UserStats>({
+  const { data: userStats, isError: statsError, refetch: refetchStats } = useQuery<UserStats>({
     queryKey: [`/api/users/${user?.id}/stats`],
     enabled: !!token && !!user,
   });
 
   // Fetch posts/videos based on active tab
   const postType = activeTab === "POSTS" ? "POST" : "REEL";
-  const { data: userPosts } = useQuery<any[]>({
+  const { data: userPosts, isError: postsError, refetch: refetchPosts } = useQuery<any[]>({
     queryKey: [`/api/posts?authorId=${user?.id}&type=${postType}`],
     enabled: !!token && !!user && activeTab !== "PORTFOLIO",
   });
 
   // Fetch portfolio items
-  const { data: portfolioItems } = useQuery<PortfolioItem[]>({
+  const { data: portfolioItems, isError: portfolioError, refetch: refetchPortfolio } = useQuery<PortfolioItem[]>({
     queryKey: [`/api/portfolio/${user?.id}`],
     enabled: !!token && !!user && activeTab === "PORTFOLIO",
   });
-  const { data: uploadStatus } = useQuery<{ available: boolean }>({
+  const { data: uploadStatus, isError: uploadStatusError, refetch: refetchUploadStatus } = useQuery<{ available: boolean }>({
     queryKey: ["/api/upload/status"],
     queryFn: async () => {
       const res = await apiRequestLib("GET", "/api/upload/status", undefined, token!);
@@ -109,17 +109,17 @@ export default function Profile() {
   });
   const uploadsAvailable = uploadStatus?.available === true;
 
-  const { data: studioConnection } = useQuery<{ studio?: UserProfile }>({
+  const { data: studioConnection, isError: studioError, refetch: refetchStudio } = useQuery<{ studio?: UserProfile }>({
     queryKey: [`/api/artists/${user?.id}/studio`],
     enabled: !!token && !!user && user?.role === "ARTIST",
   });
 
-  const { data: connectedArtists } = useQuery<any[]>({
+  const { data: connectedArtists, isError: artistsError, refetch: refetchArtists } = useQuery<any[]>({
     queryKey: [`/api/studios/${user?.id}/artists`],
     enabled: !!token && !!user && user?.role === "STUDIO",
   });
 
-  const { data: pendingRequests } = useQuery<any[]>({
+  const { data: pendingRequests, isError: requestsError, refetch: refetchRequests } = useQuery<any[]>({
     queryKey: ["/api/studio-approvals", currentUser?.id, "PENDING"],
     queryFn: async () => {
       const res = await apiRequestLib("GET", "/api/studio-approvals?status=PENDING", undefined, token!);
@@ -134,7 +134,7 @@ export default function Profile() {
   );
 
   // Check if current user follows this profile
-  const { data: followStatus } = useQuery<{ isFollowing: boolean }>({
+  const { data: followStatus, isError: followError, refetch: refetchFollow } = useQuery<{ isFollowing: boolean }>({
     queryKey: [`/api/users/${user?.id}/is-following`],
     enabled: !!token && !!user && !isOwnProfile,
   });
@@ -313,10 +313,40 @@ export default function Profile() {
     );
   }
 
+  const activeProfileError = profileError || statsError ||
+    (activeTab === "PORTFOLIO" ? portfolioError : postsError) ||
+    studioError || artistsError || requestsError || followError || uploadStatusError;
+  const retryProfile = () => {
+    refetchProfile();
+    refetchStats();
+    if (activeTab === "PORTFOLIO") refetchPortfolio(); else refetchPosts();
+    refetchStudio();
+    refetchArtists();
+    refetchRequests();
+    refetchFollow();
+    refetchUploadStatus();
+  };
+
+  if (activeProfileError) {
+    return (
+      <div className="min-h-screen bg-background">
+        <SidebarNav />
+        <main className="lg:ml-64 flex min-h-[60vh] items-center justify-center pb-20">
+          <div className="text-center text-muted-foreground">
+            <AlertCircle className="mx-auto mb-2 h-8 w-8" />
+            <p>Failed to load this profile.</p>
+            <Button variant="link" onClick={retryProfile}>Try again</Button>
+          </div>
+        </main>
+        <MobileNav />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background">
       <SidebarNav />
-      <main className="lg:ml-64 pb-20 lg:pb-8">
+      <main className="lg:ml-64 pb-20 lg:pb-8 min-w-0 overflow-x-clip">
         {/* Banner Image with Grid Overlay */}
         {user?.bannerImageUrl && (
           <div className="relative w-full h-48 md:h-64 lg:h-80 overflow-hidden bg-secondary">
@@ -329,7 +359,7 @@ export default function Profile() {
           </div>
         )}
         
-        <div className="max-w-5xl mx-auto"><div className="border border-border mx-4 mt-6">
+        <div className="max-w-5xl mx-auto min-w-0"><div className="border border-border mx-4 mt-6 min-w-0 overflow-hidden">
 
           {/* Identity row */}
           <div className="px-6 py-6 border-b border-border">
@@ -411,7 +441,7 @@ export default function Profile() {
                   )}
                   <Button
                     size="sm"
-                    onClick={() => navigate(`/messages?withUserId=${user?.id}`)}
+                    onClick={() => navigate(`/messages?withUserId=${encodeURIComponent(user!.id)}`)}
                     data-testid="button-message"
                     className="border border-border bg-background hover:bg-secondary text-foreground"
                   >
@@ -549,10 +579,10 @@ export default function Profile() {
 
         {/* Tabs - Posts, Videos, Portfolio */}
         <div className="border-b border-border">
-          <div className="flex items-center justify-center gap-0">
+          <div className="grid grid-cols-3 min-w-0">
             <button
               onClick={() => setActiveTab("POSTS")}
-              className={`flex items-center gap-2 px-6 py-3 transition-colors ${
+              className={`flex min-w-0 items-center justify-center gap-2 px-2 py-3 transition-colors ${
                 activeTab === "POSTS" ? "bg-cobalt text-white font-semibold" : "text-muted-foreground hover:text-foreground hover:bg-secondary"
               }`}
               data-testid="tab-posts"
@@ -562,7 +592,7 @@ export default function Profile() {
             </button>
             <button 
               onClick={() => setActiveTab("VIDEOS")}
-              className={`flex items-center gap-2 px-4 py-3 transition-colors ${
+              className={`flex min-w-0 items-center justify-center gap-2 px-2 py-3 transition-colors ${
                 activeTab === "VIDEOS" ? "bg-cobalt text-white font-semibold" : "text-muted-foreground hover:text-foreground hover:bg-secondary"
               }`}
               data-testid="tab-videos"
@@ -572,7 +602,7 @@ export default function Profile() {
             </button>
             <button 
               onClick={() => setActiveTab("PORTFOLIO")}
-              className={`flex items-center gap-2 px-4 py-3 transition-colors ${
+              className={`flex min-w-0 items-center justify-center gap-2 px-2 py-3 transition-colors ${
                 activeTab === "PORTFOLIO" ? "bg-cobalt text-white font-semibold" : "text-muted-foreground hover:text-foreground hover:bg-secondary"
               }`}
               data-testid="tab-portfolio"
@@ -661,7 +691,7 @@ export default function Profile() {
               {portfolioItems?.map((item: any) => (
                 <div 
                   key={item.id} 
-                  className="bg-card border border-border rounded-lg overflow-hidden group cursor-pointer hover:shadow-xl transition-all relative"
+                  className="bg-card border border-border overflow-hidden group cursor-pointer hover:shadow-xl transition-all relative"
                   data-testid={`portfolio-${item.id}`}
                 >
                   {/* Edit/Delete buttons for own profile */}

@@ -144,7 +144,7 @@ export default function CreatePostModal({ open, onClose, defaultTab = "post" }: 
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl w-[calc(100%-2rem)] sm:w-full max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-2xl w-[calc(100%-2rem)] sm:w-full max-h-[90vh] overflow-y-auto sm:rounded-none">
         <DialogHeader>
           <DialogTitle>Create New Content</DialogTitle>
         </DialogHeader>
@@ -166,7 +166,7 @@ export default function CreatePostModal({ open, onClose, defaultTab = "post" }: 
           </TabsList>
 
           <TabsContent value="post" className="space-y-4 sm:space-y-6 mt-4 sm:mt-6">
-            <div className="border-2 border-dashed border-border rounded-xl p-6 sm:p-12 text-center hover:border-primary active:border-primary transition-colors cursor-pointer bg-secondary/20 touch-manipulation">
+            <div className="border-2 border-dashed border-border p-6 sm:p-12 text-center hover:border-primary active:border-primary transition-colors cursor-pointer bg-secondary/20 touch-manipulation">
               <ImageIcon className="w-10 h-10 sm:w-12 sm:h-12 mx-auto text-muted-foreground mb-3 sm:mb-4" />
               <p className="text-sm font-medium mb-2">Tap to add photos or videos</p>
               <p className="text-xs text-muted-foreground mb-4">or drag and drop</p>
@@ -210,7 +210,7 @@ export default function CreatePostModal({ open, onClose, defaultTab = "post" }: 
               <div className="grid grid-cols-2 gap-2 sm:gap-3">
                 <button
                   onClick={() => setVisibility("PUBLIC")}
-                  className={`flex items-center justify-center gap-2 rounded-lg p-3 min-h-[48px] transition-colors touch-manipulation ${
+                  className={`flex items-center justify-center gap-2 p-3 min-h-[48px] transition-colors touch-manipulation ${
                     visibility === "PUBLIC"
                       ? "bg-primary/20 border border-primary text-primary"
                       : "bg-secondary border border-border text-muted-foreground"
@@ -221,7 +221,7 @@ export default function CreatePostModal({ open, onClose, defaultTab = "post" }: 
                 </button>
                 <button
                   onClick={() => setVisibility("FOLLOWERS")}
-                  className={`flex items-center justify-center gap-2 rounded-lg p-3 min-h-[48px] transition-colors touch-manipulation ${
+                  className={`flex items-center justify-center gap-2 p-3 min-h-[48px] transition-colors touch-manipulation ${
                     visibility === "FOLLOWERS"
                       ? "bg-primary/20 border border-primary text-primary"
                       : "bg-secondary border border-border text-muted-foreground"
@@ -235,7 +235,7 @@ export default function CreatePostModal({ open, onClose, defaultTab = "post" }: 
           </TabsContent>
 
           <TabsContent value="story" className="space-y-4 sm:space-y-6 mt-4 sm:mt-6">
-            <div className="border-2 border-dashed border-border rounded-xl p-6 sm:p-12 text-center hover:border-primary active:border-primary transition-colors cursor-pointer bg-secondary/20 touch-manipulation">
+            <div className="border-2 border-dashed border-border p-6 sm:p-12 text-center hover:border-primary active:border-primary transition-colors cursor-pointer bg-secondary/20 touch-manipulation">
               <Clock className="w-10 h-10 sm:w-12 sm:h-12 mx-auto text-muted-foreground mb-3 sm:mb-4" />
               <p className="text-sm font-medium mb-2">Add to your story</p>
               <p className="text-xs text-muted-foreground mb-4">Stories disappear after 24 hours</p>
@@ -264,7 +264,7 @@ export default function CreatePostModal({ open, onClose, defaultTab = "post" }: 
           </TabsContent>
 
           <TabsContent value="reel" className="space-y-4 sm:space-y-6 mt-4 sm:mt-6">
-            <div className="border-2 border-dashed border-border rounded-xl p-6 sm:p-12 text-center hover:border-primary active:border-primary transition-colors cursor-pointer bg-secondary/20 touch-manipulation">
+            <div className="border-2 border-dashed border-border p-6 sm:p-12 text-center hover:border-primary active:border-primary transition-colors cursor-pointer bg-secondary/20 touch-manipulation">
               <VideoIcon className="w-10 h-10 sm:w-12 sm:h-12 mx-auto text-muted-foreground mb-3 sm:mb-4" />
               <p className="text-sm font-medium mb-2">Upload your reel</p>
               <p className="text-xs text-muted-foreground mb-4">Short vertical video</p>
@@ -307,7 +307,7 @@ export default function CreatePostModal({ open, onClose, defaultTab = "post" }: 
               <div className="grid grid-cols-2 gap-2 sm:gap-3">
                 <button
                   onClick={() => setVisibility("PUBLIC")}
-                  className={`flex items-center justify-center gap-2 rounded-lg p-3 min-h-[48px] transition-colors touch-manipulation ${
+                  className={`flex items-center justify-center gap-2 p-3 min-h-[48px] transition-colors touch-manipulation ${
                     visibility === "PUBLIC"
                       ? "bg-primary/20 border border-primary text-primary"
                       : "bg-secondary border border-border text-muted-foreground"
@@ -318,7 +318,7 @@ export default function CreatePostModal({ open, onClose, defaultTab = "post" }: 
                 </button>
                 <button
                   onClick={() => setVisibility("FOLLOWERS")}
-                  className={`flex items-center justify-center gap-2 rounded-lg p-3 min-h-[48px] transition-colors touch-manipulation ${
+                  className={`flex items-center justify-center gap-2 p-3 min-h-[48px] transition-colors touch-manipulation ${
                     visibility === "FOLLOWERS"
                       ? "bg-primary/20 border border-primary text-primary"
                       : "bg-secondary border border-border text-muted-foreground"

@@ -10,20 +10,24 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import UserAvatar from "@/components/user-avatar";
+import { apiRequest } from "@/lib/queryClient";
 
 export default function Search() {
   const { token } = useAuth();
   const aiEnabled = import.meta.env.VITE_AI_ENABLED === 'true';
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchQuery, setSearchQuery] = useState(() => new URLSearchParams(window.location.search).get("q") ?? "");
   const [semanticMode, setSemanticMode] = useState(false);
 
-  const { data: searchData, isLoading } = useQuery<{ users: any[]; posts: any[]; hashtags: any[] }>({
-    queryKey: [`/api/search?q=${searchQuery}`],
+  const encodedQuery = encodeURIComponent(searchQuery.trim());
+  const { data: searchData, isLoading, isError, refetch } = useQuery<{ users: any[]; posts: any[]; hashtags: any[] }>({
+    queryKey: ["/api/search", encodedQuery],
+    queryFn: async () => (await apiRequest("GET", `/api/search?q=${encodedQuery}`)).json(),
     enabled: !!token && searchQuery.length > 0 && !semanticMode,
   });
 
-  const { data: semanticData, isLoading: isSemanticLoading } = useQuery<{ posts: any[]; available: boolean }>({
-    queryKey: [`/api/search/semantic?q=${searchQuery}`],
+  const { data: semanticData, isLoading: isSemanticLoading, isError: isSemanticError, refetch: refetchSemantic } = useQuery<{ posts: any[]; available: boolean }>({
+    queryKey: ["/api/search/semantic", encodedQuery],
+    queryFn: async () => (await apiRequest("GET", `/api/search/semantic?q=${encodedQuery}`)).json(),
     enabled: !!token && searchQuery.length > 0 && semanticMode && aiEnabled,
   });
 
@@ -101,9 +105,17 @@ export default function Search() {
                   ))}
                 </div>
               )}
+              {!loading && (semanticMode ? isSemanticError : isError) && (
+                <div className="border border-border py-8 text-center text-sm text-muted-foreground">
+                  <p>Search could not be completed.</p>
+                  <Button variant="link" onClick={() => semanticMode ? refetchSemantic() : refetch()} className="mt-1 px-0">
+                    Try again
+                  </Button>
+                </div>
+              )}
 
               {/* ── Semantic results ── */}
-              {aiEnabled && semanticMode && !loading && (
+              {aiEnabled && semanticMode && !loading && !isSemanticError && (
                 <>
                   {!semanticAvailable && (
                     <p className="text-sm text-muted-foreground py-4 text-center border border-border">
@@ -166,13 +178,13 @@ export default function Search() {
               )}
 
               {/* ── Text-search results ── */}
-              {!semanticMode && !loading && !hasResults && (
+              {!semanticMode && !loading && !isError && !hasResults && (
                 <p className="text-sm text-muted-foreground py-4 text-center border border-border">
                   No results for &ldquo;{searchQuery}&rdquo;
                 </p>
               )}
 
-              {!semanticMode && (
+              {!semanticMode && !isError && (
                 <>
                   {/* Users */}
                   {!loading && users.length > 0 && (
