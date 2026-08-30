@@ -1,0 +1,46 @@
+Replace Cloudinary with Replit Object Storage in "Tattoo Record" (pnpm monorepo; API = artifacts/api-server/src, web = artifacts/tattoo-record/src). Media = post images/videos, avatars, banners, portfolio, stories. Run `pnpm run typecheck` + `pnpm run build` after. 
+
+PREREQUISITE (human, in Replit UI): open the Object Storage tool and CREATE a bucket. That provisions it and auto-wires the connection — no API keys/secrets go in code. The `@replit/object-storage` Client reads the bucket config from the Replit environment automatically.
+
+Install: add `@replit/object-storage` to artifacts/api-server (pnpm). Remove the `cloudinary` dependency.
+
+=== 1. New storage service — artifacts/api-server/src/services/object-storage.ts (replaces cloudinary.ts) ===
+Use `import { Client } from "@replit/object-storage"; const client = new Client();`. Note its methods return a Result object ({ ok, value?, error? }) — check `.ok`, don't rely on throws.
+Export, keeping the SAME shapes the routes already consume:
+- `isStorageConfigured(): boolean` — true if a bucket is available (e.g. the Replit object-storage env/bucket id is present, or a lightweight client init check). Used for the 503 guard.
+- `uploadMedia(file: Buffer, folder: string, userId: string, mimetype: string): Promise<UploadResult>`:
+    - Build a namespaced key: `${folder}/${userId}/${crypto.randomUUID()}.${extFromMime(mimetype)}` (folder ∈ posts|stories|portfolios|avatars|banners|messages|general). Namespacing by userId is REQUIRED (the current code's delete ownership check depends on `/${userId}/` in the key, and today's upload doesn't add it — fixing that here).
+    - `await client.uploadFromBytes(key, file)`; if not ok, throw.
+    - Return `{ publicId: key, url: `/api/media/${key}`, type: mimetype.startsWith("video") ? "video" : "image" }` (lowercase type, matching prior Cloudinary output; width/height/duration are optional and omitted).
+- `deleteMedia(key: string): Promise<void>` — `await client.delete(key)`.
+- `getMediaStream(key)` / `downloadMedia(key)` — return the object's bytes or a readable stream (use `downloadAsStream` for video/range support) for the serving route.
+- small `extFromMime()` + `contentTypeFromKey()` helper (map jpg/png/webp/gif/mp4/webm/mov). You may use a `mime-types` dep or a small inline map.
+
+=== 2. Serving route (NEW — this is what replaces the public Cloudinary URL) ===
+Add `GET /api/media/*key` (PUBLIC, no auth — media is embedded in public posts):
+- Resolve the wildcard to the object key. Reject keys not under the known folders (posts/stories/portfolios/avatars/banners/messages/general) → 404.
+- Stream the object to the response with the correct `Content-Type` (from the key's extension) and `Cache-Control: public, max-age=31536000, immutable` (keys are content-addressed by UUID).
+- SUPPORT HTTP RANGE requests (honor the `Range` header, return 206 + Content-Range) so `<video>` reels/posts play and seek correctly. If the object is missing → 404.
+Register this BEFORE the Vite/SPA catch-all so it isn't swallowed.
+
+=== 3. Update the upload + delete routes (artifacts/api-server/src/routes/routes.ts ~1888-1939) ===
+- Swap imports: `isCloudinaryConfigured`→`isStorageConfigured`, keep `uploadMedia`/`deleteMedia` names.
+- POST /api/upload: keep requireAuth + MIME allowlist + 50MB cap. Guard with `isStorageConfigured()` (503 same message). Call `uploadMedia(req.file.buffer, folder, req.userId!, req.file.mimetype)`.
+- DELETE /api/upload/*publicId: key is now `${folder}/${userId}/<uuid>.<ext>`. Simplify the ownership check to: authorized only if the key `.includes(`/${req.userId}/`)` AND starts with a known folder. Then `deleteMedia(key)`.
+
+=== 4. CSP + config cleanup ===
+- Media is now same-origin (`/api/media/...`), so `img-src`/`media-src 'self'` already covers it. In the server CSP (helmet config), REMOVE `res.cloudinary.com` from img-src/media-src. KEEP `https://api.dicebear.com` (seed avatars still use it) and any blob:/data: entries.
+- Remove CLOUDINARY_* from .env.example and any docs; delete services/cloudinary.ts.
+- Leave existing DB rows that still hold absolute cloudinary/dicebear URLs alone — they remain valid; only NEW uploads use `/api/media/...`. No data migration needed.
+
+=== 5. Client ===
+No change needed to lib/api.ts `uploadFile` (still POSTs to /api/upload and reads the returned `url`). Just verify components render the returned `/api/media/...` URL directly in <img>/<video> (they use the `url` field, so this should just work). Confirm the create-post modal, avatar/banner upload in settings, and portfolio upload all still function.
+
+=== VERIFY ===
+- After creating a bucket: POST an image via the create-post modal → 200, post shows the image from `/api/media/...`.
+- Set an avatar in settings → avatar renders app-wide.
+- Upload + play a short video (reel/post) → `<video>` streams and seeks (Range works).
+- DELETE own media → 200; deleting another user's key → 403.
+- With NO bucket configured, /api/upload returns the graceful 503 (not a 500).
+- No remaining references to `cloudinary` in the codebase (`grep -ri cloudinary artifacts lib`).
+Summarize files changed/added/deleted.
