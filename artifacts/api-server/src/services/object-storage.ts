@@ -55,6 +55,27 @@ export class ObjectStorageError extends Error {
   }
 }
 
+interface StorageFile {
+  getMetadata(): Promise<[StorageFileMetadata]>;
+}
+
+interface StorageFileMetadata {
+  size?: string | number;
+}
+
+interface StorageBucket {
+  file(name: string): StorageFile;
+}
+
+type RuntimeClientState =
+  | { status: "initializing"; promise: Promise<StorageBucket> }
+  | { status: "ready"; bucket: StorageBucket }
+  | { status: "error"; error: string };
+
+interface RuntimeClient {
+  state: RuntimeClientState;
+}
+
 function resultError(error: RequestError | Error | string): string {
   if (typeof error === "string") return error;
   return error.message || "Object Storage request failed";
@@ -85,6 +106,19 @@ function getClient(): Client {
   }
   client ??= new Client({ bucketId });
   return client;
+}
+
+async function getBucket(): Promise<StorageBucket> {
+  // The public SDK exposes streaming, but not object metadata. Its client keeps
+  // the initialized bucket internally, so use that same bucket rather than
+  // creating a second storage client with separate credentials/configuration.
+  const runtimeClient = getClient() as unknown as RuntimeClient;
+  const state = runtimeClient.state;
+  if (state.status === "initializing") return state.promise;
+  if (state.status === "error") {
+    throw new ObjectStorageError(state.error);
+  }
+  return state.bucket;
 }
 
 export function extFromMime(mimetype: string): string {
@@ -139,11 +173,53 @@ export async function deleteMedia(key: string): Promise<void> {
   if (!result.ok) throwResultError(result);
 }
 
-export function getMediaStream(key: string): Readable {
+export interface MediaStreamRange {
+  start: number;
+  end: number;
+}
+
+export function getMediaStream(key: string, range?: MediaStreamRange): Readable {
   if (!isManagedMediaKey(key)) {
     throw new ObjectStorageError("Invalid media key", 400);
   }
-  return getClient().downloadAsStream(key);
+
+  // The SDK forwards these options to Google Cloud Storage's
+  // createReadStream, which makes the storage service fetch only this range.
+  const options = range
+    ? ({ start: range.start, end: range.end } as unknown as Parameters<Client["downloadAsStream"]>[1])
+    : undefined;
+  return getClient().downloadAsStream(key, options);
+}
+
+export async function getMediaSize(key: string): Promise<number> {
+  if (!isManagedMediaKey(key)) {
+    throw new ObjectStorageError("Invalid media key", 400);
+  }
+
+  try {
+    const [metadata] = await (await getBucket()).file(key).getMetadata();
+    const size = typeof metadata.size === "number" ? metadata.size : Number(metadata.size);
+    if (!Number.isSafeInteger(size) || size < 0) {
+      throw new ObjectStorageError("Object Storage returned invalid media metadata");
+    }
+    return size;
+  } catch (error) {
+    if (error instanceof ObjectStorageError) throw error;
+    const statusCode =
+      typeof error === "object" &&
+      error !== null &&
+      "code" in error &&
+      typeof error.code === "number"
+        ? error.code
+        : undefined;
+    const message =
+      error instanceof Error
+        ? error.message
+        : typeof error === "string"
+          ? error
+          : "Object Storage request failed";
+    throw new ObjectStorageError(message, statusCode);
+  }
 }
 
 export async function downloadMedia(key: string): Promise<Buffer> {

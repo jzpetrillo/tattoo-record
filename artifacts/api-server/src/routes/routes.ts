@@ -1,5 +1,6 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
+import { Readable } from "node:stream";
 import { createHash, randomBytes } from "crypto";
 import bcrypt from "bcrypt";
 import multer from "multer";
@@ -11,7 +12,8 @@ import { storage } from "../storage";
 import { requireAuth, optionalAuth, requireRole, generateToken, type AuthRequest } from "../middleware/auth";
 import {
   contentTypeFromKey,
-  downloadMedia,
+  getMediaSize,
+  getMediaStream,
   isManagedMediaKey,
   isStorageConfigured,
   MEDIA_FOLDERS,
@@ -58,6 +60,25 @@ function publicUser(user: schema.User) {
     verificationStatus: user.verificationStatus,
     createdAt: user.createdAt,
   };
+}
+
+function pipeMediaStream(stream: Readable, res: import("express").Response) {
+  stream.once("error", (error: unknown) => {
+    if (res.headersSent) {
+      res.destroy(error instanceof Error ? error : undefined);
+      return;
+    }
+
+    if (error instanceof Error && /not found/i.test(error.message)) {
+      res.status(404).end();
+      return;
+    }
+
+    console.error("[media] Failed to stream object:", error);
+    res.status(500).end();
+  });
+  stream.pipe(res);
+  return res;
 }
 
 // Safe error responder: surfaces Zod validation messages (400) but returns a
@@ -1965,7 +1986,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
 
     try {
-      const media = await downloadMedia(key);
+      const mediaSize = await getMediaSize(key);
       const rangeHeader = req.headers.range;
       const contentType = contentTypeFromKey(key);
       res.setHeader("Content-Type", contentType);
@@ -1974,29 +1995,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
 
       if (!rangeHeader) {
-        res.setHeader("Content-Length", media.length);
-        return res.status(200).end(media);
+        res.setHeader("Content-Length", mediaSize);
+        res.status(200);
+        return pipeMediaStream(getMediaStream(key), res);
       }
 
       const match = /^bytes=(\d*)-(\d*)$/.exec(rangeHeader);
       if (!match || (!match[1] && !match[2])) {
-        res.setHeader("Content-Range", `bytes */${media.length}`);
+        res.setHeader("Content-Range", `bytes */${mediaSize}`);
         return res.status(416).end();
       }
 
-      let start = match[1] ? Number(match[1]) : Math.max(media.length - Number(match[2]), 0);
-      let end = match[2] ? Number(match[2]) : media.length - 1;
-      if (!Number.isSafeInteger(start) || !Number.isSafeInteger(end) || start < 0 || start >= media.length || start > end) {
-        res.setHeader("Content-Range", `bytes */${media.length}`);
+      let start = match[1] ? Number(match[1]) : Math.max(mediaSize - Number(match[2]), 0);
+      let end = match[2] ? Number(match[2]) : mediaSize - 1;
+      if (!Number.isSafeInteger(start) || !Number.isSafeInteger(end) || start < 0 || start >= mediaSize || start > end) {
+        res.setHeader("Content-Range", `bytes */${mediaSize}`);
         return res.status(416).end();
       }
-      end = Math.min(end, media.length - 1);
+      end = Math.min(end, mediaSize - 1);
 
-      const chunk = media.subarray(start, end + 1);
       res.status(206);
-      res.setHeader("Content-Range", `bytes ${start}-${end}/${media.length}`);
-      res.setHeader("Content-Length", chunk.length);
-      return res.end(chunk);
+      res.setHeader("Content-Range", `bytes ${start}-${end}/${mediaSize}`);
+      res.setHeader("Content-Length", end - start + 1);
+      return pipeMediaStream(getMediaStream(key, { start, end }), res);
     } catch (error: any) {
       if (error?.statusCode === 404 || /not found/i.test(error?.message || "")) {
         return res.status(404).end();
