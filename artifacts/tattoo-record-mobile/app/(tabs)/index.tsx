@@ -10,7 +10,7 @@ import * as Haptics from "expo-haptics";
 import * as ImagePicker from "expo-image-picker";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useColors } from "@/hooks/useColors";
-import { ApiError, api, jsonBody, uploadMedia } from "@/lib/api";
+import { ApiError, api, jsonBody, resolveMediaUrl, resolveMediaUrls, uploadMedia } from "@/lib/api";
 import { User, useAuth } from "@/context/AuthContext";
 import { KeyboardAwareScrollViewCompat } from "@/components/KeyboardAwareScrollViewCompat";
 
@@ -38,7 +38,7 @@ function useApiQuery<T>(key: string, path: string, token: string | null, enabled
   return useQuery({
     queryKey: [key, path, token],
     queryFn: async () => {
-      const response = await api<T>(path, {}, token);
+      const response = resolveMediaUrls(await api<T>(path, {}, token));
       if (path === "/api/conversations") {
         return (response as unknown as ConversationResponse[]).map(({ conversation, participants }) => ({
           ...conversation,
@@ -65,7 +65,7 @@ function initials(user?: User | null) {
 function Avatar({ user, size = 42 }: { user?: User | null; size?: number }) {
   const colors = useColors();
   return user?.avatarUrl ? (
-    <Image source={{ uri: user.avatarUrl }} style={{ width: size, height: size, borderRadius: size / 2 }} />
+    <Image source={{ uri: resolveMediaUrl(user.avatarUrl) }} style={{ width: size, height: size, borderRadius: size / 2 }} />
   ) : (
     <View style={[styles.avatar, { width: size, height: size, borderRadius: size / 2, backgroundColor: colors.foreground }]}>
       <Text style={[styles.avatarText, { fontSize: Math.max(12, size / 3.3), color: colors.background }]}>{initials(user)}</Text>
@@ -132,7 +132,7 @@ function PostCard({ item, token, onOpenProfile }: { item: Post; token: string; o
     <Pressable style={styles.postHeader} onPress={() => onOpenProfile(item.author)}>
       <Avatar user={item.author} size={38} /><View style={styles.flex}><Text style={[styles.username, { color: colors.foreground }]}>{item.author.username}</Text><Text style={[styles.meta, { color: colors.mutedForeground }]}>{item.author.role || "MEMBER"} {item.author.isVerified ? "· VERIFIED" : ""}</Text></View><Feather name="more-horizontal" size={20} color={colors.mutedForeground} />
     </Pressable>
-    {media ? <Image source={{ uri: media }} style={styles.postImage} resizeMode="cover" /> : <View style={[styles.noMedia, { backgroundColor: colors.secondary }]}><Feather name="image" size={30} color={colors.mutedForeground} /></View>}
+    {media ? <Image source={{ uri: resolveMediaUrl(media) }} style={styles.postImage} resizeMode="cover" /> : <View style={[styles.noMedia, { backgroundColor: colors.secondary }]}><Feather name="image" size={30} color={colors.mutedForeground} /></View>}
     <View style={styles.postActions}><IconButton name={liked ? "heart" : "heart"} onPress={() => likeMutation.mutate()} color={liked ? colors.destructive : colors.foreground} label="like post" /><IconButton name="message-circle" onPress={() => undefined} color={colors.foreground} label="comment on post" /><View style={styles.flex} /><IconButton name={saved ? "bookmark" : "bookmark"} onPress={() => saveMutation.mutate()} color={saved ? colors.primary : colors.foreground} label="save post" /></View>
     <View style={styles.postCopy}><Text style={[styles.likeCount, { color: colors.foreground }]}>{(item.post.likeCount || 0) + (liked && !item.isLiked ? 1 : 0)} likes</Text>{item.post.caption ? <Text style={[styles.caption, { color: colors.foreground }]}><Text style={styles.username}>{item.author.username} </Text>{item.post.caption}</Text> : null}</View>
   </View>;

@@ -5,6 +5,27 @@ const API_BASE = configuredDomain
   ? (configuredDomain.startsWith("http") ? configuredDomain : `https://${configuredDomain}`).replace(/\/+$/, "")
   : "";
 
+export function resolveMediaUrl(url?: string | null): string | undefined {
+  if (!url) return undefined;
+  if (!url.startsWith("/api/")) return url;
+  return `${API_BASE}${url}`;
+}
+
+export function resolveMediaUrls<T>(value: T): T {
+  if (typeof value === "string") {
+    return resolveMediaUrl(value) as T;
+  }
+  if (Array.isArray(value)) {
+    return value.map(resolveMediaUrls) as T;
+  }
+  if (value && typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value).map(([key, item]) => [key, resolveMediaUrls(item)]),
+    ) as T;
+  }
+  return value;
+}
+
 export class ApiError extends Error {
   status: number;
   constructor(status: number, message: string) {

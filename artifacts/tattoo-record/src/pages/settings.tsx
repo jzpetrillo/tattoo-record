@@ -113,10 +113,10 @@ export default function Settings() {
   const profileMutation = useMutation({
     mutationFn: async (data: ProfileFormValues) => {
       const avatarUrl = avatarFile
-        ? (await uploadFile(avatarFile, `avatars/${user!.id}`, token!)).url
+        ? (await uploadFile(avatarFile, "avatars", token!)).url
         : undefined;
       const bannerImageUrl = bannerFile
-        ? (await uploadFile(bannerFile, `banners/${user!.id}`, token!)).url
+        ? (await uploadFile(bannerFile, "banners", token!)).url
         : undefined;
       const res = await apiRequest("PUT", "/api/users/me", {
         ...data,

@@ -199,7 +199,7 @@ export default function Profile() {
   const createPortfolioMutation = useMutation({
     mutationFn: async () => {
       if (!portfolioForm.imageFile) throw new Error("Image is required");
-      const uploadedImage = await uploadFile(portfolioForm.imageFile, "portfolio", token!);
+       const uploadedImage = await uploadFile(portfolioForm.imageFile, "portfolios", token!);
       await apiRequestLib("POST", "/api/portfolio", {
         title: portfolioForm.title,
         description: portfolioForm.description,
@@ -222,7 +222,7 @@ export default function Profile() {
     mutationFn: async (item: any) => {
       let media = item.media || [];
       if (portfolioForm.imageFile) {
-        const uploadedImage = await uploadFile(portfolioForm.imageFile, "portfolio", token!);
+         const uploadedImage = await uploadFile(portfolioForm.imageFile, "portfolios", token!);
         media = [{ url: uploadedImage.secure_url || uploadedImage.url, type: "IMAGE" }];
       }
       await apiRequestLib("PUT", `/api/portfolio/${item.id}`, {

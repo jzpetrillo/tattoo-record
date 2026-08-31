@@ -1,7 +1,7 @@
 import { db } from "../db";
 import { stories } from "@workspace/db";
 import { lt } from "drizzle-orm";
-import { deleteMedia } from "./cloudinary";
+import { deleteMedia, isManagedMediaKey } from "./object-storage";
 
 export async function cleanupExpiredStories() {
   try {
@@ -12,7 +12,7 @@ export async function cleanupExpiredStories() {
 
     for (const story of expiredStories) {
       try {
-        if (story.media?.publicId) {
+        if (story.media?.publicId && isManagedMediaKey(story.media.publicId)) {
           await deleteMedia(story.media.publicId);
         }
       } catch (error) {

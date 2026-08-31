@@ -9,7 +9,15 @@ import { db, pool } from "../db";
 import * as schema from "@workspace/db";
 import { storage } from "../storage";
 import { requireAuth, optionalAuth, requireRole, generateToken, type AuthRequest } from "../middleware/auth";
-import { uploadMedia, deleteMedia, isCloudinaryConfigured } from "../services/cloudinary";
+import {
+  contentTypeFromKey,
+  downloadMedia,
+  isManagedMediaKey,
+  isStorageConfigured,
+  MEDIA_FOLDERS,
+  uploadMedia,
+  deleteMedia,
+} from "../services/object-storage";
 import { generateTattooRecommendations } from "../services/ai/recommendations";
 import { setupMessageWebSocket, broadcastNewMessage } from "../services/websocket";
 import { setupLiveWebSocket } from "../services/websocket-live";
@@ -1910,14 +1918,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Upload Routes
   app.get("/api/upload/status", requireAuth, (_req: AuthRequest, res) => {
-    res.json({ available: isCloudinaryConfigured() });
+    res.json({ available: isStorageConfigured() });
   });
 
   app.post("/api/upload", requireAuth, (req: AuthRequest, res, next) => {
-    if (!isCloudinaryConfigured()) {
+    if (!isStorageConfigured()) {
       return res.status(503).json({ message: "Image uploads are temporarily unavailable." });
     }
-    Reflect.apply(upload.single("file"), undefined, [req, res, next]);
+    upload.single("file")(req as any, res as any, (error) => {
+      if (error instanceof multer.MulterError) {
+        if (error.code === "LIMIT_FILE_SIZE") {
+          return res.status(413).json({ message: "File is too large. Maximum upload size is 50 MB." });
+        }
+        return res.status(400).json({ message: "Invalid file upload." });
+      }
+      if (error) return next(error);
+      next();
+    });
   }, async (req: AuthRequest, res) => {
     try {
       if (!req.file) {
@@ -1929,13 +1946,63 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const folder = req.body.folder || "general";
-      const resourceType = req.file.mimetype.startsWith("video") ? "video" : "image";
-      
-      const result = await uploadMedia(req.file.buffer, folder, resourceType);
+      if (!MEDIA_FOLDERS.includes(folder)) {
+        return res.status(400).json({ message: "Unsupported media folder" });
+      }
+
+      const result = await uploadMedia(req.file.buffer, folder, req.userId!, req.file.mimetype);
       res.json(result);
     } catch (error: any) {
       console.error("[upload] Media upload failed:", error);
       res.status(502).json({ message: "Image upload failed. Please try again." });
+    }
+  });
+
+  app.get("/api/media/*key", async (req, res) => {
+    const key = Array.isArray(req.params.key) ? req.params.key.join("/") : req.params.key;
+    if (!isManagedMediaKey(key) || !isStorageConfigured()) {
+      return res.status(404).end();
+    }
+
+    try {
+      const media = await downloadMedia(key);
+      const rangeHeader = req.headers.range;
+      const contentType = contentTypeFromKey(key);
+      res.setHeader("Content-Type", contentType);
+      res.setHeader("X-Content-Type-Options", "nosniff");
+      res.setHeader("Accept-Ranges", "bytes");
+      res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+
+      if (!rangeHeader) {
+        res.setHeader("Content-Length", media.length);
+        return res.status(200).end(media);
+      }
+
+      const match = /^bytes=(\d*)-(\d*)$/.exec(rangeHeader);
+      if (!match || (!match[1] && !match[2])) {
+        res.setHeader("Content-Range", `bytes */${media.length}`);
+        return res.status(416).end();
+      }
+
+      let start = match[1] ? Number(match[1]) : Math.max(media.length - Number(match[2]), 0);
+      let end = match[2] ? Number(match[2]) : media.length - 1;
+      if (!Number.isSafeInteger(start) || !Number.isSafeInteger(end) || start < 0 || start >= media.length || start > end) {
+        res.setHeader("Content-Range", `bytes */${media.length}`);
+        return res.status(416).end();
+      }
+      end = Math.min(end, media.length - 1);
+
+      const chunk = media.subarray(start, end + 1);
+      res.status(206);
+      res.setHeader("Content-Range", `bytes ${start}-${end}/${media.length}`);
+      res.setHeader("Content-Length", chunk.length);
+      return res.end(chunk);
+    } catch (error: any) {
+      if (error?.statusCode === 404 || /not found/i.test(error?.message || "")) {
+        return res.status(404).end();
+      }
+      console.error("[media] Failed to serve object:", error);
+      return res.status(500).end();
     }
   });
 
@@ -1944,24 +2011,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const publicId = Array.isArray(req.params.publicId)
         ? req.params.publicId.join("/")
         : req.params.publicId;
-      // Cloudinary IDs are namespaced as tattoo-record/<folder>/<userId>/...
-      // Accept both the namespaced form and the legacy bare form for the current user.
-      const isNamespaced = publicId.startsWith(`tattoo-record/`) && publicId.includes(`/${req.userId}/`);
-      const userFolderPrefixes = [
-        `posts/${req.userId}/`,
-        `stories/${req.userId}/`,
-        `portfolios/${req.userId}/`,
-        `avatars/${req.userId}/`,
-        `banners/${req.userId}/`,
-        `messages/${req.userId}/`,
-      ];
-      const isLegacyPrefix = userFolderPrefixes.some(prefix => publicId.startsWith(prefix));
-      if (!isNamespaced && !isLegacyPrefix) {
+      if (!isManagedMediaKey(publicId) || !publicId.includes(`/${req.userId}/`)) {
         return res.status(403).json({ message: "Not authorized to delete this resource" });
       }
       await deleteMedia(publicId);
       res.json({ message: "Media deleted" });
     } catch (error: any) {
+      if (error?.statusCode === 404 || /not found/i.test(error?.message || "")) {
+        return res.status(404).json({ message: "Media not found" });
+      }
       res.status(500).json({ message: "Internal server error" });
     }
   });
