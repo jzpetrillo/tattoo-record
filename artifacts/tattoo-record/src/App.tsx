@@ -26,6 +26,7 @@ import Bookings from "@/pages/bookings";
 import AIRecommendations from "@/pages/ai-recommendations";
 import Settings from "@/pages/settings";
 import VerifyEmailChange from "@/pages/verify-email-change";
+import PostDetail from "@/pages/post-detail";
 import { ErrorBoundary } from "@/components/error-boundary";
 
 const liveEnabled = import.meta.env.VITE_LIVE_ENABLED === "true";
@@ -120,6 +121,7 @@ function Router() {
       <Route path="/jobs" component={Jobs} />
       <Route path="/create">{() => <ProtectedRoute component={Create} />}</Route>
       <Route path="/reels" component={Reels} />
+      <Route path="/posts/:id" component={PostDetail} />
       <Route path="/saved">{() => <ProtectedRoute component={SavedPosts} />}</Route>
       <Route path="/flash-sales" component={FlashSales} />
       <Route path="/bookings">{() => <ProtectedRoute component={Bookings} />}</Route>

@@ -115,9 +115,8 @@ export default function PostCard({ post, author, isLiked = false, isSaved = fals
 
   const shareMutation = useMutation({
     mutationFn: async (conversationId: string) => {
-      // A profile is a durable, public destination for a shared post. There is
-      // no standalone post route yet, so never send recipients to a 404 URL.
-      const shareUrl = `${window.location.origin}/u/${encodeURIComponent(author.username)}`;
+      const appBase = import.meta.env.BASE_URL.replace(/\/$/, "");
+      const shareUrl = `${window.location.origin}${appBase}/posts/${encodeURIComponent(post.id)}`;
       const message = `Check out this post: ${shareUrl}`;
       await apiRequest("POST", `/api/conversations/${conversationId}/messages`, { body: message }, token!);
     },

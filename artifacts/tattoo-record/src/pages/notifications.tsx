@@ -185,7 +185,7 @@ export default function Notifications() {
     if (type === "FOLLOW" && notification.actor) {
       setLocation(`/u/${notification.actor.username}`);
     } else if ((type === "LIKE" || type === "COMMENT") && payload.postId) {
-      setLocation(`/`);
+      setLocation(`/posts/${encodeURIComponent(payload.postId)}`);
     } else if (notification.actor) {
       setLocation(`/u/${notification.actor.username}`);
     }

@@ -1,0 +1,29 @@
+Three go-live fixes for "Tattoo Record" (pnpm monorepo; web = artifacts/tattoo-record/src, API = artifacts/api-server/src). Run `pnpm run typecheck` + `pnpm run build` after. Mobile-responsive, Press theme (paper, ink, sharp corners, Space Grotesk / Space Mono).
+
+=== 1. Post-detail page + route (unblocks shared links AND reels playback) ===
+No `/posts/:id` page exists, so shared links and notification "View" 404, and reels have nowhere to open.
+- Create artifacts/tattoo-record/src/pages/post-detail.tsx. Fetch GET /api/posts/:id (it exists). Handle loading / not-found (404) / forbidden (403 for FOLLOWERS-only) states cleanly.
+- Render: the media (image, OR a `<video controls autoPlay loop playsInline>` for video posts), author header linked to /u/:username (use UserAvatar), caption, timestamp, the like/comment/save actions (reuse PostCard's logic/component if practical), the comments list, and an add-comment box. Keep it Press-styled and readable at 375px.
+- Add the route in artifacts/tattoo-record/src/App.tsx: `<Route path="/posts/:id" component={PostDetail} />` (public; the API already enforces visibility). Put it BEFORE the NotFound catch-all.
+- Wire the links that currently dead-end to it: post-card share URL → `/posts/${post.id}`; notifications "View" for LIKE/COMMENT (notifications.tsx) → `/posts/${payload.postId}`.
+
+=== 2. Reels actually play ===
+artifacts/tattoo-record/src/pages/reels.tsx (~line 61-73): today the reel card has `cursor-pointer` but no onClick, and the `<video>` has no controls/autoplay — so it shows a frozen frame.
+- Make each reel card a link to `/posts/${post.id}` (the detail page from #1, which has a real player with controls). 
+- On the grid tile itself, give the video an autoplaying muted preview so it looks alive: add `autoPlay muted loop playsInline preload="metadata"` to the `<video>`. Add a small play-icon overlay so it reads as a video.
+- Verify a real video reel (uploaded via Object Storage) previews on the grid and plays with controls on the detail page.
+
+=== 3. Remove the mockup-sandbox package ===
+- `git rm -r artifacts/mockup-sandbox`. It's covered by the `artifacts/*` workspace glob in pnpm-workspace.yaml, so deleting the directory removes it from build/typecheck — no glob edit needed, but confirm nothing imports from `@workspace/mockup-sandbox` first (`grep -r mockup-sandbox artifacts lib` should return nothing after).
+- Re-run `pnpm install` so the lockfile drops it.
+
+=== 4. VERIFY (already-built) studio↔artist invites — no code expected, just confirm ===
+The bidirectional flow already exists (POST /api/studio-approvals uses initiatedBy; approve/reject authorize the counterparty; studio-connection-dialog shows "Invite Artist"; profile shows incoming invites). Smoke-test end to end:
+- As a STUDIO: open the Invite Artist dialog, search an artist, send → 200, request created with initiatedBy=STUDIO.
+- As that ARTIST: see the incoming invite in the profile panel → Accept → 200.
+- Confirm the artist now appears on the studio's public profile (linkable) and the studio on the artist's profile.
+- Confirm a THIRD, unrelated user cannot approve that invite (403).
+If any step fails, fix it; if all pass, no change needed.
+
+=== FINAL ===
+`pnpm run typecheck` + `pnpm run build` pass. Reels play; /posts/:id renders (and share/notification links land there, not NotFound); mockup-sandbox gone; studio↔artist invite round-trips. Summarize files changed/added/deleted.

@@ -845,7 +845,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         }
       }
-      res.json(post);
+
+      let isLiked = false;
+      let isSaved = false;
+      if (req.userId) {
+        const [likedRows, savedRows] = await Promise.all([
+          db
+            .select({ id: schema.postLikes.id })
+            .from(schema.postLikes)
+            .where(and(eq(schema.postLikes.postId, req.params.id), eq(schema.postLikes.userId, req.userId)))
+            .limit(1),
+          db
+            .select({ id: schema.savedPosts.id })
+            .from(schema.savedPosts)
+            .where(and(eq(schema.savedPosts.postId, req.params.id), eq(schema.savedPosts.userId, req.userId)))
+            .limit(1),
+        ]);
+        isLiked = likedRows.length > 0;
+        isSaved = savedRows.length > 0;
+      }
+
+      res.json({ ...post, isLiked, isSaved });
     } catch (error: any) {
       res.status(500).json({ message: "Internal server error" });
     }

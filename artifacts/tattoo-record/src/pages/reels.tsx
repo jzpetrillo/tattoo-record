@@ -56,10 +56,12 @@ export default function Reels() {
                 const author = item.author || {};
 
                 return (
-                  <div
+                  <Link
                     key={post.id}
+                    href={`/posts/${post.id}`}
                     className="relative aspect-square bg-secondary overflow-hidden group cursor-pointer"
                     data-testid={`reel-card-${post.id}`}
+                    aria-label={`Open reel by ${author.username || "Tattoo Record member"}`}
                   >
                     {post.media && post.media.length > 0 ? (
                       <div className="w-full h-full">
@@ -67,9 +69,11 @@ export default function Reels() {
                           <video
                             src={post.media[0].url}
                             className="w-full h-full object-cover"
+                             autoPlay
                             muted
                             loop
                             playsInline
+                             preload="metadata"
                           />
                         ) : (
                           <img
@@ -89,14 +93,12 @@ export default function Reels() {
 
                     <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-end p-3 text-white">
                       {author.username ? (
-                        <Link href={`/u/${author.username}`}>
-                          <div className="flex items-center gap-2 mb-2" data-testid={`reel-author-${post.id}`}>
-                            <UserAvatar {...author} className="w-6 h-6 border-paper" />
-                            <span className="text-xs font-medium truncate">
-                              {author.username}
-                            </span>
-                          </div>
-                        </Link>
+                        <div className="flex items-center gap-2 mb-2" data-testid={`reel-author-${post.id}`}>
+                          <UserAvatar {...author} className="w-6 h-6 border-paper" />
+                          <span className="text-xs font-medium truncate">
+                            {author.username}
+                          </span>
+                        </div>
                       ) : null}
 
                       {post.caption && (
@@ -122,7 +124,7 @@ export default function Reels() {
                         </svg>
                       </div>
                     </div>
-                  </div>
+                  </Link>
                 );
               })}
             </div>
