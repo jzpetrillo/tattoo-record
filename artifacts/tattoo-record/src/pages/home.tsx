@@ -4,6 +4,7 @@ import MobileNav from "@/components/layout/mobile-nav";
 import StoriesBar from "@/components/stories/stories-bar";
 import SuggestedUsers from "@/components/layout/suggested-users";
 import PostFeed from "@/components/posts/post-feed";
+import GettingStarted from "@/components/onboarding/getting-started";
 import ForYouRail from "@/components/for-you/for-you-rail";
 import { useAuth } from "@/hooks/use-auth";
 import { Link } from "wouter";
@@ -152,6 +153,7 @@ export default function Home() {
           <ForYouRail />
 
           {/* Feed */}
+          <GettingStarted />
           <PostFeed />
         </div>
       </main>

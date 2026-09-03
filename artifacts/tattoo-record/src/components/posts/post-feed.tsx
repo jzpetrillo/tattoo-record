@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 import { apiRequest } from "@/lib/api";
@@ -32,9 +33,12 @@ export default function PostFeed() {
     queryKey: ["/api/for-you"],
     enabled: !!token && posts?.length === 0,
   });
+  const [followedIds, setFollowedIds] = useState<Set<string>>(() => new Set());
+  const [isFollowingAll, setIsFollowingAll] = useState(false);
   const followMutation = useMutation({
     mutationFn: (userId: string) => apiRequest("POST", `/api/users/${userId}/follow`, {}, token!),
-    onSuccess: () => {
+    onSuccess: (_response, userId) => {
+      setFollowedIds((current) => new Set(current).add(userId));
       queryClient.invalidateQueries({ queryKey: ["/api/for-you"] });
       queryClient.invalidateQueries({ queryKey: ["/api/posts"] });
     },
@@ -42,7 +46,26 @@ export default function PostFeed() {
       toast({ title: "Unable to follow artist", description: error.message, variant: "destructive" });
     },
   });
-  const suggestedUsers = forYou?.suggestedUsers?.slice(0, 3) ?? [];
+  const suggestedUsers = forYou?.suggestedUsers?.slice(0, 6) ?? [];
+  const followAllPending = isFollowingAll || followMutation.isPending;
+  const handleFollowAll = async () => {
+    if (followAllPending || suggestedUsers.length === 0) return;
+
+    setIsFollowingAll(true);
+    try {
+      await Promise.all(suggestedUsers.map((suggested) => followMutation.mutateAsync(suggested.id)));
+    } catch {
+      toast({
+        title: "Some suggestions could not be followed",
+        description: "You can try the remaining artists individually.",
+        variant: "destructive",
+      });
+    } finally {
+      queryClient.invalidateQueries({ queryKey: ["/api/for-you"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/posts"] });
+      setIsFollowingAll(false);
+    }
+  };
   const firstPostLabel = user?.role === "STUDIO"
     ? "Share your studio's first post"
     : user?.role === "ARTIST"
@@ -61,7 +84,9 @@ export default function PostFeed() {
         </div>
       ) : posts?.length === 0 ? (
         <div className="border border-ink bg-paper px-4 py-10 sm:p-12 text-center">
-          <p className="press-nameplate text-2xl sm:text-3xl text-ink">Your feed is empty</p>
+          <p className="press-nameplate text-2xl sm:text-3xl text-ink">
+            Welcome, {user?.firstName?.trim() || (user?.username ? `@${user.username}` : "there")}
+          </p>
           <p className="mt-3 text-sm text-ink/70 max-w-md mx-auto">
             Follow artists and studios to make this a personal stream of new
             work. Explore the community or publish something of your own to
@@ -69,7 +94,20 @@ export default function PostFeed() {
           </p>
           {suggestedUsers.length > 0 && (
             <div className="mt-7 text-left max-w-lg mx-auto">
-              <p className="meta text-xs uppercase tracking-widest text-ink/60 mb-3">Suggested for you</p>
+              <div className="flex items-center justify-between gap-3 mb-3">
+                <p className="meta text-xs uppercase tracking-widest text-ink/60">Suggested for you</p>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="link"
+                  className="h-auto px-0 text-xs font-mono uppercase tracking-wider"
+                  onClick={handleFollowAll}
+                  disabled={followAllPending}
+                  data-testid="button-empty-feed-follow-all"
+                >
+                  {isFollowingAll ? "Following…" : "Follow all"}
+                </Button>
+              </div>
               <div className="space-y-3">
                 {suggestedUsers.map((suggested) => (
                   <div key={suggested.id} className="flex items-center gap-3 border-t border-ink/15 pt-3">
@@ -78,8 +116,8 @@ export default function PostFeed() {
                       <p className="font-semibold text-sm truncate">{suggested.displayName || suggested.username || "User"}</p>
                       <p className="text-xs text-ink/60 truncate">@{suggested.username || "user"}</p>
                     </div>
-                    <Button size="sm" variant="outline" onClick={() => followMutation.mutate(suggested.id)} disabled={followMutation.isPending} data-testid={`button-empty-feed-follow-${suggested.id}`}>
-                      <UserPlus className="w-3.5 h-3.5 mr-1" /> Follow
+                    <Button size="sm" variant="outline" onClick={() => followMutation.mutate(suggested.id)} disabled={followAllPending || followedIds.has(suggested.id)} data-testid={`button-empty-feed-follow-${suggested.id}`}>
+                      {followedIds.has(suggested.id) ? "Following" : <><UserPlus className="w-3.5 h-3.5 mr-1" /> Follow</>}
                     </Button>
                   </div>
                 ))}

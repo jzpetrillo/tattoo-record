@@ -1,0 +1,34 @@
+Enhance new-user onboarding in "Tattoo Record" (web = artifacts/tattoo-record/src). Build on the EXISTING empty-feed welcome in components/posts/post-feed.tsx — don't rewrite it, extend it. Keep the Press theme (paper/ink, Space Grotesk / Space Mono, sharp corners, no emoji — stay editorial). Run `pnpm run typecheck` + `pnpm run build` after. Mobile-responsive.
+
+=== 1. Personalize the empty-feed welcome (components/posts/post-feed.tsx) ===
+- Change the "Your feed is empty" headline to greet the user by name: "Welcome, {firstName}" using the user's firstName, falling back to username (e.g. "Welcome, Keenan" / "Welcome, @artist1"). firstName comes from the /api/users/me query the app already hydrates from — read it from there (the auth store may only hold username/role). Keep it in `.press-nameplate`. Keep the existing supporting line below it.
+- Show MORE suggestions: bump `suggestedUsers.slice(0, 3)` to `slice(0, 6)`.
+- Add a "Follow all" action above the list: follows every shown suggestion (Promise.all of the existing follow calls), then invalidates ["/api/posts"] and ["/api/for-you"]. Handle partial failure with a toast; disable while pending.
+- Reflect per-item state: once a suggestion is followed, show "Following" (disabled) or remove it from the list, instead of leaving a live "Follow" button. Keep the existing error toast.
+
+=== 2. New "Getting started" checklist (retention lever — the main add) ===
+Create components/onboarding/getting-started.tsx — a compact, dismissible card that renders at the TOP of the home feed (pages/home.tsx, logged-in view), ABOVE the feed/PostFeed, so it persists even after the user follows someone and the feed fills in.
+
+Three steps, each with a REAL completion state (show a check when done, an action link when not):
+  a. "Add a profile photo" — done when user.avatarUrl is set; action → /settings.
+  b. "Complete your profile" — done when the user's bio is non-empty; action → /settings.
+  c. "Share your first post" — done when the user has ≥1 post; check via GET /api/users/{id}/stats (it returns postsCount), action → /create.
+Data: pull avatarUrl + bio from the /api/users/me query; postsCount from the stats endpoint.
+
+Behavior:
+- Show a small progress indicator ("1 of 3 done") and a thin progress bar.
+- Auto-hide the whole card when all three are complete.
+- Dismissible: an "×" that hides it and persists dismissal in localStorage (wrap read/write in try/catch; key e.g. `tr-onboarding-dismissed:{userId}`). If dismissed, don't show again for that user.
+- Only render for logged-in users; never on the logged-out landing.
+- Press-styled: bordered card, `.meta` labels, checks in the accent color; readable and not overbearing at 375px.
+
+=== 3. Wiring ===
+- pages/home.tsx: render <GettingStarted /> at the top of the logged-in feed column, above PostFeed. It self-hides when complete/dismissed, so no conditional needed at the call site beyond auth.
+- Reuse UserAvatar, Button, and the existing follow mutation patterns — no new deps.
+
+=== VERIFY ===
+- A brand-new account sees "Welcome, {name}", up to 6 suggested creators, a working "Follow all", and the Getting-started card with 0/3 (or accurate) progress.
+- Completing a step (add avatar / bio / first post) flips its check on next load; when all 3 done, the card disappears.
+- Dismiss persists across reloads; the card never shows on the landing page.
+- No layout overflow at 375px.
+Summarize files changed/added.
