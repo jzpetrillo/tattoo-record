@@ -956,6 +956,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.patch("/api/posts/:id", requireAuth, async (req: AuthRequest, res) => {
+    try {
+      const { caption } = validation.updatePostCaptionSchema.parse(req.body);
+      const result = await storage.getPost(req.params.id);
+      if (!result) {
+        return res.status(404).json({ message: "Post not found" });
+      }
+      if (result.post.authorId !== req.userId) {
+        return res.status(403).json({ message: "Not authorized to update this post" });
+      }
+      if (!caption && (!result.post.media || result.post.media.length === 0)) {
+        return res.status(400).json({ message: "A post without media must have a caption" });
+      }
+
+      const updatedPost = await storage.updatePostCaption(req.params.id, caption || null);
+      res.json(updatedPost);
+    } catch (error: any) {
+      sendError(res, error);
+    }
+  });
+
   app.delete("/api/posts/:id", requireAuth, async (req: AuthRequest, res) => {
     try {
       const result = await storage.getPost(req.params.id);

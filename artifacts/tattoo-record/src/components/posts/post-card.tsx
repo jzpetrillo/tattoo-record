@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Link } from "wouter";
 import UserAvatar from "@/components/user-avatar";
+import PostOwnerActions from "@/components/posts/post-owner-actions";
 
 interface PostCardProps {
   post: any;
@@ -28,6 +29,8 @@ export default function PostCard({ post, author, isLiked = false, isSaved = fals
   const [selectedUser, setSelectedUser] = useState<string | null>(null);
   const [liked, setLiked] = useState(isLiked);
   const [saved, setSaved] = useState(isSaved);
+  const [currentCaption, setCurrentCaption] = useState(post.caption ?? "");
+  const [deleted, setDeleted] = useState(false);
 
   // Sync liked state with isLiked prop from feed
   useEffect(() => {
@@ -38,6 +41,10 @@ export default function PostCard({ post, author, isLiked = false, isSaved = fals
   useEffect(() => {
     setSaved(isSaved);
   }, [isSaved]);
+
+  useEffect(() => {
+    setCurrentCaption(post.caption ?? "");
+  }, [post.caption]);
 
   const likeMutation = useMutation({
     mutationFn: async (shouldLike: boolean) => {
@@ -152,11 +159,13 @@ export default function PostCard({ post, author, isLiked = false, isSaved = fals
     },
   });
 
+  if (deleted) return null;
+
   return (
     <article className="bg-card border border-border overflow-hidden" data-testid={`post-${post.id}`}>
       {/* Post header with author info */}
       <div className="p-4 flex items-center gap-3">
-        <Link href={`/u/${author.username}`} data-testid={`link-author-${post.id}`}>
+        <Link href={`/u/${author.username}`} className="min-w-0 flex-1" data-testid={`link-author-${post.id}`}>
           <div className="flex items-center gap-3 cursor-pointer hover:opacity-80">
             <UserAvatar {...author} className="w-10 h-10" />
             <div>
@@ -167,6 +176,15 @@ export default function PostCard({ post, author, isLiked = false, isSaved = fals
             </div>
           </div>
         </Link>
+        {user?.id === post.authorId && (
+          <PostOwnerActions
+            postId={post.id}
+            caption={currentCaption}
+            hasMedia={Boolean(post.media?.length)}
+            onCaptionUpdated={setCurrentCaption}
+            onDeleted={() => setDeleted(true)}
+          />
+        )}
       </div>
 
       {/* Post image - Large, full-width, premium display */}
@@ -221,10 +239,10 @@ export default function PostCard({ post, author, isLiked = false, isSaved = fals
           <p className="text-sm font-semibold" data-testid={`text-likes-${post.id}`}>
             {post.likeCount} {post.likeCount === 1 ? 'like' : 'likes'}
           </p>
-          {post.caption && (
+          {currentCaption && (
             <p className="text-sm mt-1">
               <span className="font-semibold mr-2">{author.username}</span>
-              {post.caption}
+              {currentCaption}
             </p>
           )}
           {post.commentCount > 0 && (

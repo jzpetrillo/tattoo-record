@@ -64,6 +64,10 @@ export const createPostSchema = z.object({
   path: ["caption"]
 });
 
+export const updatePostCaptionSchema = z.object({
+  caption: z.string().max(5000, "Caption must be 5,000 characters or fewer").transform((caption) => caption.trim()),
+});
+
 export const createCommentSchema = z.object({
   body: z.string().min(1, "Comment cannot be empty").max(1000)
 });

@@ -6,6 +6,7 @@ import { apiRequest } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, Heart, Bookmark, AlertCircle, Loader2 } from "lucide-react";
 import UserAvatar from "@/components/user-avatar";
+import PostOwnerActions from "@/components/posts/post-owner-actions";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 
@@ -13,10 +14,11 @@ export default function PostDetail() {
   const params = useParams();
   const id = params?.id;
   const [, setLocation] = useLocation();
-  const { token } = useAuth();
+  const { token, user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [commentText, setCommentText] = useState("");
+  const [currentCaption, setCurrentCaption] = useState<string | null>(null);
 
   const { data, error, isLoading } = useQuery<any>({
     queryKey: [`/api/posts/${id}`],
@@ -33,6 +35,7 @@ export default function PostDetail() {
   const author = data?.author;
   const isLiked = data?.isLiked;
   const isSaved = data?.isSaved;
+  const displayedCaption = currentCaption ?? postData?.caption ?? "";
 
   const likeMutation = useMutation({
     mutationFn: async (shouldLike: boolean) => {
@@ -186,8 +189,8 @@ export default function PostDetail() {
       </header>
 
       <article className="max-w-2xl mx-auto md:border-x-2 border-ink min-h-screen bg-card shadow-sm pb-10">
-        <div className="p-4 border-b-2 border-ink bg-card flex items-center justify-between">
-          <Link href={`/u/${author.username}`} className="flex items-center gap-4 cursor-pointer group w-full">
+        <div className="p-4 border-b-2 border-ink bg-card flex items-center justify-between gap-3">
+          <Link href={`/u/${author.username}`} className="flex items-center gap-4 cursor-pointer group min-w-0 flex-1">
             <UserAvatar {...author} className="w-12 h-12 border-2 border-ink shadow-[2px_2px_0px_0px_#111] group-hover:shadow-[4px_4px_0px_0px_#111] transition-all" />
             <div>
               <h3 className="font-sans font-bold text-base uppercase group-hover:text-cobalt transition-colors tracking-tight">
@@ -198,6 +201,15 @@ export default function PostDetail() {
               </p>
             </div>
           </Link>
+          {user?.id === postData.authorId && (
+            <PostOwnerActions
+              postId={postData.id}
+              caption={displayedCaption}
+              hasMedia={Boolean(postData.media?.length)}
+              onCaptionUpdated={setCurrentCaption}
+              onDeleted={() => setLocation("/")}
+            />
+          )}
         </div>
 
         {postData.media?.[0] && (
@@ -214,7 +226,7 @@ export default function PostDetail() {
             ) : (
               <img
                 src={postData.media[0].url}
-                alt={postData.caption || "Post visual"}
+                alt={displayedCaption || "Post visual"}
                 className="w-full h-auto object-contain max-h-[85vh]"
                 loading="eager"
               />
@@ -255,11 +267,11 @@ export default function PostDetail() {
             </button>
           </div>
           
-          {postData.caption && (
+          {displayedCaption && (
             <div className="mb-6 border-l-2 border-ink pl-4 py-1">
               <p className="font-sans text-[15px] leading-relaxed whitespace-pre-wrap text-ink">
                 <span className="font-bold mr-3 uppercase text-sm tracking-tight">{author.username}</span>
-                {postData.caption}
+                {displayedCaption}
               </p>
             </div>
           )}

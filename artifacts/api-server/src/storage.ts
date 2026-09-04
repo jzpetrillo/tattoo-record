@@ -38,6 +38,7 @@ export interface IStorage {
   getPosts(options: { limit?: number; offset?: number; authorId?: string; type?: string }): Promise<any[]>;
   getPostCount(userId: string): Promise<number>;
   createPost(post: schema.InsertPost): Promise<schema.Post>;
+  updatePostCaption(id: string, caption: string | null): Promise<schema.Post | undefined>;
   deletePost(id: string): Promise<void>;
   likePost(postId: string, userId: string): Promise<boolean>;
   unlikePost(postId: string, userId: string): Promise<void>;
@@ -263,6 +264,15 @@ export class DatabaseStorage implements IStorage {
   async createPost(post: schema.InsertPost) {
     const [newPost] = await db.insert(schema.posts).values(post as any).returning();
     return newPost;
+  }
+
+  async updatePostCaption(id: string, caption: string | null) {
+    const [updatedPost] = await db
+      .update(schema.posts)
+      .set({ caption, updatedAt: new Date() })
+      .where(and(eq(schema.posts.id, id), isNull(schema.posts.deletedAt)))
+      .returning();
+    return updatedPost;
   }
 
   async deletePost(id: string) {
