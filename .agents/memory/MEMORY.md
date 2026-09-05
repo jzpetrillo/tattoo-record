@@ -2,3 +2,4 @@
 - [React type-version boundaries](react-type-version-boundaries.md) — Duplicate React 19 type minors can make compatible refs appear incompatible at dependency boundaries.
 - [Production seed admin reconciliation](production-seed-admin-reconciliation.md) — Corrected seed credentials reconcile by stable username and abort on identity collisions.
 - [Object Storage SDK runtime](object-storage-sdk-runtime.md) — Initialize the SDK lazily with the explicit bucket ID and preserve its runtime package boundary.
+- [JSON API cache policy](json-api-cache-policy.md) — Dynamic API responses must not emit ETags; bodyless 304s break React Query reloads.
