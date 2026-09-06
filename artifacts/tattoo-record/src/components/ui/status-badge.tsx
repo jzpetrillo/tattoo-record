@@ -6,11 +6,11 @@ type PaymentStatus = "UNPAID" | "DEPOSIT_PAID" | "FULLY_PAID" | "REFUNDED";
 type VerificationStatus = "PENDING" | "APPROVED" | "REJECTED";
 type JobType = "FULL_TIME" | "PART_TIME" | "CONTRACT" | "APPRENTICESHIP";
 
-const BOOKING_STATUS_CONFIG: Record<BookingStatus, { label: string; variant: "default" | "secondary" | "outline" | "destructive" }> = {
+const BOOKING_STATUS_CONFIG: Record<BookingStatus, { label: string; variant: "default" | "secondary" | "outline" | "destructive"; className?: string }> = {
   PENDING:   { label: "Pending",   variant: "secondary" },
   APPROVED:  { label: "Approved",  variant: "default"   },
   REJECTED:  { label: "Rejected",  variant: "outline"   },
-  COMPLETED: { label: "Completed", variant: "secondary" },
+  COMPLETED: { label: "Completed", variant: "secondary", className: "border-transparent bg-green-600 text-white hover:bg-green-600/80" },
   CANCELLED: { label: "Cancelled", variant: "outline"   },
 };
 
@@ -44,7 +44,7 @@ export function StatusBadge({ status, type, className, ...props }: StatusBadgePr
   if (type === "booking") {
     const config = BOOKING_STATUS_CONFIG[status as BookingStatus] ?? { label: status, variant: "outline" as const };
     return (
-      <Badge variant={config.variant} className={cn("text-xs", className)} {...props}>
+      <Badge variant={config.variant} className={cn("text-xs", config.className, className)} {...props}>
         {config.label}
       </Badge>
     );
