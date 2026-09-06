@@ -16,11 +16,20 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Separator } from "@/components/ui/separator";
 import { CheckCircle2, Lock, Mail, User, Trash2 } from "lucide-react";
 
+function normalizeWebsiteUrl(value: string) {
+  const trimmed = value.trim();
+  if (!trimmed || /^[a-z][a-z\d+.-]*:\/\//i.test(trimmed)) return trimmed;
+  return `https://${trimmed}`;
+}
+
 const profileSchema = z.object({
   firstName: z.string().max(50).optional(),
   lastName: z.string().max(50).optional(),
   bio: z.string().max(500).optional(),
-  website: z.string().url("Must be a valid URL").optional().or(z.literal("")),
+  website: z.string().refine(
+    (value) => value.trim() === "" || z.string().url().safeParse(normalizeWebsiteUrl(value)).success,
+    "Must be a valid URL",
+  ),
 });
 
 const passwordSchema = z.object({
@@ -120,6 +129,7 @@ export default function Settings() {
         : undefined;
       const res = await apiRequest("PUT", "/api/users/me", {
         ...data,
+        website: normalizeWebsiteUrl(data.website),
         ...(avatarUrl ? { avatarUrl } : {}),
         ...(bannerImageUrl ? { bannerImageUrl } : {}),
       }, token!);
@@ -132,7 +142,7 @@ export default function Settings() {
       toast({ description: "Profile updated successfully." });
     },
     onError: (error: Error) => {
-      toast({ variant: "destructive", description: error.message });
+      toast({ variant: "destructive", description: getApiErrorMessage(error) });
     },
   });
 

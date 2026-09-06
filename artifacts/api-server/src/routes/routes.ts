@@ -85,7 +85,7 @@ function pipeMediaStream(stream: Readable, res: import("express").Response) {
 // generic message for all other errors so internal details never reach clients.
 function sendError(res: any, error: any): void {
   if (error?.name === "ZodError") {
-    const msg = error.errors?.[0]?.message ?? error.message ?? "Validation failed";
+    const msg = error.issues?.[0]?.message ?? error.errors?.[0]?.message ?? "Validation failed";
     res.status(400).json({ message: msg });
   } else {
     console.error("[route-error]", error);

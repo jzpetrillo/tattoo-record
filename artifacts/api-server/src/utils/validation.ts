@@ -200,12 +200,18 @@ export const aiRecommendationSchema = z.object({
 
 // Whitelist of fields a user is allowed to update on their own profile.
 // Critical fields (role, isVerified, verificationStatus, isBanned, etc.) are excluded.
+const managedMediaUrlSchema = z.union([
+  z.string().url(),
+  z.string().regex(/^\/api\/media\/[^\s?#]+$/, "Invalid managed media URL"),
+  z.literal(""),
+]);
+
 export const updateUserSchema = z.object({
   firstName: z.string().max(100).optional(),
   lastName: z.string().max(100).optional(),
   bio: z.string().max(1000).optional(),
-  avatarUrl: z.string().url().optional().or(z.literal("")),
-  bannerImageUrl: z.string().url().optional().or(z.literal("")),
+  avatarUrl: managedMediaUrlSchema.optional(),
+  bannerImageUrl: managedMediaUrlSchema.optional(),
   location: z.object({
     city: z.string().optional(),
     country: z.string().optional(),
