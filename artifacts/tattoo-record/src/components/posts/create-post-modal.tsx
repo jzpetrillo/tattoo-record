@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 import { apiRequest, uploadFile } from "@/lib/api";
@@ -13,12 +13,68 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ImageIcon, VideoIcon, Clock } from "lucide-react";
+import { ImageIcon, VideoIcon, Clock, X } from "lucide-react";
 
 interface CreatePostModalProps {
   open: boolean;
   onClose: () => void;
   defaultTab?: "post" | "story" | "reel";
+}
+
+function MediaPreviews({
+  files,
+  onRemove,
+}: {
+  files: File[];
+  onRemove: (index: number) => void;
+}) {
+  const previews = useMemo(
+    () => files.map((file) => ({ file, url: URL.createObjectURL(file) })),
+    [files],
+  );
+
+  useEffect(() => {
+    return () => {
+      previews.forEach(({ url }) => URL.revokeObjectURL(url));
+    };
+  }, [previews]);
+
+  if (previews.length === 0) return null;
+
+  return (
+    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3" aria-label="Selected media previews">
+      {previews.map(({ file, url }, index) => (
+        <div key={url} className="relative overflow-hidden border border-border bg-secondary/20">
+          {file.type.startsWith("video/") ? (
+            <video
+              src={url}
+              controls
+              muted
+              playsInline
+              preload="metadata"
+              className="aspect-square w-full bg-black object-contain"
+              aria-label={`Video preview: ${file.name}`}
+            />
+          ) : (
+            <img
+              src={url}
+              alt={`Preview of ${file.name}`}
+              className="aspect-square w-full object-cover"
+            />
+          )}
+          <button
+            type="button"
+            onClick={() => onRemove(index)}
+            className="absolute right-2 top-2 inline-flex h-9 w-9 items-center justify-center rounded-full bg-black/75 text-white shadow-sm"
+            aria-label={`Remove ${file.name}`}
+          >
+            <X className="h-4 w-4" />
+          </button>
+          <p className="truncate px-2 py-2 text-xs text-muted-foreground">{file.name}</p>
+        </div>
+      ))}
+    </div>
+  );
 }
 
 export default function CreatePostModal({ open, onClose, defaultTab = "post" }: CreatePostModalProps) {
@@ -166,33 +222,35 @@ export default function CreatePostModal({ open, onClose, defaultTab = "post" }: 
           </TabsList>
 
           <TabsContent value="post" className="space-y-4 sm:space-y-6 mt-4 sm:mt-6">
-            <div className="border-2 border-dashed border-border p-6 sm:p-12 text-center hover:border-primary active:border-primary transition-colors cursor-pointer bg-secondary/20 touch-manipulation">
+            <Input
+              type="file"
+              multiple
+              accept="image/*,video/*"
+              onChange={(e) => setFiles(Array.from(e.target.files || []))}
+              className="sr-only"
+              id="post-file-upload"
+              disabled={!uploadsAvailable || isSubmitting}
+              data-testid="input-file-upload"
+            />
+            <label
+              htmlFor="post-file-upload"
+              className="block border-2 border-dashed border-border p-6 sm:p-12 text-center hover:border-primary active:border-primary transition-colors cursor-pointer bg-secondary/20 touch-manipulation"
+            >
               <ImageIcon className="w-10 h-10 sm:w-12 sm:h-12 mx-auto text-muted-foreground mb-3 sm:mb-4" />
-              <p className="text-sm font-medium mb-2">Tap to add photos or videos</p>
-              <p className="text-xs text-muted-foreground mb-4">or drag and drop</p>
-              <Input
-                type="file"
-                multiple
-                accept="image/*,video/*"
-                onChange={(e) => setFiles(Array.from(e.target.files || []))}
-                className="hidden"
-                id="post-file-upload"
-                disabled={!uploadsAvailable || isSubmitting}
-                data-testid="input-file-upload"
-              />
-              <label htmlFor="post-file-upload">
-                <Button type="button" disabled={!uploadsAvailable || isSubmitting} className="min-h-[44px]">
-                  Select files
-                </Button>
-              </label>
-            </div>
+              <span className="block text-sm font-medium mb-2">Tap to add photos or videos</span>
+              <span className="block text-xs text-muted-foreground mb-4">or drag and drop</span>
+              <span className="inline-flex min-h-[44px] items-center justify-center bg-primary px-4 py-2 text-sm font-medium text-primary-foreground">
+                Select files
+              </span>
+            </label>
             {uploadStatusQuery.data && !uploadsAvailable && (
               <p className="text-sm text-muted-foreground">Image uploads are temporarily unavailable.</p>
             )}
 
-            {files.length > 0 && (
-              <p className="text-sm text-muted-foreground">{files.length} file(s) selected</p>
-            )}
+            <MediaPreviews
+              files={files}
+              onRemove={(index) => setFiles((current) => current.filter((_, itemIndex) => itemIndex !== index))}
+            />
 
             <div>
               <label className="block text-sm font-medium mb-2">Caption</label>
@@ -235,61 +293,65 @@ export default function CreatePostModal({ open, onClose, defaultTab = "post" }: 
           </TabsContent>
 
           <TabsContent value="story" className="space-y-4 sm:space-y-6 mt-4 sm:mt-6">
-            <div className="border-2 border-dashed border-border p-6 sm:p-12 text-center hover:border-primary active:border-primary transition-colors cursor-pointer bg-secondary/20 touch-manipulation">
+            <Input
+              type="file"
+              accept="image/*,video/*"
+              onChange={(e) => setFiles(Array.from(e.target.files || []).slice(0, 1))}
+              className="sr-only"
+              id="story-file-upload"
+              disabled={!uploadsAvailable || isSubmitting}
+              data-testid="input-story-upload"
+            />
+            <label
+              htmlFor="story-file-upload"
+              className="block border-2 border-dashed border-border p-6 sm:p-12 text-center hover:border-primary active:border-primary transition-colors cursor-pointer bg-secondary/20 touch-manipulation"
+            >
               <Clock className="w-10 h-10 sm:w-12 sm:h-12 mx-auto text-muted-foreground mb-3 sm:mb-4" />
-              <p className="text-sm font-medium mb-2">Add to your story</p>
-              <p className="text-xs text-muted-foreground mb-4">Stories disappear after 24 hours</p>
-              <Input
-                type="file"
-                accept="image/*,video/*"
-                onChange={(e) => setFiles(Array.from(e.target.files || []).slice(0, 1))}
-                className="hidden"
-                id="story-file-upload"
-                disabled={!uploadsAvailable || isSubmitting}
-                data-testid="input-story-upload"
-              />
-              <label htmlFor="story-file-upload">
-                <Button type="button" disabled={!uploadsAvailable || isSubmitting} className="min-h-[44px]">
-                  Select file
-                </Button>
-              </label>
-            </div>
+              <span className="block text-sm font-medium mb-2">Add to your story</span>
+              <span className="block text-xs text-muted-foreground mb-4">Stories disappear after 24 hours</span>
+              <span className="inline-flex min-h-[44px] items-center justify-center bg-primary px-4 py-2 text-sm font-medium text-primary-foreground">
+                Select file
+              </span>
+            </label>
             {uploadStatusQuery.data && !uploadsAvailable && (
               <p className="text-sm text-muted-foreground">Image uploads are temporarily unavailable.</p>
             )}
 
-            {files.length > 0 && (
-              <p className="text-sm text-muted-foreground">1 file selected</p>
-            )}
+            <MediaPreviews
+              files={files}
+              onRemove={(index) => setFiles((current) => current.filter((_, itemIndex) => itemIndex !== index))}
+            />
           </TabsContent>
 
           <TabsContent value="reel" className="space-y-4 sm:space-y-6 mt-4 sm:mt-6">
-            <div className="border-2 border-dashed border-border p-6 sm:p-12 text-center hover:border-primary active:border-primary transition-colors cursor-pointer bg-secondary/20 touch-manipulation">
+            <Input
+              type="file"
+              accept="video/*"
+              onChange={(e) => setFiles(Array.from(e.target.files || []).slice(0, 1))}
+              className="sr-only"
+              id="reel-file-upload"
+              disabled={!uploadsAvailable || isSubmitting}
+              data-testid="input-reel-upload"
+            />
+            <label
+              htmlFor="reel-file-upload"
+              className="block border-2 border-dashed border-border p-6 sm:p-12 text-center hover:border-primary active:border-primary transition-colors cursor-pointer bg-secondary/20 touch-manipulation"
+            >
               <VideoIcon className="w-10 h-10 sm:w-12 sm:h-12 mx-auto text-muted-foreground mb-3 sm:mb-4" />
-              <p className="text-sm font-medium mb-2">Upload your reel</p>
-              <p className="text-xs text-muted-foreground mb-4">Short vertical video</p>
-              <Input
-                type="file"
-                accept="video/*"
-                onChange={(e) => setFiles(Array.from(e.target.files || []).slice(0, 1))}
-                className="hidden"
-                id="reel-file-upload"
-                disabled={!uploadsAvailable || isSubmitting}
-                data-testid="input-reel-upload"
-              />
-              <label htmlFor="reel-file-upload">
-                <Button type="button" disabled={!uploadsAvailable || isSubmitting} className="min-h-[44px]">
-                  Select video
-                </Button>
-              </label>
-            </div>
+              <span className="block text-sm font-medium mb-2">Upload your reel</span>
+              <span className="block text-xs text-muted-foreground mb-4">Short vertical video</span>
+              <span className="inline-flex min-h-[44px] items-center justify-center bg-primary px-4 py-2 text-sm font-medium text-primary-foreground">
+                Select video
+              </span>
+            </label>
             {uploadStatusQuery.data && !uploadsAvailable && (
               <p className="text-sm text-muted-foreground">Image uploads are temporarily unavailable.</p>
             )}
 
-            {files.length > 0 && (
-              <p className="text-sm text-muted-foreground">1 video selected</p>
-            )}
+            <MediaPreviews
+              files={files}
+              onRemove={(index) => setFiles((current) => current.filter((_, itemIndex) => itemIndex !== index))}
+            />
 
             <div>
               <label className="block text-sm font-medium mb-2">Caption</label>
