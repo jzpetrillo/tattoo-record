@@ -287,7 +287,7 @@ export default function Explore() {
             <p className="text-sm text-muted-foreground mb-4">
               {filteredUsers.length} {filteredUsers.length === 1 ? "result" : "results"}
             </p>
-            <div className="grid grid-cols-3 gap-px bg-foreground">
+            <div className="grid grid-cols-3 gap-px">
               {filteredUsers.map((user, idx) => (
                 <Link 
                   key={user.id} 
