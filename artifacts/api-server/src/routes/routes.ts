@@ -2241,6 +2241,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get("/api/studios/:studioId/feed", requireAuth, async (req, res) => {
+    try {
+      const limit = Math.min(Math.max(Number(req.query.limit) || 60, 1), 100);
+      const offset = Math.max(Number(req.query.offset) || 0, 0);
+      const posts = await storage.getStudioArtistPosts(req.params.studioId, limit, offset);
+      res.json(posts);
+    } catch (error: any) {
+      sendError(res, error);
+    }
+  });
+
   app.get("/api/artists/:artistId/studio", async (req, res) => {
     try {
       const studio = await storage.getArtistStudio(req.params.artistId);

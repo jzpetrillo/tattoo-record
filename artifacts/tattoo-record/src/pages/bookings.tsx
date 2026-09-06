@@ -40,16 +40,21 @@ type BookingFormData = z.infer<typeof bookingSchema>;
 
 type BookingStatus = "PENDING" | "APPROVED" | "REJECTED" | "COMPLETED" | "CANCELLED";
 type PaymentStatus = "UNPAID" | "DEPOSIT_PAID" | "FULLY_PAID" | "REFUNDED";
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 export default function BookingsPage() {
   const { user, token } = useAuth();
   const { toast } = useToast();
   const requestedArtistId = new URLSearchParams(window.location.search).get("artist") ?? "";
-  const preselectedArtistId = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(requestedArtistId)
+  const requestedStudioId = new URLSearchParams(window.location.search).get("studio") ?? "";
+  const preselectedArtistId = UUID_PATTERN.test(requestedArtistId)
     ? requestedArtistId
     : "";
+  const preselectedStudioId = UUID_PATTERN.test(requestedStudioId)
+    ? requestedStudioId
+    : "";
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
-  const [createDialogOpen, setCreateDialogOpen] = useState(Boolean(preselectedArtistId));
+  const [createDialogOpen, setCreateDialogOpen] = useState(Boolean(preselectedArtistId || preselectedStudioId));
 
   const { data: bookings = [], isLoading, isError, refetch } = useQuery<any[]>({
     queryKey: ["/api/bookings", { status: statusFilter }],
@@ -70,16 +75,22 @@ export default function BookingsPage() {
   });
 
   const { data: artists = [] } = useQuery<any[]>({
-    queryKey: ["/api/users", { type: "ARTIST" }],
+    queryKey: [preselectedStudioId ? `/api/studios/${preselectedStudioId}/artists` : "/api/users", { type: "ARTIST" }],
     queryFn: async () => {
-      const res = await fetch("/api/users?type=ARTIST", {
+      const url = preselectedStudioId
+        ? `/api/studios/${preselectedStudioId}/artists`
+        : "/api/users?type=ARTIST";
+      const res = await fetch(url, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
         credentials: "include",
       });
       if (!res.ok) throw new Error("Failed to fetch artists");
-      return res.json();
+      const data = await res.json();
+      return preselectedStudioId
+        ? data.map((connection: any) => connection.artist)
+        : data;
     },
     enabled: !!token && createDialogOpen,
     staleTime: 0,
@@ -269,7 +280,10 @@ export default function BookingsPage() {
                               <SelectContent className="bg-background border-border">
                                 {artists.map((artist: any) => (
                                   <SelectItem key={artist.id} value={artist.id}>
-                                    {artist.username} - {artist.profile?.displayName}
+                                    {artist.firstName || artist.lastName
+                                      ? `${artist.firstName ?? ""} ${artist.lastName ?? ""}`.trim()
+                                      : artist.username}
+                                    {artist.username && ` (@${artist.username})`}
                                   </SelectItem>
                                 ))}
                               </SelectContent>

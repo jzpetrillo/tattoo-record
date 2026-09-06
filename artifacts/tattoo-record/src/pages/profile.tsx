@@ -19,7 +19,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { apiRequest as apiRequestLib, uploadFile } from "@/lib/api";
 import UserAvatar from "@/components/user-avatar";
 
-type TabType = "POSTS" | "VIDEOS" | "PORTFOLIO";
+type TabType = "POSTS" | "VIDEOS" | "PORTFOLIO" | "ARTIST_FEED";
 
 interface UserProfile {
   id: string;
@@ -49,6 +49,15 @@ interface PortfolioItem {
   category?: string;
   imageUrl: string;
   createdAt: string;
+}
+
+function isVideoPost(item: any) {
+  const media = item?.post?.media?.[0];
+  const mediaType = String(media?.type ?? "").toLowerCase();
+  return item?.post?.type === "REEL"
+    || mediaType === "video"
+    || mediaType.startsWith("video/")
+    || /\.(mp4|mov|m4v|webm)(?:$|[?#])/i.test(String(media?.url ?? ""));
 }
 
 const TATTOO_STYLES = [
@@ -91,7 +100,7 @@ export default function Profile() {
   const postType = activeTab === "POSTS" ? "POST" : "REEL";
   const { data: userPosts, isError: postsError, refetch: refetchPosts } = useQuery<any[]>({
     queryKey: [`/api/posts?authorId=${user?.id}&type=${postType}`],
-    enabled: !!token && !!user && activeTab !== "PORTFOLIO",
+    enabled: !!token && !!user && (activeTab === "POSTS" || activeTab === "VIDEOS"),
   });
 
   // Fetch portfolio items
@@ -117,6 +126,15 @@ export default function Profile() {
   const { data: connectedArtists, isError: artistsError, refetch: refetchArtists } = useQuery<any[]>({
     queryKey: [`/api/studios/${user?.id}/artists`],
     enabled: !!token && !!user && user?.role === "STUDIO",
+  });
+
+  const {
+    data: artistFeedPosts,
+    isError: artistFeedError,
+    refetch: refetchArtistFeed,
+  } = useQuery<any[]>({
+    queryKey: [`/api/studios/${user?.id}/feed`],
+    enabled: !!token && !!user && activeTab === "ARTIST_FEED" && (connectedArtists?.length ?? 0) > 0,
   });
 
   const { data: pendingRequests, isError: requestsError, refetch: refetchRequests } = useQuery<any[]>({
@@ -314,12 +332,14 @@ export default function Profile() {
   }
 
   const activeProfileError = profileError || statsError ||
-    (activeTab === "PORTFOLIO" ? portfolioError : postsError) ||
+    (activeTab === "PORTFOLIO" ? portfolioError : activeTab === "ARTIST_FEED" ? artistFeedError : postsError) ||
     studioError || artistsError || requestsError || followError || uploadStatusError;
   const retryProfile = () => {
     refetchProfile();
     refetchStats();
-    if (activeTab === "PORTFOLIO") refetchPortfolio(); else refetchPosts();
+    if (activeTab === "PORTFOLIO") refetchPortfolio();
+    else if (activeTab === "ARTIST_FEED") refetchArtistFeed();
+    else refetchPosts();
     refetchStudio();
     refetchArtists();
     refetchRequests();
@@ -460,15 +480,28 @@ export default function Profile() {
                     </Button>
                   )}
                   {user?.role === "STUDIO" && (
-                    <Button
-                      size="sm"
-                      onClick={() => navigate(`/jobs?studio=${user?.id}`)}
-                      data-testid="button-view-jobs"
-                      className="border border-border bg-background hover:bg-secondary text-foreground"
-                    >
-                      <Briefcase className="w-4 h-4 mr-1" />
-                      <span className="meta text-xs">View Jobs</span>
-                    </Button>
+                    <>
+                      {(connectedArtists?.length ?? 0) > 0 && (
+                        <Button
+                          size="sm"
+                          onClick={() => navigate(`/bookings?studio=${user?.id}`)}
+                          data-testid="button-book-studio"
+                          className="bg-primary text-primary-foreground hover:bg-primary/90"
+                        >
+                          <Calendar className="w-4 h-4 mr-1" />
+                          <span className="meta text-xs">Book</span>
+                        </Button>
+                      )}
+                      <Button
+                        size="sm"
+                        onClick={() => navigate(`/jobs?studio=${user?.id}`)}
+                        data-testid="button-view-jobs"
+                        className="border border-border bg-background hover:bg-secondary text-foreground"
+                      >
+                        <Briefcase className="w-4 h-4 mr-1" />
+                        <span className="meta text-xs">View Jobs</span>
+                      </Button>
+                    </>
                   )}
                 </>
               )}
@@ -579,7 +612,7 @@ export default function Profile() {
 
         {/* Tabs - Posts, Videos, Portfolio */}
         <div className="border-b border-border">
-          <div className="grid grid-cols-3 min-w-0">
+          <div className={`grid min-w-0 ${(connectedArtists?.length ?? 0) > 0 && user?.role === "STUDIO" ? "grid-cols-4" : "grid-cols-3"}`}>
             <button
               onClick={() => setActiveTab("POSTS")}
               className={`flex min-w-0 items-center justify-center gap-2 px-2 py-3 transition-colors ${
@@ -614,6 +647,18 @@ export default function Profile() {
               )}
               <span className="meta text-xs">{getPortfolioTabLabel()}</span>
             </button>
+            {user?.role === "STUDIO" && (connectedArtists?.length ?? 0) > 0 && (
+              <button
+                onClick={() => setActiveTab("ARTIST_FEED")}
+                className={`flex min-w-0 items-center justify-center gap-2 px-2 py-3 transition-colors ${
+                  activeTab === "ARTIST_FEED" ? "bg-cobalt text-white font-semibold" : "text-muted-foreground hover:text-foreground hover:bg-secondary"
+                }`}
+                data-testid="tab-artist-feed"
+              >
+                <UserPlus className="w-4 h-4" />
+                <span className="meta text-[10px] sm:text-xs">Artist Feed</span>
+              </button>
+            )}
           </div>
         </div>
 
@@ -621,26 +666,42 @@ export default function Profile() {
         {activeTab !== "PORTFOLIO" && (
           <>
             <div className="grid grid-cols-3 gap-px mt-1">
-              {userPosts?.map((item: any, idx: number) => (
-                <div key={item.post.id} className="aspect-square bg-secondary group cursor-pointer relative overflow-hidden" data-testid={`post-${item.post.id}`}>
+              {(activeTab === "ARTIST_FEED" ? artistFeedPosts : userPosts)?.map((item: any, idx: number) => (
+                <Link key={item.post.id} href={`/posts/${item.post.id}`}>
+                <div className="aspect-square bg-secondary group cursor-pointer relative overflow-hidden" data-testid={`post-${item.post.id}`}>
                   {item.post.media?.[0]?.url ? (
-                    <img
-                      src={item.post.media[0].url}
-                      alt={activeTab}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                    />
+                    isVideoPost(item) ? (
+                      <video
+                        src={item.post.media[0].url}
+                        muted
+                        playsInline
+                        preload="metadata"
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      />
+                    ) : (
+                      <img
+                        src={item.post.media[0].url}
+                        alt={activeTab === "ARTIST_FEED" ? `Post by ${item.author.username}` : activeTab}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      />
+                    )
                   ) : (
                     <div className="w-full h-full flex items-center justify-center bg-secondary">
                       <ImageIcon className="w-8 h-8 text-muted-foreground" />
                     </div>
                   )}
-                  {activeTab === "VIDEOS" && (
+                  {isVideoPost(item) && (
                     <div className="absolute top-3 right-3">
                       <Film className="w-6 h-6 text-white drop-shadow-lg" />
                     </div>
                   )}
                   {/* Index number */}
                   <span className="absolute top-1 left-1.5 font-mono text-[10px] text-white/70 leading-none">{String(idx + 1).padStart(2, "0")}</span>
+                  {activeTab === "ARTIST_FEED" && (
+                    <span className="absolute bottom-1 left-1.5 max-w-[90%] truncate bg-black/70 px-1.5 py-1 font-mono text-[9px] uppercase text-white">
+                      @{item.author.username}
+                    </span>
+                  )}
                   {/* Hover overlay with like/comment counts */}
                   <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-1">
                     <div className="flex items-center gap-1 text-white">
@@ -653,10 +714,11 @@ export default function Profile() {
                     </div>
                   </div>
                 </div>
+                </Link>
               ))}
             </div>
 
-            {userPosts?.length === 0 && (
+            {(activeTab === "ARTIST_FEED" ? artistFeedPosts : userPosts)?.length === 0 && (
               <div className="text-center py-16 text-muted-foreground">
                 <div className="mb-4">
                   {activeTab === "POSTS" ? (
@@ -665,9 +727,13 @@ export default function Profile() {
                     <Film className="w-16 h-16 mx-auto opacity-50" />
                   )}
                 </div>
-                <p className="text-xl font-light">No {activeTab.toLowerCase()} yet</p>
+                <p className="text-xl font-light">
+                  {activeTab === "ARTIST_FEED" ? "No artist posts yet" : `No ${activeTab.toLowerCase()} yet`}
+                </p>
                 <p className="text-sm mt-2">
-                  {isOwnProfile ? "Share your first content to get started" : "No content to display"}
+                  {activeTab === "ARTIST_FEED"
+                    ? "Posts from connected artists will appear here"
+                    : isOwnProfile ? "Share your first content to get started" : "No content to display"}
                 </p>
               </div>
             )}

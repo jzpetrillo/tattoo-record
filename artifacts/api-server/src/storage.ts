@@ -36,6 +36,7 @@ export interface IStorage {
   // Post operations
   getPost(id: string): Promise<any>;
   getPosts(options: { limit?: number; offset?: number; authorId?: string; type?: string }): Promise<any[]>;
+  getStudioArtistPosts(studioId: string, limit?: number, offset?: number): Promise<any[]>;
   getPostCount(userId: string): Promise<number>;
   createPost(post: schema.InsertPost): Promise<schema.Post>;
   updatePostCaption(id: string, caption: string | null): Promise<schema.Post | undefined>;
@@ -248,6 +249,29 @@ export class DatabaseStorage implements IStorage {
       .from(schema.posts)
       .innerJoin(schema.users, eq(schema.posts.authorId, schema.users.id))
       .where(and(...conditions))
+      .orderBy(desc(schema.posts.createdAt))
+      .limit(limit)
+      .offset(offset);
+  }
+
+  async getStudioArtistPosts(studioId: string, limit = 60, offset = 0) {
+    return db
+      .select({
+        post: schema.posts,
+        author: publicUserColumns,
+      })
+      .from(schema.studioApprovalRequests)
+      .innerJoin(
+        schema.posts,
+        eq(schema.studioApprovalRequests.artistId, schema.posts.authorId),
+      )
+      .innerJoin(schema.users, eq(schema.posts.authorId, schema.users.id))
+      .where(and(
+        eq(schema.studioApprovalRequests.studioId, studioId),
+        eq(schema.studioApprovalRequests.status, "APPROVED"),
+        inArray(schema.posts.type, ["POST", "REEL"]),
+        isNull(schema.posts.deletedAt),
+      ))
       .orderBy(desc(schema.posts.createdAt))
       .limit(limit)
       .offset(offset);
