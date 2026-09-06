@@ -2232,6 +2232,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.delete("/api/studio-approvals/:id", requireAuth, async (req: AuthRequest, res) => {
+    try {
+      const approvalReq = await storage.getStudioApprovalRequestById(req.params.id);
+      if (!approvalReq) return res.status(404).json({ message: "Connection not found" });
+      if (approvalReq.studioId !== req.userId && approvalReq.artistId !== req.userId) {
+        return res.status(403).json({ message: "Not authorized" });
+      }
+      if (approvalReq.status !== "APPROVED") {
+        return res.status(409).json({ message: "Only approved connections can be removed." });
+      }
+      if (!await storage.revokeStudioApproval(req.params.id)) {
+        return res.status(409).json({ message: "Only approved connections can be removed." });
+      }
+      res.json({ message: "Connection removed" });
+    } catch (error: any) {
+      sendError(res, error);
+    }
+  });
+
   app.get("/api/studios/:studioId/artists", async (req, res) => {
     try {
       const artists = await storage.getApprovedArtists(req.params.studioId);

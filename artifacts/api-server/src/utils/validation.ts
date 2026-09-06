@@ -38,6 +38,7 @@ export const registerSchema = z.object({
 });
 
 export const createPostSchema = z.object({
+  type: z.enum(["POST", "REEL", "STORY"]).default("POST"),
   caption: z.string().optional(),
   media: z.array(z.object({
     publicId: z.string(),

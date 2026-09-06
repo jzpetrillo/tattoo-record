@@ -8,7 +8,8 @@
     "build": "node ./build.mjs",
     "start": "node --enable-source-maps ./dist/index.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test:email-change": "NODE_ENV=test tsx --test test/email-change.test.ts"
+    "test:email-change": "NODE_ENV=test tsx --test test/email-change.test.ts",
+    "test:studio-artist-feed": "NODE_ENV=test tsx --test test/studio-artist-feed.test.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.78.0",

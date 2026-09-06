@@ -111,6 +111,7 @@ export interface IStorage {
   getStudioApprovalRequests(filters: { studioId?: string; artistId?: string; status?: string }): Promise<any[]>;
   getStudioApprovalRequestById(id: string): Promise<any>;
   updateStudioApprovalStatus(id: string, status: string): Promise<boolean>;
+  revokeStudioApproval(id: string): Promise<boolean>;
   getApprovedArtists(studioId: string): Promise<any[]>;
   getArtistStudio(artistId: string): Promise<any>;
   
@@ -964,9 +965,24 @@ export class DatabaseStorage implements IStorage {
     return Boolean(updated);
   }
 
+  async revokeStudioApproval(id: string) {
+    const [updated] = await db
+      .update(schema.studioApprovalRequests)
+      .set({ status: "REJECTED", updatedAt: new Date() })
+      .where(and(
+        eq(schema.studioApprovalRequests.id, id),
+        eq(schema.studioApprovalRequests.status, "APPROVED"),
+      ))
+      .returning({ id: schema.studioApprovalRequests.id });
+    return Boolean(updated);
+  }
+
   async getApprovedArtists(studioId: string) {
     return db
       .select({
+        request: {
+          id: schema.studioApprovalRequests.id,
+        },
         artist: publicUserColumns
       })
       .from(schema.studioApprovalRequests)

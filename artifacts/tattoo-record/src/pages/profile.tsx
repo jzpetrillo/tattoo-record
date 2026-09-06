@@ -9,7 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useParams, useLocation } from "wouter";
 import { Link } from "wouter";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
@@ -126,6 +126,8 @@ export default function Profile() {
   const { data: connectedArtists, isError: artistsError, refetch: refetchArtists } = useQuery<any[]>({
     queryKey: [`/api/studios/${user?.id}/artists`],
     enabled: !!token && !!user && user?.role === "STUDIO",
+    refetchInterval: 15_000,
+    refetchOnWindowFocus: true,
   });
 
   const {
@@ -135,6 +137,8 @@ export default function Profile() {
   } = useQuery<any[]>({
     queryKey: [`/api/studios/${user?.id}/feed`],
     enabled: !!token && !!user && activeTab === "ARTIST_FEED" && (connectedArtists?.length ?? 0) > 0,
+    refetchInterval: 15_000,
+    refetchOnWindowFocus: true,
   });
 
   const { data: pendingRequests, isError: requestsError, refetch: refetchRequests } = useQuery<any[]>({
@@ -212,6 +216,27 @@ export default function Profile() {
       toast({ description: error.message, variant: "destructive" });
     },
   });
+
+  const removeConnectionMutation = useMutation({
+    mutationFn: async (requestId: string) => {
+      return apiRequestLib("DELETE", `/api/studio-approvals/${requestId}`, undefined, token!);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/studios/${user?.id}/artists`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/studios/${user?.id}/feed`] });
+      queryClient.invalidateQueries({ queryKey: ["/api/studio-approvals"] });
+      toast({ description: "Artist connection removed" });
+    },
+    onError: (error: Error) => {
+      toast({ description: error.message, variant: "destructive" });
+    },
+  });
+
+  useEffect(() => {
+    if (activeTab === "ARTIST_FEED" && connectedArtists && connectedArtists.length === 0) {
+      setActiveTab("POSTS");
+    }
+  }, [activeTab, connectedArtists]);
 
   // Portfolio mutations
   const createPortfolioMutation = useMutation({
@@ -601,10 +626,26 @@ export default function Profile() {
             <p className="meta text-xs mb-3">Artists</p>
             <div className="grid grid-cols-5 gap-px bg-border">
               {connectedArtists.slice(0, 10).map((item: any) => (
-                <Link href={`/u/${item.artist.username}`} key={item.artist.id} className="flex flex-col items-center bg-background p-2 hover:bg-secondary" data-testid={`connected-artist-${item.artist.id}`}>
-                  <UserAvatar {...item.artist} className="w-full h-auto aspect-square mb-1" />
-                  <span className="meta text-[9px] truncate w-full text-center">{item.artist.username}</span>
-                </Link>
+                <div key={item.artist.id} className="relative flex flex-col items-center bg-background p-2 hover:bg-secondary" data-testid={`connected-artist-${item.artist.id}`}>
+                  <Link href={`/u/${item.artist.username}`} className="flex w-full flex-col items-center">
+                    <UserAvatar {...item.artist} className="w-full h-auto aspect-square mb-1" />
+                    <span className="meta text-[9px] truncate w-full text-center">{item.artist.username}</span>
+                  </Link>
+                  {isOwnProfile && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="mt-2 h-7 w-full px-1 text-[9px]"
+                      disabled={removeConnectionMutation.isPending}
+                      onClick={() => removeConnectionMutation.mutate(item.request.id)}
+                      data-testid={`button-remove-artist-${item.artist.id}`}
+                    >
+                      <UserMinus className="mr-1 h-3 w-3" />
+                      Remove
+                    </Button>
+                  )}
+                </div>
               ))}
             </div>
           </div>
