@@ -620,7 +620,7 @@ export default function Profile() {
         {/* Posts/Videos Grid */}
         {activeTab !== "PORTFOLIO" && (
           <>
-            <div className="grid grid-cols-3 gap-px bg-foreground mt-1">
+            <div className="grid grid-cols-3 gap-px mt-1">
               {userPosts?.map((item: any, idx: number) => (
                 <div key={item.post.id} className="aspect-square bg-secondary group cursor-pointer relative overflow-hidden" data-testid={`post-${item.post.id}`}>
                   {item.post.media?.[0]?.url ? (
