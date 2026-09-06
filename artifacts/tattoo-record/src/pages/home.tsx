@@ -53,9 +53,7 @@ export default function Home() {
 
         <div className="max-w-[630px] mx-auto lg:pt-8 px-4 lg:px-0">
           {/* Stories Bar */}
-          <div className="border border-border mb-4 bg-background mt-4 lg:mt-0">
-            <StoriesBar />
-          </div>
+          <StoriesBar />
 
           {/* Featured Error */}
           {featuredError && (

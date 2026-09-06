@@ -22,9 +22,13 @@ export default function StoriesBar() {
     return acc;
   }, []) || [];
 
+  if (!isLoading && !isError && storyUsers.length === 0) {
+    return null;
+  }
+
   return (
     <>
-      <div className="border-b border-border py-4 mb-4">
+      <div className="border border-border bg-background py-4 mb-4 mt-4 lg:mt-0">
         <div className="flex gap-4 overflow-x-auto scrollbar-hide px-1">
           {/* Loading skeletons */}
           {isLoading && (
