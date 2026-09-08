@@ -139,15 +139,26 @@
     font-family: var(--font-mono);
     text-transform: uppercase;
     letter-spacing: 0.06em;
+  }
+
+  /* The default colours below are wrapped in :where() so they carry zero
+     specificity. This block is appended after Tailwind's generated
+     utilities, so a plain `.meta { color }` outranked every explicit text
+     utility on the same element -- `meta ... group-hover:text-white/70`
+     never turned white, and `meta ... text-ink/60` was ignored. At zero
+     specificity the default still applies when nothing else sets a colour,
+     but any explicit utility now wins regardless of source order. */
+  :where(.meta) {
     color: hsl(60 3% 40%);
   }
 
-  .text-cobalt { color: hsl(236 91% 56%); }
-  .bg-cobalt { background-color: hsl(236 91% 56%); color: #fff; }
-  .border-cobalt { border-color: hsl(236 91% 56%); }
-  .text-flash { color: hsl(15 100% 56%); }
-  .bg-flash { background-color: hsl(15 100% 56%); color: #111; }
-  .border-ink { border-color: hsl(0 0% 7%); }
+  /* ink / paper / cobalt / flash are registered in tailwind.config.ts, so
+     text-*, bg-*, border-* and ring-* variants are generated -- including
+     opacity modifiers, which a hand-written class cannot express. Only the
+     paired foreground colours below can't be expressed as a colour entry,
+     so they remain here. */
+  :where(.bg-cobalt) { color: #fff; }
+  :where(.bg-flash) { color: #111; }
 }
 
 @supports (padding-bottom: env(safe-area-inset-bottom)) {

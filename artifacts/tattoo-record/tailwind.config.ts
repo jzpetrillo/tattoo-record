@@ -43,6 +43,17 @@ export default {
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",
+        // Press palette. These were used as `text-ink`, `bg-paper`,
+        // `ring-cobalt` etc. across the app but only ever existed as a
+        // handful of hand-written rules in index.css, so `text-ink`,
+        // `bg-ink`, `bg-paper`, `border-paper` and `ring-cobalt` resolved
+        // to nothing. Registering them here generates every variant --
+        // including opacity modifiers like `text-ink/60`, which a plain
+        // CSS class cannot express.
+        ink: "hsl(0 0% 7%)",
+        paper: "hsl(47 20% 91%)",
+        cobalt: "hsl(236 91% 56%)",
+        flash: "hsl(15 100% 56%)",
         chart: {
           "1": "hsl(var(--chart-1))",
           "2": "hsl(var(--chart-2))",
