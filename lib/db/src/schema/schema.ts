@@ -74,13 +74,6 @@ export const livestreamStatusEnum = pgEnum("livestream_status", [
   "LIVE",
   "ENDED"
 ]);
-export const consultationStatusEnum = pgEnum("consultation_status", [
-  "REQUESTED",
-  "CONFIRMED",
-  "DECLINED",
-  "COMPLETED"
-]);
-export const platformEnum = pgEnum("platform", ["INSTAGRAM", "TIKTOK", "OTHER"]);
 export const postTypeEnum = pgEnum("post_type", ["POST", "REEL", "STORY"]);
 export const paymentStatusEnum = pgEnum("payment_status", [
   "UNPAID",
@@ -136,7 +129,6 @@ export const users = pgTable("users", {
     lat?: number;
     lng?: number;
   }>(),
-  links: jsonb("links").$type<string[]>().default([]),
   socialHandles: jsonb("social_handles").$type<Record<string, string>>().default({}),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
@@ -155,29 +147,6 @@ export const emailChangeTokens = pgTable("email_change_tokens", {
 }, (table) => ({
   userIdIdx: index("email_change_tokens_user_id_idx").on(table.userId),
 }));
-
-export const studioProfiles = pgTable("studio_profiles", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }).unique(),
-  name: varchar("name", { length: 255 }).notNull(),
-  description: text("description"),
-  services: jsonb("services").$type<string[]>().default([]),
-  hours: jsonb("hours").$type<Record<string, string>>().default({}),
-  paymentMethods: jsonb("payment_methods").$type<string[]>().default([]),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-  updatedAt: timestamp("updated_at").notNull().defaultNow()
-});
-
-export const artistProfiles = pgTable("artist_profiles", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }).unique(),
-  styles: jsonb("styles").$type<string[]>().default([]),
-  rateCents: integer("rate_cents"),
-  availability: jsonb("availability").$type<Record<string, any>>().default({}),
-  yearsExperience: integer("years_experience"),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-  updatedAt: timestamp("updated_at").notNull().defaultNow()
-});
 
 export const posts = pgTable("posts", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -281,7 +250,6 @@ export const messages: any = pgTable("messages", {
     url: string;
     type: string;
   }>(),
-  voiceUrl: text("voice_url"),
   replyToId: uuid("reply_to_id"),
   reactions: jsonb("reactions").$type<Array<{
     userId: string;
@@ -311,25 +279,6 @@ export const stories = pgTable("stories", {
 }, (table) => ({
   userIdx: index("stories_user_idx").on(table.userId),
   expiresAtIdx: index("stories_expires_at_idx").on(table.expiresAt)
-}));
-
-export const storyHighlights = pgTable("story_highlights", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
-  title: varchar("title", { length: 100 }).notNull(),
-  coverUrl: text("cover_url"),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-  updatedAt: timestamp("updated_at").notNull().defaultNow()
-});
-
-export const highlightStories = pgTable("highlight_stories", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  highlightId: uuid("highlight_id").notNull().references(() => storyHighlights.id, { onDelete: "cascade" }),
-  storyId: uuid("story_id").notNull().references(() => stories.id, { onDelete: "cascade" }),
-  sortOrder: integer("sort_order").notNull().default(0),
-  createdAt: timestamp("created_at").notNull().defaultNow()
-}, (table) => ({
-  uniqueHighlightStory: uniqueIndex("unique_highlight_story").on(table.highlightId, table.storyId)
 }));
 
 // Professional Features
@@ -449,20 +398,6 @@ export const liveReactions = pgTable("live_reactions", {
   postedAt: timestamp("posted_at").notNull().defaultNow()
 });
 
-// Consultations
-export const consultationRequests = pgTable("consultation_requests", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  artistId: uuid("artist_id").notNull().references(() => users.id, { onDelete: "cascade" }),
-  requesterId: uuid("requester_id").notNull().references(() => users.id, { onDelete: "cascade" }),
-  preferredTimes: jsonb("preferred_times").$type<string[]>().default([]),
-  status: consultationStatusEnum("status").notNull().default("REQUESTED"),
-  notes: text("notes"),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-  updatedAt: timestamp("updated_at").notNull().defaultNow()
-}, (table) => ({
-  artistIdx: index("consultation_requests_artist_idx").on(table.artistId)
-}));
-
 // Auxiliary Tables
 export const hashtags = pgTable("hashtags", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -493,16 +428,6 @@ export const follows = pgTable("follows", {
   uniqueFollow: uniqueIndex("unique_follow").on(table.followerId, table.followingId),
   followerIdx: index("follows_follower_idx").on(table.followerId),
   followingIdx: index("follows_following_idx").on(table.followingId)
-}));
-
-export const postShares = pgTable("post_shares", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  postId: uuid("post_id").notNull().references(() => posts.id, { onDelete: "cascade" }),
-  userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
-  platform: platformEnum("platform").notNull(),
-  sharedAt: timestamp("shared_at").notNull().defaultNow()
-}, (table) => ({
-  postIdx: index("post_shares_post_idx").on(table.postId)
 }));
 
 // Saved Posts (Bookmarks)
@@ -595,8 +520,6 @@ export const events = pgTable("events", {
 // Relations
 export const usersRelations = relations(users, ({ many, one }) => ({
   posts: many(posts),
-  studioProfile: one(studioProfiles),
-  artistProfile: one(artistProfiles),
   followers: many(follows, { relationName: "followers" }),
   following: many(follows, { relationName: "following" })
 }));
