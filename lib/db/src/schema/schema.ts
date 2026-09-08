@@ -271,7 +271,7 @@ export const conversationParticipants = pgTable("conversation_participants", {
   userIdx: index("conversation_participants_user_idx").on(table.userId)
 }));
 
-export const messages: any = pgTable("messages", {
+export const messages = pgTable("messages", {
   id: uuid("id").primaryKey().defaultRandom(),
   conversationId: uuid("conversation_id").notNull().references(() => conversations.id, { onDelete: "cascade" }),
   senderId: uuid("sender_id").notNull().references(() => users.id, { onDelete: "cascade" }),
@@ -616,7 +616,7 @@ export const conversationsRelations = relations(conversations, ({ many }) => ({
   messages: many(messages)
 }));
 
-export const messagesRelations = relations(messages, ({ one }): any => ({
+export const messagesRelations = relations(messages, ({ one }) => ({
   conversation: one(conversations, {
     fields: [messages.conversationId],
     references: [conversations.id]
