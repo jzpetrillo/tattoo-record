@@ -81,16 +81,56 @@ function pipeMediaStream(stream: Readable, res: import("express").Response) {
   return res;
 }
 
-// Safe error responder: surfaces Zod validation messages (400) but returns a
-// generic message for all other errors so internal details never reach clients.
+// Postgres SQLSTATE codes that mean "the client sent something invalid", not
+// "the server broke". Without these, a malformed id in a URL surfaces as a 500.
+const PG_INVALID_TEXT_REPRESENTATION = "22P02"; // e.g. a non-UUID in a :id param
+const PG_UNIQUE_VIOLATION = "23505";
+const PG_FOREIGN_KEY_VIOLATION = "23503";
+const PG_NUMERIC_OUT_OF_RANGE = "22003";
+
+// Safe error responder: surfaces Zod validation messages (400), maps known
+// client-input database errors to 4xx, and returns a generic message for
+// everything else so internal details never reach clients.
 function sendError(res: any, error: any): void {
   if (error?.name === "ZodError") {
     const msg = error.issues?.[0]?.message ?? error.errors?.[0]?.message ?? "Validation failed";
     res.status(400).json({ message: msg });
-  } else {
-    console.error("[route-error]", error);
-    res.status(500).json({ message: "An unexpected error occurred" });
+    return;
   }
+
+  // Drivers surface the SQLSTATE either directly or wrapped in `cause`.
+  const code = error?.code ?? error?.cause?.code;
+
+  if (code === PG_INVALID_TEXT_REPRESENTATION) {
+    // A malformed identifier can never match a row, so this is a bad URL rather
+    // than a server fault. 404 keeps it consistent with a valid-but-missing id.
+    res.status(404).json({ message: "Not found" });
+    return;
+  }
+  if (code === PG_UNIQUE_VIOLATION) {
+    res.status(409).json({ message: "That record already exists." });
+    return;
+  }
+  if (code === PG_FOREIGN_KEY_VIOLATION || code === PG_NUMERIC_OUT_OF_RANGE) {
+    res.status(400).json({ message: "Invalid request." });
+    return;
+  }
+
+  console.error("[route-error]", error);
+  res.status(500).json({ message: "An unexpected error occurred" });
+}
+
+// Clamp client-supplied pagination before it reaches SQL: a negative LIMIT is a
+// database error (500), and an unbounded one is an easy way to exhaust the DB.
+function parsePageParam(raw: unknown, fallback: number, max: number): number {
+  const n = Number.parseInt(String(raw ?? ""), 10);
+  if (!Number.isFinite(n) || n <= 0) return fallback;
+  return Math.min(n, max);
+}
+
+function parseOffsetParam(raw: unknown): number {
+  const n = Number.parseInt(String(raw ?? ""), 10);
+  return Number.isFinite(n) && n > 0 ? n : 0;
 }
 
 function getCanonicalAppUrl(): string {
@@ -676,8 +716,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/users", async (req, res) => {
     try {
       const type = req.query.type as string;
-      const take = parseInt(req.query.take as string) || 24;
-      const skip = parseInt(req.query.skip as string) || 0;
+      const take = parsePageParam(req.query.take, 24, 100);
+      const skip = parseOffsetParam(req.query.skip);
       
       const users = await storage.getUsers({ type, take, skip });
       res.json(users);
@@ -799,8 +839,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Post Routes
   app.get("/api/posts", requireAuth, async (req: AuthRequest, res) => {
     try {
-      const limit = parseInt(req.query.limit as string) || 20;
-      const offset = parseInt(req.query.offset as string) || 0;
+      const limit = parsePageParam(req.query.limit, 20, 100);
+      const offset = parseOffsetParam(req.query.offset);
       const authorId = req.query.authorId as string;
       const type = req.query.type as "POST" | "REEL" | "STORY" | undefined;
       const featured = req.query.featured === "true";
@@ -996,7 +1036,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // For You Recommendations
   app.get("/api/for-you", requireAuth, async (req: AuthRequest, res) => {
     try {
-      const limit = parseInt(req.query.limit as string) || 10;
+      const limit = parsePageParam(req.query.limit, 10, 50);
       const recommendations = await getForYouRecommendations(req.userId!, limit);
       res.json(recommendations);
     } catch (error: any) {
@@ -1186,7 +1226,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!participant) {
         return res.status(403).json({ message: "Not a participant in this conversation" });
       }
-      const limit = parseInt(req.query.limit as string) || 50;
+      const limit = parsePageParam(req.query.limit, 50, 100);
       const messages = await storage.getMessages(req.params.id, limit);
       res.json(messages);
     } catch (error: any) {
@@ -1911,7 +1951,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/search/semantic", async (req, res) => {
     try {
       const query = (req.query.q as string || "").trim();
-      const limit = Math.min(parseInt(req.query.limit as string) || 20, 50);
+      const limit = parsePageParam(req.query.limit, 20, 50);
       if (!query) return res.json({ posts: [], available: false });
       if (!flags.aiSemanticSearch || !isVoyageEnabled()) {
         return res.json({ posts: [], available: false });
@@ -1931,7 +1971,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/hashtags/trending", async (req, res) => {
     try {
-      const limit = parseInt(req.query.limit as string) || 10;
+      const limit = parsePageParam(req.query.limit, 10, 50);
       const hashtags = await storage.getTrendingHashtags(limit);
       res.json(hashtags);
     } catch (error: any) {
@@ -1942,7 +1982,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Notification Routes
   app.get("/api/notifications", requireAuth, async (req: AuthRequest, res) => {
     try {
-      const limit = parseInt(req.query.limit as string) || 50;
+      const limit = parsePageParam(req.query.limit, 50, 100);
       const notifications = await storage.getNotifications(req.userId!, limit);
       res.json(notifications);
     } catch (error: any) {
@@ -1970,7 +2010,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/discovery/trending", async (req, res) => {
     try {
-      const limit = parseInt(req.query.limit as string) || 20;
+      const limit = parsePageParam(req.query.limit, 20, 100);
       const posts = await getTrendingPosts(limit);
       res.json(posts);
     } catch (error: any) {

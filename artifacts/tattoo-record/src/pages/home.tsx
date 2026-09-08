@@ -116,7 +116,7 @@ export default function Home() {
                 {featuredPosts.map((item: any) => (
                   <Link
                     key={item.post.id}
-                    href={`/u/${item.author.username}`}
+                    href={`/posts/${item.post.id}`}
                     data-testid={`featured-post-${item.post.id}`}
                   >
                     <div className="flex-shrink-0 w-48 cursor-pointer group">

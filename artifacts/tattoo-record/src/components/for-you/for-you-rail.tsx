@@ -114,7 +114,7 @@ export default function ForYouRail() {
       {recommendedPosts.length > 0 && (
         <div className="grid grid-cols-2 gap-px bg-border">
           {heroPost && (
-            <Link href={`/u/${heroPost.author.username}`}>
+            <Link href={`/posts/${heroPost.post.id}`}>
               <div className="relative aspect-[4/5] bg-muted group cursor-pointer overflow-hidden" data-testid={`for-you-hero-${heroPost.post.id}`}>
                 {heroPost.post.media?.[0] ? (
                   <img
@@ -149,7 +149,7 @@ export default function ForYouRail() {
 
           <div className="grid grid-rows-2 gap-px bg-border">
             {sidePosts.map((item) => (
-              <Link key={item.post.id} href={`/u/${item.author.username}`}>
+              <Link key={item.post.id} href={`/posts/${item.post.id}`}>
                 <div className="relative aspect-[4/3] bg-muted group cursor-pointer overflow-hidden" data-testid={`for-you-post-${item.post.id}`}>
                   {item.post.media?.[0] ? (
                     <img

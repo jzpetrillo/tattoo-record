@@ -130,11 +130,13 @@ export default function CreatePostModal({ open, onClose, defaultTab = "post" }: 
       const file = files[0];
       const media = await uploadFile(file, "stories", token!);
 
+      // The stories API takes a single media object, not an array — sending an
+      // array here made every story creation fail validation with a 400.
       await apiRequest(
         "POST",
         "/api/stories",
         {
-          media: [media],
+          media,
         },
         token!
       );

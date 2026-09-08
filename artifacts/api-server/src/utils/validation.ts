@@ -131,7 +131,7 @@ export const createBookingSchema = z.object({
   tattooSize: z.string().optional(),
   flashSaleId: z.string().uuid().optional(),
   referenceImages: z.array(z.object({ publicId: z.string(), url: z.string() })).optional(),
-  reminderPreference: z.enum(["DAY_BEFORE", "WEEK_BEFORE", "NONE"]).optional(),
+  reminderPreference: z.enum(["DAY_BEFORE", "WEEK_BEFORE", "NONE", "BOTH"]).optional(),
 }).refine(d => d.depositCents == null || d.totalPriceCents == null || d.depositCents <= d.totalPriceCents, {
   message: "Deposit cannot exceed total price",
   path: ["depositCents"],
@@ -147,7 +147,7 @@ export const updateBookingSchema = z.object({
   durationMinutes: z.number().int().positive().optional(),
   referenceImages: z.array(z.object({ publicId: z.string(), url: z.string() })).optional(),
   notes: z.string().optional(),
-  reminderPreference: z.enum(["DAY_BEFORE", "WEEK_BEFORE", "NONE"]).optional(),
+  reminderPreference: z.enum(["DAY_BEFORE", "WEEK_BEFORE", "NONE", "BOTH"]).optional(),
   status: z.enum(["PENDING", "APPROVED", "REJECTED", "COMPLETED", "CANCELLED"]).optional(),
 });
 
