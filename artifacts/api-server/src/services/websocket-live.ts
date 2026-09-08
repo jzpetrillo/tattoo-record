@@ -16,6 +16,7 @@ interface LiveWSClient extends WebSocket {
   userId?: string;
   eventId?: string;
   isAlive?: boolean;
+  isViewing?: boolean;
 }
 
 interface LiveWSMessage {
@@ -175,6 +176,7 @@ async function handleJoin(
     eventViewers.set(eventId, new Set());
   }
   eventViewers.get(eventId)!.add(ws.userId);
+  ws.isViewing = true;
 
   // Derive isHost from the event record — never trust client-supplied payload
   const isHost = event ? event.hostId === ws.userId : false;
@@ -219,6 +221,7 @@ async function handleLeave(
   if (eventViewers.has(eventId)) {
     eventViewers.get(eventId)!.delete(userId);
   }
+  ws.isViewing = false;
 
   await db
     .update(livestreamParticipants)
@@ -331,7 +334,11 @@ async function handleStreamEnd(wss: WebSocketServer, ws: LiveWSClient) {
 function broadcastToEvent(wss: WebSocketServer, eventId: string, message: any) {
   const data = JSON.stringify(message);
   wss.clients.forEach((client: LiveWSClient) => {
-    if (client.eventId === eventId && client.readyState === WebSocket.OPEN) {
+    if (
+      client.isViewing === true
+      && client.eventId === eventId
+      && client.readyState === WebSocket.OPEN
+    ) {
       client.send(data);
     }
   });

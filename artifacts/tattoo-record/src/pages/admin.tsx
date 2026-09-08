@@ -23,6 +23,11 @@ import SidebarNav from "@/components/layout/sidebar-nav";
 import MobileNav from "@/components/layout/mobile-nav";
 import { useState } from "react";
 import UserAvatar from "@/components/user-avatar";
+import {
+  getAdminBookingItems,
+  getAdminBookingsUrl,
+  type BookingStatusFilter,
+} from "@/lib/admin-bookings";
 
 type AdminSection = "overview" | "users" | "posts" | "jobs" | "flash-sales" | "bookings" | "verification" | "csp-violations";
 
@@ -44,7 +49,7 @@ export default function AdminDashboard() {
   const [newSale, setNewSale] = useState({ artistId: "", title: "", description: "", originalPrice: "", flashPrice: "", availableSlots: "1", expiresAt: "" });
   const [postsFeatureFilter, setPostsFeatureFilter] = useState<string>("all");
   const [postsAuthorSearch, setPostsAuthorSearch] = useState<string>("");
-  const [bookingStatusFilter, setBookingStatusFilter] = useState<string>("all");
+  const [bookingStatusFilter, setBookingStatusFilter] = useState<BookingStatusFilter>("all");
 
   // Stats query
   const { data: stats, isLoading: statsLoading, isError: statsError, refetch: refetchStats } = useQuery({
@@ -134,10 +139,10 @@ export default function AdminDashboard() {
   });
 
   // Bookings query
-  const { data: bookings, isLoading: bookingsLoading, isError: bookingsError, refetch: refetchBookings } = useQuery({
-    queryKey: ["/api/admin/bookings"],
+  const { data: bookingsResponse, isLoading: bookingsLoading, isError: bookingsError, refetch: refetchBookings } = useQuery({
+    queryKey: ["/api/admin/bookings", bookingStatusFilter],
     queryFn: async () => {
-      const res = await fetch("/api/admin/bookings", {
+      const res = await fetch(getAdminBookingsUrl(bookingStatusFilter), {
         headers: { Authorization: `Bearer ${token}` },
         credentials: "include",
       });
@@ -146,6 +151,9 @@ export default function AdminDashboard() {
     },
     enabled: !!token && user?.role === "ADMIN" && activeSection === "bookings",
   });
+  const bookings = bookingsResponse
+    ? getAdminBookingItems(bookingsResponse as any, bookingStatusFilter)
+    : undefined;
 
   // CSP violations query
   const { data: cspViolations, isLoading: cspLoading, isError: cspError, refetch: refetchCsp } = useQuery({
@@ -1236,7 +1244,10 @@ export default function AdminDashboard() {
             <div className="space-y-6">
               <div className="flex flex-col sm:flex-row justify-between gap-4">
                 <h2 className="text-base font-semibold uppercase tracking-wider text-muted-foreground">Bookings Overview</h2>
-                <Select value={bookingStatusFilter} onValueChange={setBookingStatusFilter}>
+                <Select
+                  value={bookingStatusFilter}
+                  onValueChange={(value) => setBookingStatusFilter(value as BookingStatusFilter)}
+                >
                   <SelectTrigger className="w-44" data-testid="select-booking-status-filter">
                     <SelectValue placeholder="Filter by status" />
                   </SelectTrigger>
@@ -1259,14 +1270,11 @@ export default function AdminDashboard() {
                 <EmptyState icon={Calendar} title="No bookings" description="No bookings have been made yet." />
               ) : (
                 (() => {
-                  const filtered = (bookings as any[]).filter((b) =>
-                    bookingStatusFilter === "all" || b.status === bookingStatusFilter
-                  );
-                  return filtered.length === 0 ? (
+                  return bookings.length === 0 ? (
                     <EmptyState icon={Calendar} title="No bookings found" description="No bookings match the selected status." />
                   ) : (
                     <div className="space-y-2">
-                      {filtered.map((booking: any) => (
+                      {bookings.map((booking: any) => (
                         <Card key={booking.id} data-testid={`card-booking-${booking.id}`}>
                           <CardContent className="p-4">
                             <div className="flex items-center justify-between">

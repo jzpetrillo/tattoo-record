@@ -143,7 +143,7 @@ export interface IStorage {
   deactivateJob(jobId: string): Promise<void>;
   getAllFlashSalesAdmin(): Promise<any[]>;
   deleteFlashSale(saleId: string): Promise<void>;
-  getAllBookingsAdmin(): Promise<any[]>;
+  getAllBookingsAdmin(options?: { status?: string }): Promise<any[]>;
 
   // AI operations
   updatePostTags(postId: string, tags: { subjects?: string[]; styles?: string[]; aiTags?: { styles: string[]; subjects: string[]; colorProfile: string; placement: string } | null }): Promise<void>;
@@ -1671,7 +1671,7 @@ export class DatabaseStorage implements IStorage {
       .where(eq(schema.flashSales.id, saleId));
   }
 
-  async getAllBookingsAdmin() {
+  async getAllBookingsAdmin(options: { status?: string } = {}) {
     const artistUser = alias(schema.users, "artist");
     const clientUser = alias(schema.users, "client");
     
@@ -1698,6 +1698,7 @@ export class DatabaseStorage implements IStorage {
       .from(schema.bookings)
       .leftJoin(artistUser, eq(schema.bookings.artistId, artistUser.id))
       .leftJoin(clientUser, eq(schema.bookings.clientId, clientUser.id))
+      .where(options.status ? eq(schema.bookings.status, options.status as any) : undefined)
       .orderBy(desc(schema.bookings.createdAt));
     
     return results.map(r => ({

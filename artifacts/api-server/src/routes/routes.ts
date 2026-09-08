@@ -2492,7 +2492,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Admin - Bookings Overview
   app.get("/api/admin/bookings", requireAuth, requireRole(["ADMIN"]), async (req: AuthRequest, res) => {
     try {
-      const bookings = await storage.getAllBookingsAdmin();
+      const status = typeof req.query.status === "string" ? req.query.status : undefined;
+      const validStatuses = ["PENDING", "APPROVED", "COMPLETED", "CANCELLED", "REJECTED"];
+      if (status && !validStatuses.includes(status)) {
+        return res.status(400).json({ message: "Invalid booking status" });
+      }
+      const bookings = await storage.getAllBookingsAdmin({ status });
       res.json(bookings);
     } catch (error: any) {
       res.status(500).json({ message: "Internal server error" });

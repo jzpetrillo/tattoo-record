@@ -114,7 +114,7 @@ export function setupMessageWebSocket(server: Server) {
 
           case "REACTION_ADDED":
           case "REACTION_REMOVED":
-            await handleReaction(wss, message);
+            await handleReaction(wss, ws.userId!, message);
             break;
 
           case "HEARTBEAT":
@@ -199,8 +199,8 @@ async function handleReadReceipt(wss: WebSocketServer, userId: string, payload: 
   });
 }
 
-async function handleReaction(wss: WebSocketServer, message: WSMessage) {
-  const { messageId, emoji, userId } = message.payload;
+async function handleReaction(wss: WebSocketServer, userId: string, message: WSMessage) {
+  const { messageId, emoji } = message.payload;
 
   const [msg] = await db
     .select()
