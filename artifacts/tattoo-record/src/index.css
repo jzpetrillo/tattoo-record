@@ -43,19 +43,6 @@
 }
 
 @layer utilities {
-  .marquee {
-    animation: marquee 30s linear infinite;
-  }
-  
-  @keyframes marquee {
-    0% {
-      transform: translateX(0);
-    }
-    100% {
-      transform: translateX(-50%);
-    }
-  }
-  
   .editorial-title {
     font-size: clamp(2rem, 8vw, 6rem);
     line-height: 0.9;
