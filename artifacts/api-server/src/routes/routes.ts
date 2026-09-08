@@ -846,13 +846,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const featured = req.query.featured === "true";
       
       if (authorId) {
-        const posts = await storage.getPosts({ limit, offset, authorId, type });
+        const posts = await storage.getPosts({ limit, offset, authorId, type, viewerId: req.userId });
         res.json(posts);
       } else if (featured) {
         const posts = await getFeaturedPosts(limit, req.userId);
         res.json(posts);
       } else if (type) {
-        const posts = await storage.getPosts({ limit, offset, type });
+        const posts = await storage.getPosts({ limit, offset, type, viewerId: req.userId });
         res.json(posts);
       } else {
         const feed = await getPersonalizedFeed(req.userId!, limit, offset);
@@ -1872,10 +1872,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/livestream-events", requireAuth, async (req: AuthRequest, res) => {
     try {
+      const validated = validation.createLivestreamEventSchema.parse(req.body);
       const event = await storage.createLivestreamEvent({
-        ...req.body,
+        ...validated,
         hostId: req.userId!
-      });
+      } as any);
       res.json(event);
     } catch (error: any) {
       sendError(res, error);
@@ -1895,7 +1896,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (event.hostId !== req.userId) {
         return res.status(403).json({ message: "Not authorized to edit this event" });
       }
-      await storage.updateLivestreamEvent(req.params.id, req.body);
+      const validated = validation.updateLivestreamEventSchema.parse(req.body);
+      await storage.updateLivestreamEvent(req.params.id, validated as any);
       res.json({ message: "Event updated" });
     } catch (error: any) {
       res.status(500).json({ message: "Internal server error" });
@@ -1927,12 +1929,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Search Routes
-  app.get("/api/search", async (req, res) => {
+  // optionalAuth so a signed-in searcher still matches posts they are entitled
+  // to see (their own, and FOLLOWERS posts by people they follow). Without it
+  // req.userId is always undefined here and search silently returns PUBLIC only.
+  app.get("/api/search", optionalAuth, async (req: AuthRequest, res) => {
     try {
       const query = req.query.q as string;
       const [users, posts, hashtags] = await Promise.all([
         storage.searchUsers(query),
-        storage.searchPosts(query),
+        storage.searchPosts(query, req.userId),
         storage.searchHashtags(query)
       ]);
       res.json({ users, posts, hashtags });
@@ -2300,11 +2305,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/studios/:studioId/feed", requireAuth, async (req, res) => {
+  app.get("/api/studios/:studioId/feed", requireAuth, async (req: AuthRequest, res) => {
     try {
       const limit = Math.min(Math.max(Number(req.query.limit) || 60, 1), 100);
       const offset = Math.max(Number(req.query.offset) || 0, 0);
-      const posts = await storage.getStudioArtistPosts(req.params.studioId, limit, offset);
+      const posts = await storage.getStudioArtistPosts(req.params.studioId, limit, offset, req.userId);
       res.json(posts);
     } catch (error: any) {
       sendError(res, error);

@@ -187,6 +187,20 @@ export const updateFlashSaleSchema = z.object({
   }
 });
 
+// Livestream events were previously created and updated from raw req.body, which
+// let a client set hostId, status, viewer counts and timestamps directly — on
+// update that meant the host could reassign the event to another user. Only the
+// author-supplied fields belong here; everything else is server-owned.
+export const createLivestreamEventSchema = z.object({
+  title: z.string().min(1, "Title is required").max(255),
+  scheduledFor: z.coerce.date().optional(),
+});
+
+export const updateLivestreamEventSchema = z.object({
+  title: z.string().min(1, "Title is required").max(255).optional(),
+  scheduledFor: z.coerce.date().optional(),
+});
+
 export const jobApplySchema = z.object({
   coverLetter: z.string().min(10, "Cover letter must be at least 10 characters").max(5000),
   portfolioSnapshot: z.array(z.record(z.string(), z.unknown())).default([]),
