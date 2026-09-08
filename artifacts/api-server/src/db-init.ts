@@ -343,5 +343,22 @@ export async function initDatabase() {
   `);
 
   await ensureCaseInsensitiveEmailUniqueness();
-  await seedProductionAdmin();
+
+  // Seeding the bootstrap admin is a convenience, not a prerequisite for
+  // serving traffic. getSeedAdminConfig() throws when a SEED_ADMIN_* secret
+  // is missing or malformed, and that rejection propagated out of
+  // initDatabase() through registerRoutes() to the process.exit(1) in
+  // index.ts -- so a missing bootstrap secret took the whole site down with
+  // a 502 instead of simply starting without a freshly seeded admin.
+  // Existing admin accounts are unaffected either way, so log loudly and
+  // keep booting; a site that is up without a seeded admin beats a site
+  // that is down.
+  try {
+    await seedProductionAdmin();
+  } catch (err) {
+    console.error(
+      "[db-init] Production admin seeding failed; continuing startup without it:",
+      err instanceof Error ? err.message : String(err),
+    );
+  }
 }
