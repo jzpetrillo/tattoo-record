@@ -131,7 +131,7 @@ export const createBookingSchema = z.object({
   tattooSize: z.string().optional(),
   flashSaleId: z.string().uuid().optional(),
   referenceImages: z.array(z.object({ publicId: z.string(), url: z.string() })).optional(),
-  reminderPreference: z.enum(["DAY_BEFORE", "WEEK_BEFORE", "NONE"]).optional(),
+  reminderPreference: z.enum(["DAY_BEFORE", "WEEK_BEFORE", "NONE", "BOTH"]).optional(),
 }).refine(d => d.depositCents == null || d.totalPriceCents == null || d.depositCents <= d.totalPriceCents, {
   message: "Deposit cannot exceed total price",
   path: ["depositCents"],
@@ -147,7 +147,7 @@ export const updateBookingSchema = z.object({
   durationMinutes: z.number().int().positive().optional(),
   referenceImages: z.array(z.object({ publicId: z.string(), url: z.string() })).optional(),
   notes: z.string().optional(),
-  reminderPreference: z.enum(["DAY_BEFORE", "WEEK_BEFORE", "NONE"]).optional(),
+  reminderPreference: z.enum(["DAY_BEFORE", "WEEK_BEFORE", "NONE", "BOTH"]).optional(),
   status: z.enum(["PENDING", "APPROVED", "REJECTED", "COMPLETED", "CANCELLED"]).optional(),
 });
 
@@ -185,6 +185,20 @@ export const updateFlashSaleSchema = z.object({
       ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Flash price must be less than original price", path: ["flashPriceCents"] });
     }
   }
+});
+
+// Livestream events were previously created and updated from raw req.body, which
+// let a client set hostId, status, viewer counts and timestamps directly — on
+// update that meant the host could reassign the event to another user. Only the
+// author-supplied fields belong here; everything else is server-owned.
+export const createLivestreamEventSchema = z.object({
+  title: z.string().min(1, "Title is required").max(255),
+  scheduledFor: z.coerce.date().optional(),
+});
+
+export const updateLivestreamEventSchema = z.object({
+  title: z.string().min(1, "Title is required").max(255).optional(),
+  scheduledFor: z.coerce.date().optional(),
 });
 
 export const jobApplySchema = z.object({

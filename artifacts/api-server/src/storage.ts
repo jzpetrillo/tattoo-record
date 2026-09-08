@@ -3,6 +3,23 @@ import * as schema from "@workspace/db";
 import { eq, and, desc, asc, isNull, isNotNull, sql, or, ilike, inArray, lte, gte } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 
+// A FOLLOWERS-only post is visible to its author and to accounts that follow
+// them; everyone else may only see PUBLIC posts. GET /api/posts/:id already
+// enforces this, but the list, profile, studio-feed and search paths did not,
+// so private posts leaked through them. Apply this to every query that returns
+// posts to a client so list and detail views agree.
+function postVisibleToViewer(viewerId?: string) {
+  if (!viewerId) {
+    return eq(schema.posts.visibility, "PUBLIC");
+  }
+
+  return or(
+    eq(schema.posts.visibility, "PUBLIC"),
+    eq(schema.posts.authorId, viewerId),
+    sql`EXISTS (SELECT 1 FROM ${schema.follows} WHERE ${schema.follows.followerId} = ${viewerId} AND ${schema.follows.followingId} = ${schema.posts.authorId})`
+  );
+}
+
 // Public user columns — never includes hashedPassword or email.
 // Use this in every query that returns user data to clients.
 export const publicUserColumns = {
@@ -231,10 +248,10 @@ export class DatabaseStorage implements IStorage {
     return result;
   }
 
-  async getPosts(options: { limit?: number; offset?: number; authorId?: string; type?: string }) {
-    const { limit = 20, offset = 0, authorId, type } = options;
-    
-    const conditions = [isNull(schema.posts.deletedAt)];
+  async getPosts(options: { limit?: number; offset?: number; authorId?: string; type?: string; viewerId?: string }) {
+    const { limit = 20, offset = 0, authorId, type, viewerId } = options;
+
+    const conditions: any[] = [isNull(schema.posts.deletedAt), postVisibleToViewer(viewerId)];
     if (authorId) {
       conditions.push(eq(schema.posts.authorId, authorId));
     }
@@ -255,7 +272,7 @@ export class DatabaseStorage implements IStorage {
       .offset(offset);
   }
 
-  async getStudioArtistPosts(studioId: string, limit = 60, offset = 0) {
+  async getStudioArtistPosts(studioId: string, limit = 60, offset = 0, viewerId?: string) {
     return db
       .select({
         post: schema.posts,
@@ -272,6 +289,7 @@ export class DatabaseStorage implements IStorage {
         eq(schema.studioApprovalRequests.status, "APPROVED"),
         inArray(schema.posts.type, ["POST", "REEL"]),
         isNull(schema.posts.deletedAt),
+        postVisibleToViewer(viewerId),
       ))
       .orderBy(desc(schema.posts.createdAt))
       .limit(limit)
@@ -710,7 +728,7 @@ export class DatabaseStorage implements IStorage {
       .limit(20);
   }
 
-  async searchPosts(query: string) {
+  async searchPosts(query: string, viewerId?: string) {
     return db
       .select({
         post: schema.posts,
@@ -721,7 +739,8 @@ export class DatabaseStorage implements IStorage {
       .where(
         and(
           ilike(schema.posts.caption, `%${query}%`),
-          isNull(schema.posts.deletedAt)
+          isNull(schema.posts.deletedAt),
+          postVisibleToViewer(viewerId)
         )
       )
       .orderBy(desc(schema.posts.createdAt))
@@ -812,7 +831,7 @@ export class DatabaseStorage implements IStorage {
          1 - (p.embedding <=> $1::vector) as similarity
        FROM posts p
        JOIN users u ON p.author_id = u.id
-       WHERE p.deleted_at IS NULL AND p.embedding IS NOT NULL
+       WHERE p.deleted_at IS NULL AND p.embedding IS NOT NULL AND p.visibility = 'PUBLIC'
        ORDER BY p.embedding <=> $1::vector
        LIMIT $2`,
       [vecStr, limit]

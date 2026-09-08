@@ -2,7 +2,7 @@ import { WebSocketServer, WebSocket } from "ws";
 import { Server, IncomingMessage } from "http";
 import jwt from "jsonwebtoken";
 import { db } from "../db";
-import { messages, conversationParticipants } from "@workspace/db";
+import { users, messages, conversationParticipants } from "@workspace/db";
 import { eq, and } from "drizzle-orm";
 import { getWebSocketUpgradePath } from "./websocket-routing";
 
@@ -73,13 +73,28 @@ export function setupMessageWebSocket(server: Server) {
 
   const heartbeatInterval = parseInt(process.env.WEBSOCKET_HEARTBEAT_MS || "30000");
 
-  wss.on("connection", (ws: WSClient, req: IncomingMessage) => {
+  wss.on("connection", async (ws: WSClient, req: IncomingMessage) => {
     // Authenticate at handshake time — reject if no valid JWT
     const userId = extractAndVerifyToken(req);
     if (!userId) {
       ws.close(4401, "Unauthorized");
       return;
     }
+
+    // A JWT stays valid for 7 days, so verifying the signature alone would let a
+    // banned or deleted user keep full socket access until it expires. requireAuth
+    // re-checks this on every HTTP request; /ws/live does the same. Mirror it here.
+    const [activeUser] = await db
+      .select({ id: users.id, isBanned: users.isBanned, deletedAt: users.deletedAt })
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1);
+
+    if (!activeUser || activeUser.deletedAt || activeUser.isBanned) {
+      ws.close(4401, "Unauthorized");
+      return;
+    }
+
     ws.userId = userId;
     ws.isAlive = true;
 
@@ -100,9 +115,12 @@ export function setupMessageWebSocket(server: Server) {
             });
             break;
 
-          case "NEW_MESSAGE":
-            await handleNewMessage(wss, message.payload);
-            break;
+          // NEW_MESSAGE is deliberately not accepted from clients. The payload
+          // would be attacker-controlled (any conversationId, any senderId, any
+          // body) and was fanned out to every participant unchecked. Messages
+          // are written through the participation-checked HTTP route, which then
+          // broadcasts authoritatively via broadcastNewMessage(); this socket is
+          // receive-only for that type.
 
           case "READ_RECEIPT":
             await handleReadReceipt(wss, ws.userId!, message.payload);
@@ -155,21 +173,33 @@ export function setupMessageWebSocket(server: Server) {
   return wss;
 }
 
-async function handleNewMessage(wss: WebSocketServer, payload: any) {
-  const participants = await db
-    .select()
-    .from(conversationParticipants)
-    .where(eq(conversationParticipants.conversationId, payload.conversationId));
+// Every socket action below targets a conversation the client names, so the
+// caller's membership has to be proven before it is honoured. Without this a
+// user could react to, mark read, or signal typing in any conversation whose id
+// they can guess.
+async function isConversationParticipant(
+  conversationId: string,
+  userId: string
+): Promise<boolean> {
+  if (!conversationId) return false;
 
-  participants.forEach((participant) => {
-    sendToUser(wss, participant.userId, {
-      type: "NEW_MESSAGE",
-      payload
-    });
-  });
+  const [participant] = await db
+    .select({ userId: conversationParticipants.userId })
+    .from(conversationParticipants)
+    .where(
+      and(
+        eq(conversationParticipants.conversationId, conversationId),
+        eq(conversationParticipants.userId, userId)
+      )
+    )
+    .limit(1);
+
+  return Boolean(participant);
 }
 
 async function handleReadReceipt(wss: WebSocketServer, userId: string, payload: any) {
+  if (!(await isConversationParticipant(payload?.conversationId, userId))) return;
+
   await db
     .update(conversationParticipants)
     .set({ lastReadAt: new Date() })
@@ -210,6 +240,10 @@ async function handleReaction(wss: WebSocketServer, userId: string, message: WSM
 
   if (!msg) return;
 
+  // The reaction is written to a message the client named, then broadcast into
+  // that conversation — so membership must be checked, not assumed.
+  if (!(await isConversationParticipant(msg.conversationId, userId))) return;
+
   let reactions = msg.reactions || [];
 
   if (message.type === "REACTION_ADDED") {
@@ -239,6 +273,8 @@ async function handleReaction(wss: WebSocketServer, userId: string, message: WSM
 }
 
 async function handleTyping(wss: WebSocketServer, senderId: string, payload: any) {
+  if (!(await isConversationParticipant(payload?.conversationId, senderId))) return;
+
   const participants = await db
     .select()
     .from(conversationParticipants)

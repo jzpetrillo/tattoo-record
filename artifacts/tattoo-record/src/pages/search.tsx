@@ -140,7 +140,7 @@ export default function Search() {
                             ? `${Math.round(item.similarity * 100)}%`
                             : null;
                           return (
-                            <Link key={post.id} href={`/u/${author.username}`}>
+                            <Link key={post.id} href={`/posts/${post.id}`}>
                               <div
                                 className="flex items-center gap-3 p-3 border border-border hover:bg-secondary transition-colors cursor-pointer"
                                 data-testid={`semantic-post-${post.id}`}
@@ -260,7 +260,7 @@ export default function Search() {
                           const post = item.post ?? item;
                           const author = item.author ?? {};
                           return (
-                            <Link key={post.id} href={`/u/${author.username}`}>
+                            <Link key={post.id} href={`/posts/${post.id}`}>
                               <div
                                 className="flex items-center gap-3 p-3 border border-border hover:bg-secondary transition-colors cursor-pointer"
                                 data-testid={`post-result-${post.id}`}

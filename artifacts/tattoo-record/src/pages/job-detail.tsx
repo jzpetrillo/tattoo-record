@@ -114,7 +114,15 @@ export default function JobDetail() {
 
   const applyMutation = useMutation({
     mutationFn: async (data: any) => {
-      const res = await apiRequest("POST", `/api/jobs/${id}/apply`, data);
+      // The form collects a single optional portfolio link, but the API stores
+      // portfolio references as a jsonb array — wrap it (empty when omitted) so
+      // the submission validates instead of failing with a 400.
+      const link = typeof data.portfolioSnapshot === "string" ? data.portfolioSnapshot.trim() : "";
+      const payload = {
+        coverLetter: data.coverLetter,
+        portfolioSnapshot: link ? [{ url: link }] : [],
+      };
+      const res = await apiRequest("POST", `/api/jobs/${id}/apply`, payload);
       return res.json();
     },
     onSuccess: () => {
