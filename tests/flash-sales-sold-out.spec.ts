@@ -1,46 +1,14 @@
-import { expect, test, type APIRequestContext, type Page } from "@playwright/test";
+import { expect, test, type APIRequestContext } from "@playwright/test";
 import { randomUUID } from "node:crypto";
-
-const password = "flash-sale-e2e-password";
-
-type TestUser = {
-  id: string;
-  email: string;
-  token: string;
-};
+import {
+  createTestUser,
+  loginTestUser,
+  type TestUser,
+} from "./helpers/test-user";
 
 type FlashSale = {
   id: string;
 };
-
-async function createUser(
-  request: APIRequestContext,
-  label: string,
-  role: "ARTIST" | "ENTHUSIAST",
-): Promise<TestUser> {
-  const suffix = randomUUID().replaceAll("-", "").slice(0, 12);
-  const email = `${label}-${suffix}@example.com`;
-  const response = await request.post("/api/auth/register", {
-    data: {
-      email,
-      username: `${label}${suffix}`,
-      password,
-      role,
-    },
-  });
-
-  expect(response.ok(), await response.text()).toBe(true);
-  const body = await response.json();
-  return { id: body.user.id, email, token: body.token };
-}
-
-async function login(page: Page, user: TestUser) {
-  await page.goto("/auth");
-  await page.getByTestId("input-login-email").fill(user.email);
-  await page.getByTestId("input-login-password").fill(password);
-  await page.getByTestId("button-login").click();
-  await expect(page).toHaveURL(/\/$/);
-}
 
 async function createFlashSale(
   request: APIRequestContext,
@@ -75,8 +43,8 @@ test("flash sale cards show sold-out and remaining-slot states from real API dat
   page,
   request,
 }) => {
-  const artist = await createUser(request, "flashArtist", "ARTIST");
-  const client = await createUser(request, "flashClient", "ENTHUSIAST");
+  const artist = await createTestUser(request, "flashArtist", "ARTIST");
+  const client = await createTestUser(request, "flashClient", "ENTHUSIAST");
   const soldOutTitle = `Sold out flash ${randomUUID()}`;
   const availableTitle = `Available flash ${randomUUID()}`;
 
@@ -96,7 +64,7 @@ test("flash sale cards show sold-out and remaining-slot states from real API dat
   });
   expect(bookingResponse.ok(), await bookingResponse.text()).toBe(true);
 
-  await login(page, client);
+  await loginTestUser(page, client);
   await page.goto("/flash-sales");
 
   const soldOutCard = page.getByTestId(`flash-sale-${soldOutSale.id}`);

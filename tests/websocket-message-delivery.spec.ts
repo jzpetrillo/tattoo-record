@@ -1,35 +1,10 @@
-import { expect, test, type APIRequestContext, type Page } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 import { randomUUID } from "node:crypto";
-
-const password = "chat-e2e-test-password";
-
-type TestUser = {
-  id: string;
-  email: string;
-  username: string;
-  token: string;
-};
-
-async function createUser(request: APIRequestContext, label: string): Promise<TestUser> {
-  const suffix = randomUUID().replaceAll("-", "").slice(0, 12);
-  const email = `${label}-${suffix}@example.com`;
-  const username = `${label}${suffix}`;
-  const response = await request.post("/api/auth/register", {
-    data: { email, username, password, role: "ENTHUSIAST" },
-  });
-
-  expect(response.ok(), await response.text()).toBe(true);
-  const body = await response.json();
-  return { id: body.user.id, email, username, token: body.token };
-}
-
-async function login(page: Page, user: TestUser) {
-  await page.goto("/auth");
-  await page.getByTestId("input-login-email").fill(user.email);
-  await page.getByTestId("input-login-password").fill(password);
-  await page.getByTestId("button-login").click();
-  await expect(page).toHaveURL(/\/$/);
-}
+import {
+  createTestUser,
+  loginTestUser,
+  type TestUser,
+} from "./helpers/test-user";
 
 async function openConversation(page: Page, otherUser: TestUser) {
   let firstFrameSent: Promise<void> | undefined;
@@ -52,8 +27,8 @@ test("a recipient sees a new chat message over the authenticated WebSocket", asy
   browser,
   request,
 }) => {
-  const sender = await createUser(request, "chatSender");
-  const recipient = await createUser(request, "chatRecipient");
+  const sender = await createTestUser(request, "chatSender");
+  const recipient = await createTestUser(request, "chatRecipient");
 
   const conversation = await request.post("/api/conversations", {
     headers: { Authorization: `Bearer ${sender.token}` },
@@ -67,8 +42,8 @@ test("a recipient sees a new chat message over the authenticated WebSocket", asy
   const recipientPage = await recipientContext.newPage();
 
   try {
-    await login(senderPage, sender);
-    await login(recipientPage, recipient);
+    await loginTestUser(senderPage, sender);
+    await loginTestUser(recipientPage, recipient);
 
     await openConversation(recipientPage, sender);
     await openConversation(senderPage, recipient);
