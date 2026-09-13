@@ -5,8 +5,18 @@ const SEED_ADMIN_EMAIL = "SEED_ADMIN_EMAIL";
 const SEED_ADMIN_USERNAME = "SEED_ADMIN_USERNAME";
 const SEED_ADMIN_PASSWORD = "SEED_ADMIN_PASSWORD";
 
-function getSeedAdminConfig() {
-  if (process.env.NODE_ENV !== "production") return null;
+export function getSeedAdminConfig() {
+  const productionSeedRequested = process.env.PRODUCTION_SEED === "1";
+  const isProductionSeed =
+    process.env.NODE_ENV === "production" || productionSeedRequested;
+
+  if (!isProductionSeed) return null;
+
+  if (productionSeedRequested && process.env.NODE_ENV !== "production") {
+    console.warn(
+      "WARNING: PRODUCTION_SEED=1 is set. Production admin credential requirements are enforced even though NODE_ENV is not production.",
+    );
+  }
 
   const missing = [SEED_ADMIN_EMAIL, SEED_ADMIN_USERNAME, SEED_ADMIN_PASSWORD]
     .filter((key) => !process.env[key]?.trim());
