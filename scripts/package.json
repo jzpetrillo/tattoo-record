@@ -4,11 +4,14 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "check:csp": "tsx ./check-csp-domains.ts",
     "hello": "tsx ./src/hello.ts",
+    "test:csp": "tsx --test ./test/check-csp-domains.test.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "devDependencies": {
     "@types/node": "catalog:",
+    "glob": "^13.0.6",
     "tsx": "catalog:"
   }
 }
