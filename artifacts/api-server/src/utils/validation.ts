@@ -4,6 +4,96 @@ import { DEMO_LOGIN_ROLES } from "../config/demo-mode";
 
 export const insertStudioApprovalRequestSchema = _insertStudioApprovalRequestSchema;
 
+const ALLOWED_EXTERNAL_IMAGE_HOSTS = new Set([
+  "api.dicebear.com",
+  "ui-avatars.com",
+  "picsum.photos",
+  "fastly.picsum.photos",
+  "commondatastorage.googleapis.com",
+]);
+
+const ALLOWED_EXTERNAL_VIDEO_HOSTS = new Set([
+  "commondatastorage.googleapis.com",
+]);
+
+const UNLISTED_MEDIA_DOMAIN_MESSAGE =
+  "This media URL is from an unlisted domain and may be blocked by the browser's security policy";
+
+function isAllowedMediaUrl(value: string, type: "image" | "video"): boolean {
+  if (value === "" || value.startsWith("/api/media/") || value.startsWith("blob:")) {
+    return true;
+  }
+  if (type === "image" && value.startsWith("data:")) return true;
+
+  try {
+    const url = new URL(value);
+    if (url.protocol !== "https:" || (url.port !== "" && url.port !== "443")) return false;
+    const allowedHosts = type === "image"
+      ? ALLOWED_EXTERNAL_IMAGE_HOSTS
+      : ALLOWED_EXTERNAL_VIDEO_HOSTS;
+    return allowedHosts.has(url.hostname.toLowerCase());
+  } catch {
+    return false;
+  }
+}
+
+const mediaItemSchema = z.object({
+  publicId: z.string(),
+  url: z.string(),
+  type: z.enum(["image", "video", "IMAGE", "VIDEO"]),
+  width: z.number().optional(),
+  height: z.number().optional(),
+  duration: z.number().optional(),
+}).superRefine((item, ctx) => {
+  const type = item.type.toLowerCase() as "image" | "video";
+  if (!isAllowedMediaUrl(item.url, type)) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["url"],
+      message: UNLISTED_MEDIA_DOMAIN_MESSAGE,
+    });
+  }
+});
+
+const portfolioMediaItemSchema = z.object({
+  publicId: z.string().optional(),
+  url: z.string(),
+  type: z.enum(["image", "video", "IMAGE", "VIDEO"]),
+  width: z.number().optional(),
+  height: z.number().optional(),
+}).superRefine((item, ctx) => {
+  const type = item.type.toLowerCase() as "image" | "video";
+  if (!isAllowedMediaUrl(item.url, type)) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["url"],
+      message: UNLISTED_MEDIA_DOMAIN_MESSAGE,
+    });
+  }
+}).transform((item) => ({
+  ...item,
+  publicId: item.publicId ?? item.url,
+}));
+
+const compactMediaItemSchema = z.object({
+  publicId: z.string(),
+  url: z.string(),
+  type: z.enum(["image", "video", "IMAGE", "VIDEO"]),
+}).superRefine((item, ctx) => {
+  const type = item.type.toLowerCase() as "image" | "video";
+  if (!isAllowedMediaUrl(item.url, type)) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["url"],
+      message: UNLISTED_MEDIA_DOMAIN_MESSAGE,
+    });
+  }
+});
+
+const imageUrlSchema = z.string().refine((value) => isAllowedMediaUrl(value, "image"), {
+  message: UNLISTED_MEDIA_DOMAIN_MESSAGE,
+});
+
 export const loginSchema = z.object({
   email: z.string().trim().email("Invalid email address").transform((email) => email.toLowerCase()),
   password: z.string().min(6, "Password must be at least 6 characters"),
@@ -40,14 +130,7 @@ export const registerSchema = z.object({
 export const createPostSchema = z.object({
   type: z.enum(["POST", "REEL", "STORY"]).default("POST"),
   caption: z.string().optional(),
-  media: z.array(z.object({
-    publicId: z.string(),
-    url: z.string(),
-    type: z.string(),
-    width: z.number().optional(),
-    height: z.number().optional(),
-    duration: z.number().optional()
-  })).optional().default([]),
+  media: z.array(mediaItemSchema).optional().default([]),
   location: z.object({
     city: z.string().optional(),
     country: z.string().optional(),
@@ -111,7 +194,7 @@ export const createFlashSaleSchema = z.object({
   flashPriceCents: z.number().int().positive("Flash price must be positive"),
   availableSlots: z.number().int().min(1, "Must have at least 1 slot"),
   expiresAt: z.string().refine(v => new Date(v) > new Date(), { message: "Expiry must be in the future" }),
-  media: z.array(z.object({ publicId: z.string(), url: z.string(), type: z.string() })).optional(),
+  media: z.array(compactMediaItemSchema).optional(),
   styles: z.array(z.string()).optional(),
 }).refine(d => d.flashPriceCents < d.originalPriceCents, {
   message: "Flash price must be less than original price",
@@ -153,19 +236,19 @@ export const updateBookingSchema = z.object({
 
 // Fields an artist may update on their own portfolio item.
 // Matches actual portfolio_items columns; excludes ownership (artistId).
-export const updatePortfolioItemSchema = z.object({
+export const portfolioItemSchema = z.object({
   title: z.string().min(1).max(255).optional(),
   description: z.string().optional(),
-  media: z.array(z.object({
-    publicId: z.string(),
-    url: z.string(),
-    type: z.string(),
-    width: z.number().optional(),
-    height: z.number().optional(),
-  })).optional(),
+  media: z.array(portfolioMediaItemSchema).optional(),
   categories: z.array(z.string()).optional(),
   sortOrder: z.number().int().nonnegative().optional(),
 });
+
+export const createPortfolioItemSchema = portfolioItemSchema.extend({
+  title: z.string().min(1).max(255),
+});
+
+export const updatePortfolioItemSchema = portfolioItemSchema;
 
 // Fields an artist may update on their own flash sale.
 // Excludes ownership (artistId), counter (bookedSlots), and isActive toggle
@@ -177,7 +260,7 @@ export const updateFlashSaleSchema = z.object({
   flashPriceCents: z.number().int().positive().optional(),
   availableSlots: z.number().int().min(1).optional(),
   expiresAt: z.string().refine(v => new Date(v) > new Date(), { message: "Expiry must be in the future" }).optional(),
-  media: z.array(z.object({ publicId: z.string(), url: z.string(), type: z.string() })).optional(),
+  media: z.array(compactMediaItemSchema).optional(),
   styles: z.array(z.string()).optional(),
 }).superRefine((data, ctx) => {
   if (data.flashPriceCents !== undefined && data.originalPriceCents !== undefined) {
@@ -215,11 +298,7 @@ export const aiRecommendationSchema = z.object({
 
 // Whitelist of fields a user is allowed to update on their own profile.
 // Critical fields (role, isVerified, verificationStatus, isBanned, etc.) are excluded.
-const managedMediaUrlSchema = z.union([
-  z.string().url(),
-  z.string().regex(/^\/api\/media\/[^\s?#]+$/, "Invalid managed media URL"),
-  z.literal(""),
-]);
+const managedMediaUrlSchema = imageUrlSchema;
 
 export const updateUserSchema = z.object({
   firstName: z.string().max(100).optional(),

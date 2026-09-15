@@ -1311,8 +1311,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/portfolio", requireAuth, requireRole(["ARTIST", "STUDIO"]), async (req: AuthRequest, res) => {
     try {
+      const validated = validation.createPortfolioItemSchema.parse(req.body);
       const item = await storage.createPortfolioItem({
-        ...req.body,
+        ...validated,
         artistId: req.userId!
       });
       res.json(item);
@@ -1504,12 +1505,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if ((flashSale as any).artistId !== req.userId) {
         return res.status(403).json({ message: "Not authorized to edit this flash sale" });
       }
-      let validated: ReturnType<typeof validation.updateFlashSaleSchema.parse>;
-      try {
-        validated = validation.updateFlashSaleSchema.parse(req.body);
-      } catch (err: any) {
-        return res.status(400).json({ message: err.errors?.[0]?.message || "Validation failed" });
-      }
+      const validated = validation.updateFlashSaleSchema.parse(req.body);
       // Re-check flashPrice < originalPrice by merging partial values with the stored sale,
       // so a partial update cannot set flashPriceCents >= the persisted originalPriceCents.
       const storedSale = flashSale as any;
@@ -2576,7 +2572,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Admin - Update flash sale
   app.put("/api/admin/flash-sales/:id", requireAuth, requireRole(["ADMIN"]), async (req: AuthRequest, res) => {
     try {
-      const updated = await storage.updateFlashSale(req.params.id, req.body);
+      const validated = validation.updateFlashSaleSchema.parse(req.body);
+      const { expiresAt, ...flashRest } = validated;
+      const updated = await storage.updateFlashSale(req.params.id, {
+        ...flashRest,
+        ...(expiresAt !== undefined ? { expiresAt: new Date(expiresAt) } : {}),
+      });
       res.json(updated);
     } catch (error: any) {
       sendError(res, error);

@@ -58,7 +58,7 @@ async function createPost(user: TestUser, type: "POST" | "REEL", label: string) 
       caption: label,
       media: [{
         publicId: `${label}-${randomUUID()}`,
-        url: `https://example.com/${label}.${type === "REEL" ? "mp4" : "jpg"}`,
+        url: `/api/media/test/${label}.${type === "REEL" ? "mp4" : "jpg"}`,
         type: type === "REEL" ? "video" : "image",
       }],
     },
