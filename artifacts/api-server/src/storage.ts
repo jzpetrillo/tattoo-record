@@ -552,12 +552,12 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createMessage(message: schema.InsertMessage) {
-    const newMessage = ((await db.insert(schema.messages).values(message as any).returning()) as any[])[0];
+    const [newMessage] = await db.insert(schema.messages).values(message).returning();
     
     await db
       .update(schema.conversations)
       .set({ lastMessageAt: new Date() })
-      .where(eq(schema.conversations.id, message.conversationId as unknown as string));
+      .where(eq(schema.conversations.id, message.conversationId));
 
     return newMessage;
   }
