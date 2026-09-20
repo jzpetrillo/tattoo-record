@@ -98,7 +98,6 @@ export default function Landing() {
                 <span className="font-mono text-xs uppercase tracking-[0.14em] text-background/65">Image archive / incoming</span>
                 <div className="max-w-48 border-l-2 border-cobalt pl-3">
                   <p className="press-nameplate text-2xl leading-none">A space for the work before the work.</p>
-                  <p className="mt-3 text-sm text-background/70">Drop a hero tattoo image here when the archive is ready.</p>
                 </div>
               </div>
             </div>

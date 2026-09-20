@@ -687,7 +687,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       res.json({ message: "Logged out successfully" });
     } catch (error: any) {
-      res.status(500).json({ message: "Internal server error" });
+      sendError(res, error);
     }
   });
 
@@ -708,7 +708,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await storage.updateUser(req.userId!, { hashedPassword });
       res.json({ message: "Password changed successfully" });
     } catch (error: any) {
-      res.status(500).json({ message: "Internal server error" });
+      sendError(res, error);
     }
   });
 
@@ -722,7 +722,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const users = await storage.getUsers({ type, take, skip });
       res.json(users);
     } catch (error: any) {
-      res.status(500).json({ message: "Internal server error" });
+      sendError(res, error);
     }
   });
 
@@ -734,7 +734,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       res.json(safeUser(user));
     } catch (error: any) {
-      res.status(500).json({ message: "Internal server error" });
+      sendError(res, error);
     }
   });
 
@@ -753,7 +753,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       res.json(req.userId === user.id ? safeUser(user) : publicUser(user));
     } catch (error: any) {
-      res.status(500).json({ message: "Internal server error" });
+      sendError(res, error);
     }
   });
 
@@ -783,7 +783,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       res.json({ message: "Followed successfully" });
     } catch (error: any) {
-      res.status(500).json({ message: "Internal server error" });
+      sendError(res, error);
     }
   });
 
@@ -792,7 +792,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await storage.unfollowUser(req.userId!, req.params.id);
       res.json({ message: "Unfollowed successfully" });
     } catch (error: any) {
-      res.status(500).json({ message: "Internal server error" });
+      sendError(res, error);
     }
   });
 
@@ -801,7 +801,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const isFollowing = await storage.isFollowing(req.userId!, req.params.id);
       res.json({ isFollowing });
     } catch (error: any) {
-      res.status(500).json({ message: "Internal server error" });
+      sendError(res, error);
     }
   });
 
@@ -832,7 +832,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         postsCount,
       });
     } catch (error: any) {
-      res.status(500).json({ message: "Internal server error" });
+      sendError(res, error);
     }
   });
 
@@ -859,7 +859,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         res.json(feed);
       }
     } catch (error: any) {
-      res.status(500).json({ message: "Internal server error" });
+      sendError(res, error);
     }
   });
 
@@ -907,7 +907,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.json({ ...post, isLiked, isSaved });
     } catch (error: any) {
-      res.status(500).json({ message: "Internal server error" });
+      sendError(res, error);
     }
   });
 
@@ -983,7 +983,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ message: "Post liked" });
     } catch (error: any) {
       console.error("[like post]", error);
-      res.status(500).json({ message: "Internal server error" });
+      sendError(res, error);
     }
   });
 
@@ -992,7 +992,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await storage.unlikePost(req.params.id, req.userId!);
       res.json({ message: "Post unliked" });
     } catch (error: any) {
-      res.status(500).json({ message: "Internal server error" });
+      sendError(res, error);
     }
   });
 
@@ -1029,7 +1029,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await storage.deletePost(req.params.id);
       res.json({ message: "Post deleted" });
     } catch (error: any) {
-      res.status(500).json({ message: "Internal server error" });
+      sendError(res, error);
     }
   });
 
@@ -1040,7 +1040,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const recommendations = await getForYouRecommendations(req.userId!, limit);
       res.json(recommendations);
     } catch (error: any) {
-      res.status(500).json({ message: "Internal server error" });
+      sendError(res, error);
     }
   });
 
@@ -1050,7 +1050,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const comments = await storage.getComments(req.params.postId);
       res.json(comments);
     } catch (error: any) {
-      res.status(500).json({ message: "Internal server error" });
+      sendError(res, error);
     }
   });
 
@@ -1095,7 +1095,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await storage.deleteComment(req.params.commentId);
       res.json({ message: "Comment deleted" });
     } catch (error: any) {
-      res.status(500).json({ message: "Internal server error" });
+      sendError(res, error);
     }
   });
 
@@ -1112,7 +1112,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         entityType: "post",
       }).catch(() => {});
     } catch (error: any) {
-      res.status(500).json({ message: "Internal server error" });
+      sendError(res, error);
     }
   });
 
@@ -1121,7 +1121,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await storage.unsavePost(req.userId!, req.params.postId);
       res.json({ message: "Post unsaved" });
     } catch (error: any) {
-      res.status(500).json({ message: "Internal server error" });
+      sendError(res, error);
     }
   });
 
@@ -1131,7 +1131,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const saved = await storage.getSavedPosts(req.userId!, collectionName);
       res.json(saved);
     } catch (error: any) {
-      res.status(500).json({ message: "Internal server error" });
+      sendError(res, error);
     }
   });
 
@@ -1140,7 +1140,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const isSaved = await storage.isPostSaved(req.userId!, req.params.postId);
       res.json({ isSaved });
     } catch (error: any) {
-      res.status(500).json({ message: "Internal server error" });
+      sendError(res, error);
     }
   });
 
@@ -1149,7 +1149,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const collections = await storage.getSavedCollections(req.userId!);
       res.json(collections);
     } catch (error: any) {
-      res.status(500).json({ message: "Internal server error" });
+      sendError(res, error);
     }
   });
 
@@ -1175,7 +1175,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const stories = await storage.getActiveStories();
       res.json(stories);
     } catch (error: any) {
-      res.status(500).json({ message: "Internal server error" });
+      sendError(res, error);
     }
   });
 
@@ -1184,7 +1184,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const stories = await storage.getStories(req.params.userId);
       res.json(stories);
     } catch (error: any) {
-      res.status(500).json({ message: "Internal server error" });
+      sendError(res, error);
     }
   });
 
@@ -1194,7 +1194,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const conversations = await storage.getConversations(req.userId!);
       res.json(conversations);
     } catch (error: any) {
-      res.status(500).json({ message: "Internal server error" });
+      sendError(res, error);
     }
   });
 
@@ -1208,7 +1208,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       );
       res.json(conversation);
     } catch (error: any) {
-      res.status(500).json({ message: "Internal server error" });
+      sendError(res, error);
     }
   });
 
@@ -1230,7 +1230,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const messages = await storage.getMessages(req.params.id, limit);
       res.json(messages);
     } catch (error: any) {
-      res.status(500).json({ message: "Internal server error" });
+      sendError(res, error);
     }
   });
 
@@ -1272,7 +1272,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await storage.markConversationAsRead(req.params.id, req.userId!);
       res.json({ message: "Marked as read" });
     } catch (error: any) {
-      res.status(500).json({ message: "Internal server error" });
+      sendError(res, error);
     }
   });
 
@@ -1295,7 +1295,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const messages = await storage.getMessages(conversation.id, 50);
       res.json({ conversation, messages, otherUser: publicUser(otherUser) });
     } catch (error: any) {
-      res.status(500).json({ message: "Internal server error" });
+      sendError(res, error);
     }
   });
 
@@ -1305,7 +1305,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const portfolio = await storage.getPortfolio(req.params.artistId);
       res.json(portfolio);
     } catch (error: any) {
-      res.status(500).json({ message: "Internal server error" });
+      sendError(res, error);
     }
   });
 
@@ -1317,7 +1317,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       res.json(item);
     } catch (error: any) {
-      res.status(500).json({ message: "Internal server error" });
+      sendError(res, error);
     }
   });
 
@@ -1334,7 +1334,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await storage.updatePortfolioItem(req.params.id, validated);
       res.json({ message: "Portfolio item updated" });
     } catch (error: any) {
-      res.status(500).json({ message: "Internal server error" });
+      sendError(res, error);
     }
   });
 
@@ -1350,7 +1350,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await storage.deletePortfolioItem(req.params.id);
       res.json({ message: "Portfolio item deleted" });
     } catch (error: any) {
-      res.status(500).json({ message: "Internal server error" });
+      sendError(res, error);
     }
   });
 
@@ -1360,7 +1360,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const jobs = await storage.getJobs(req.query);
       res.json(jobs);
     } catch (error: any) {
-      res.status(500).json({ message: "Internal server error" });
+      sendError(res, error);
     }
   });
 
@@ -1372,7 +1372,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       res.json(job);
     } catch (error: any) {
-      res.status(500).json({ message: "Internal server error" });
+      sendError(res, error);
     }
   });
 
@@ -1453,7 +1453,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(applications);
     } catch (error: any) {
       console.error("[jobs/applications]", error);
-      res.status(500).json({ message: "Internal server error" });
+      sendError(res, error);
     }
   });
 
@@ -1465,7 +1465,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const flashSales = await storage.getFlashSales(artistId, activeOnly);
       res.json(flashSales);
     } catch (error: any) {
-      res.status(500).json({ message: "Internal server error" });
+      sendError(res, error);
     }
   });
 
@@ -1477,7 +1477,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       res.json(flashSale);
     } catch (error: any) {
-      res.status(500).json({ message: "Internal server error" });
+      sendError(res, error);
     }
   });
 
@@ -1525,7 +1525,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       res.json(updated);
     } catch (error: any) {
-      res.status(500).json({ message: "Internal server error" });
+      sendError(res, error);
     }
   });
 
@@ -1550,7 +1550,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const bookings = await storage.getBookings(filters);
       res.json(bookings);
     } catch (error: any) {
-      res.status(500).json({ message: "Internal server error" });
+      sendError(res, error);
     }
   });
 
@@ -1566,7 +1566,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       res.json(booking);
     } catch (error: any) {
-      res.status(500).json({ message: "Internal server error" });
+      sendError(res, error);
     }
   });
 
@@ -1657,7 +1657,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       res.json(updated);
     } catch (error: any) {
-      res.status(500).json({ message: "Internal server error" });
+      sendError(res, error);
     }
   });
 
@@ -1678,7 +1678,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       res.json(updated);
     } catch (error: any) {
-      res.status(500).json({ message: "Internal server error" });
+      sendError(res, error);
     }
   });
 
@@ -1699,7 +1699,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       res.json(updated);
     } catch (error: any) {
-      res.status(500).json({ message: "Internal server error" });
+      sendError(res, error);
     }
   });
 
@@ -1729,7 +1729,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await storage.deleteBooking(req.params.id);
       res.json({ message: "Booking cancelled" });
     } catch (error: any) {
-      res.status(500).json({ message: "Internal server error" });
+      sendError(res, error);
     }
   });
 
@@ -1762,7 +1762,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }).catch((e) => console.error("[cancellation-request notification]", e));
       res.json({ message: "Cancellation request sent to the artist" });
     } catch (error: any) {
-      res.status(500).json({ message: "Internal server error" });
+      sendError(res, error);
     }
   });
 
@@ -1804,7 +1804,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         res.json({ message: "Cancellation request rejected" });
       }
     } catch (error: any) {
-      res.status(500).json({ message: "Internal server error" });
+      sendError(res, error);
     }
   });
 
@@ -1856,7 +1856,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         remindersCreated 
       });
     } catch (error: any) {
-      res.status(500).json({ message: "Internal server error" });
+      sendError(res, error);
     }
   });
 
@@ -1866,7 +1866,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const events = await storage.getLivestreamEvents(req.query);
       res.json(events);
     } catch (error: any) {
-      res.status(500).json({ message: "Internal server error" });
+      sendError(res, error);
     }
   });
 
@@ -1900,7 +1900,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await storage.updateLivestreamEvent(req.params.id, validated as any);
       res.json({ message: "Event updated" });
     } catch (error: any) {
-      res.status(500).json({ message: "Internal server error" });
+      sendError(res, error);
     }
   });
 
@@ -1912,7 +1912,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await storage.updateLivestreamEvent(req.params.eventId, { status: "LIVE", startedAt: new Date() });
       res.json({ message: "Stream started" });
     } catch (error: any) {
-      res.status(500).json({ message: "Internal server error" });
+      sendError(res, error);
     }
   });
 
@@ -1924,7 +1924,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await storage.updateLivestreamEvent(req.params.eventId, { status: "ENDED", endedAt: new Date() });
       res.json({ message: "Stream ended" });
     } catch (error: any) {
-      res.status(500).json({ message: "Internal server error" });
+      sendError(res, error);
     }
   });
 
@@ -1948,7 +1948,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }).catch(() => {});
       }
     } catch (error: any) {
-      res.status(500).json({ message: "Internal server error" });
+      sendError(res, error);
     }
   });
 
@@ -1980,7 +1980,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const hashtags = await storage.getTrendingHashtags(limit);
       res.json(hashtags);
     } catch (error: any) {
-      res.status(500).json({ message: "Internal server error" });
+      sendError(res, error);
     }
   });
 
@@ -1991,7 +1991,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const notifications = await storage.getNotifications(req.userId!, limit);
       res.json(notifications);
     } catch (error: any) {
-      res.status(500).json({ message: "Internal server error" });
+      sendError(res, error);
     }
   });
 
@@ -2000,7 +2000,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await storage.markNotificationAsRead(req.params.id);
       res.json({ message: "Notification marked as read" });
     } catch (error: any) {
-      res.status(500).json({ message: "Internal server error" });
+      sendError(res, error);
     }
   });
 
@@ -2009,7 +2009,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await storage.markAllNotificationsAsRead(req.userId!);
       res.json({ message: "All notifications marked as read" });
     } catch (error: any) {
-      res.status(500).json({ message: "Internal server error" });
+      sendError(res, error);
     }
   });
 
@@ -2019,7 +2019,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const posts = await getTrendingPosts(limit);
       res.json(posts);
     } catch (error: any) {
-      res.status(500).json({ message: "Internal server error" });
+      sendError(res, error);
     }
   });
 
@@ -2127,7 +2127,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (error?.statusCode === 404 || /not found/i.test(error?.message || "")) {
         return res.status(404).json({ message: "Media not found" });
       }
-      res.status(500).json({ message: "Internal server error" });
+      sendError(res, error);
     }
   });
 
@@ -2217,7 +2217,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const requests = await storage.getStudioApprovalRequests(filters);
       res.json(requests);
     } catch (error: any) {
-      res.status(500).json({ message: "Internal server error" });
+      sendError(res, error);
     }
   });
 
@@ -2301,7 +2301,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const artists = await storage.getApprovedArtists(req.params.studioId);
       res.json(artists);
     } catch (error: any) {
-      res.status(500).json({ message: "Internal server error" });
+      sendError(res, error);
     }
   });
 
@@ -2321,7 +2321,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const studio = await storage.getArtistStudio(req.params.artistId);
       res.json(studio);
     } catch (error: any) {
-      res.status(500).json({ message: "Internal server error" });
+      sendError(res, error);
     }
   });
 
@@ -2350,7 +2350,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       res.json(filteredUsers);
     } catch (error: any) {
-      res.status(500).json({ message: "Internal server error" });
+      sendError(res, error);
     }
   });
 
@@ -2359,7 +2359,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const pendingUsers = await storage.getPendingUsers();
       res.json(pendingUsers);
     } catch (error: any) {
-      res.status(500).json({ message: "Internal server error" });
+      sendError(res, error);
     }
   });
 
@@ -2387,7 +2387,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const stats = await storage.getAdminStats();
       res.json(stats);
     } catch (error: any) {
-      res.status(500).json({ message: "Internal server error" });
+      sendError(res, error);
     }
   });
 
@@ -2403,7 +2403,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       res.json(users);
     } catch (error: any) {
-      res.status(500).json({ message: "Internal server error" });
+      sendError(res, error);
     }
   });
 
@@ -2447,7 +2447,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       res.json(posts);
     } catch (error: any) {
-      res.status(500).json({ message: "Internal server error" });
+      sendError(res, error);
     }
   });
 
@@ -2484,7 +2484,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const jobs = await storage.getAllJobsAdmin();
       res.json(jobs);
     } catch (error: any) {
-      res.status(500).json({ message: "Internal server error" });
+      sendError(res, error);
     }
   });
 
@@ -2521,7 +2521,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const sales = await storage.getAllFlashSalesAdmin();
       res.json(sales);
     } catch (error: any) {
-      res.status(500).json({ message: "Internal server error" });
+      sendError(res, error);
     }
   });
 
@@ -2545,7 +2545,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const bookings = await storage.getAllBookingsAdmin({ status });
       res.json(bookings);
     } catch (error: any) {
-      res.status(500).json({ message: "Internal server error" });
+      sendError(res, error);
     }
   });
 
@@ -2645,7 +2645,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       );
       res.json(rows);
     } catch (error: any) {
-      res.status(500).json({ message: "Internal server error" });
+      sendError(res, error);
     }
   });
 
@@ -2655,7 +2655,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await pool.query("DELETE FROM csp_violations");
       res.json({ message: "All CSP violation reports cleared." });
     } catch (error: any) {
-      res.status(500).json({ message: "Internal server error" });
+      sendError(res, error);
     }
   });
 
