@@ -186,7 +186,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createUser(insertUser: schema.InsertUser) {
-    const [user] = await db.insert(schema.users).values(insertUser as any).returning();
+    const [user] = await db.insert(schema.users).values(insertUser).returning();
     return user;
   }
 
@@ -305,7 +305,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createPost(post: schema.InsertPost) {
-    const [newPost] = await db.insert(schema.posts).values(post as any).returning();
+    const [newPost] = await db.insert(schema.posts).values(post).returning();
     return newPost;
   }
 
@@ -431,7 +431,7 @@ export class DatabaseStorage implements IStorage {
     
     const [newStory] = await db
       .insert(schema.stories)
-      .values({ ...story, expiresAt } as any)
+      .values({ ...story, expiresAt })
       .returning();
     return newStory;
   }
@@ -592,7 +592,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createPortfolioItem(item: schema.InsertPortfolioItem) {
-    const [newItem] = await db.insert(schema.portfolioItems).values(item as any).returning();
+    const [newItem] = await db.insert(schema.portfolioItems).values(item).returning();
     return newItem;
   }
 

@@ -718,17 +718,28 @@ export const insertBookingSchema = createInsertSchema(bookings).omit({
 
 // Types
 export type User = typeof users.$inferSelect;
-export type InsertUser = z.infer<typeof insertUserSchema>;
+export type InsertUser = Omit<
+  typeof users.$inferInsert,
+  "id" | "createdAt" | "updatedAt" | "deletedAt"
+>;
 export type Post = typeof posts.$inferSelect;
-export type InsertPost = z.infer<typeof insertPostSchema>;
+export type InsertPost = Omit<
+  typeof posts.$inferInsert,
+  "id" | "likeCount" | "commentCount" | "saveCount" | "createdAt" | "updatedAt" | "deletedAt" | "embedding"
+> & {
+  embedding?: number[] | null;
+};
 export type Comment = typeof comments.$inferSelect;
 export type InsertComment = z.infer<typeof insertCommentSchema>;
 export type Message = typeof messages.$inferSelect;
 export type InsertMessage = z.infer<typeof insertMessageSchema>;
 export type Story = typeof stories.$inferSelect;
-export type InsertStory = z.infer<typeof insertStorySchema>;
+export type InsertStory = Omit<typeof stories.$inferInsert, "id" | "createdAt">;
 export type PortfolioItem = typeof portfolioItems.$inferSelect;
-export type InsertPortfolioItem = z.infer<typeof insertPortfolioItemSchema>;
+export type InsertPortfolioItem = Omit<
+  typeof portfolioItems.$inferInsert,
+  "id" | "createdAt" | "updatedAt"
+>;
 export type JobPosting = typeof jobPostings.$inferSelect;
 export type InsertJobPosting = z.infer<typeof insertJobPostingSchema>;
 export type LivestreamEvent = typeof livestreamEvents.$inferSelect;
