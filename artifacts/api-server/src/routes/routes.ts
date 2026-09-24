@@ -2380,8 +2380,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Admin Stats Dashboard
   app.get("/api/admin/stats", requireAuth, requireRole(["ADMIN"]), async (req: AuthRequest, res) => {
     try {
-      const stats = await storage.getAdminStats();
-      res.json(stats);
+      const [stats, cspCount] = await Promise.all([
+        storage.getAdminStats(),
+        pool.query<{ count: string }>("SELECT COUNT(*) AS count FROM csp_violations"),
+      ]);
+      res.json({ ...stats, cspViolationCount: Number(cspCount.rows[0].count) });
     } catch (error: any) {
       sendError(res, error);
     }

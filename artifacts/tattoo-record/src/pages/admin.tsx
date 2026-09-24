@@ -63,6 +63,7 @@ export default function AdminDashboard() {
       return res.json();
     },
     enabled: !!token && user?.role === "ADMIN",
+    refetchInterval: 60_000,
   });
 
   // Users for verification
@@ -375,6 +376,7 @@ export default function AdminDashboard() {
     mutationFn: async () => apiRequest("DELETE", "/api/admin/csp-violations"),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/csp-violations"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/stats"] });
       toast({ title: "Reports cleared", description: "All CSP violation reports have been deleted." });
     },
     onError: (error: any) => {
@@ -484,6 +486,14 @@ export default function AdminDashboard() {
               >
                 <item.icon className="w-4 h-4" />
                 <span className="meta text-xs">{item.label}</span>
+                {item.id === "csp-violations" && stats?.cspViolationCount > 0 && (
+                  <Badge
+                    className={activeSection === item.id ? "bg-white text-cobalt hover:bg-white" : "bg-destructive text-destructive-foreground hover:bg-destructive"}
+                    data-testid="badge-csp-violations"
+                  >
+                    {stats.cspViolationCount}
+                  </Badge>
+                )}
               </button>
             ))}
           </div>
@@ -535,6 +545,15 @@ export default function AdminDashboard() {
                         <span className="text-sm">Bookings</span>
                       </div>
                       <p className="text-3xl font-bold">{stats.totalBookings}</p>
+                    </CardContent>
+                  </Card>
+                  <Card data-testid="stat-csp-violations">
+                    <CardContent className="p-6">
+                      <div className="flex items-center gap-2 text-muted-foreground mb-2">
+                        <ShieldAlert className="w-4 h-4" />
+                        <span className="text-sm">CSP Reports</span>
+                      </div>
+                      <p className="text-3xl font-bold">{stats.cspViolationCount}</p>
                     </CardContent>
                   </Card>
                   
