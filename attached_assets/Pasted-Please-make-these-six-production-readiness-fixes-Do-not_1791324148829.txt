@@ -1,0 +1,18 @@
+Please make these six production-readiness fixes. Do not change anything else, and do not publish.
+
+1. In artifacts/api-server/package.json, change the multer dependency from "^2.2.0" to "^2.3.0" and reinstall. Versions below 2.3.0 carry three denial-of-service advisories, and multer handles our upload endpoint.
+
+2. In artifacts/api-server/src/routes/routes.ts, beside the existing authLimiter and emailChangeIpLimiter definitions, add two rate limiters:
+   - aiLimiter: 1 hour window, max 30 in production and 300 otherwise
+   - uploadLimiter: 1 hour window, max 100 in production and 1000 otherwise
+   Both should key on req.userId falling back to "unauthenticated", set standardHeaders: true and legacyHeaders: false, and return a clear message. Apply uploadLimiter to POST /api/upload and aiLimiter to POST /api/ai/tattoo-recommendations, in both cases immediately after requireAuth. Both endpoints cost money per call and currently have no limit at all.
+
+3. In scripts/post-merge.sh, remove the "pnpm --filter db push" line and replace it with a comment explaining that schema changes are applied deliberately instead. Running it on every merge reconciles the production database with whatever the merged code declares, including dropping columns and tables, with no migration history and no review step.
+
+4. In artifacts/api-server/src/services/password-reset-email.ts, immediately after the DEFAULT_FROM constant, throw an error at module load if NODE_ENV is "production" and RESEND_FROM_EMAIL is not set. The default onboarding@resend.dev sender only delivers to the Resend account owner, so production must use a verified domain.
+
+5. In artifacts/api-server/src/app.ts, replace app.use(cors()) with a CORS configuration limited to our own origins: the origin from APP_URL, plus REPLIT_DEV_DOMAIN when it is set. Do not enable credentials — this app authenticates with a Bearer token, not cookies.
+
+6. In artifacts/tattoo-record/index.html, add a favicon link pointing at the existing /favicon.svg, a meta description, and Open Graph and Twitter card tags for title, description and site name. The favicon file already exists in public/ but nothing references it, so no icon loads today.
+
+When you're done, run "pnpm run typecheck" and confirm it reports zero errors.

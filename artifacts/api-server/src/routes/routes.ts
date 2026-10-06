@@ -189,6 +189,24 @@ const emailChangeIpLimiter = rateLimit({
   message: { message: "Too many email change requests. Please try again later." },
 });
 
+const aiLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: process.env.NODE_ENV === "production" ? 30 : 300,
+  keyGenerator: (req: AuthRequest) => req.userId || "unauthenticated",
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { message: "Too many AI recommendation requests. Please try again in an hour." },
+});
+
+const uploadLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: process.env.NODE_ENV === "production" ? 100 : 1000,
+  keyGenerator: (req: AuthRequest) => req.userId || "unauthenticated",
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { message: "Too many upload requests. Please try again in an hour." },
+});
+
 const emailChangeAccountLimiter = rateLimit({
   windowMs: 60 * 60 * 1000,
   max: process.env.NODE_ENV === "production" ? 5 : 100,
@@ -2024,7 +2042,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json({ available: isStorageConfigured() });
   });
 
-  app.post("/api/upload", requireAuth, (req: AuthRequest, res, next) => {
+  app.post("/api/upload", requireAuth, uploadLimiter, (req: AuthRequest, res, next) => {
     if (!isStorageConfigured()) {
       return res.status(503).json({ message: "Image uploads are temporarily unavailable." });
     }
@@ -2128,7 +2146,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // AI Routes
-  app.post("/api/ai/tattoo-recommendations", requireAuth, async (req: AuthRequest, res) => {
+  app.post("/api/ai/tattoo-recommendations", requireAuth, aiLimiter, async (req: AuthRequest, res) => {
     try {
       const validated = validation.aiRecommendationSchema.parse(req.body);
       const recommendations = await generateTattooRecommendations(validated);

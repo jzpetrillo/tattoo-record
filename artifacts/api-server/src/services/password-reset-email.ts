@@ -2,6 +2,10 @@ import { ReplitConnectors } from "@replit/connectors-sdk";
 
 const DEFAULT_FROM = "Tattoo Record <onboarding@resend.dev>";
 
+if (process.env.NODE_ENV === "production" && !process.env.RESEND_FROM_EMAIL?.trim()) {
+  throw new Error("RESEND_FROM_EMAIL must be configured with a verified domain sender in production.");
+}
+
 type EmailChangeDelivery = (to: string, verificationUrl: string) => Promise<void>;
 
 let emailChangeDeliveryOverride: EmailChangeDelivery | undefined;
