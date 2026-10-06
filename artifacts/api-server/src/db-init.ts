@@ -1,9 +1,47 @@
 import { pool } from "./db";
 import bcrypt from "bcrypt";
+import { logger } from "./lib/logger";
 
 const SEED_ADMIN_EMAIL = "SEED_ADMIN_EMAIL";
 const SEED_ADMIN_USERNAME = "SEED_ADMIN_USERNAME";
 const SEED_ADMIN_PASSWORD = "SEED_ADMIN_PASSWORD";
+const CSP_CLEANUP_INTERVAL_MS = 24 * 60 * 60 * 1000;
+let cspCleanupTimer: NodeJS.Timeout | undefined;
+
+function cspRetentionDays(): number {
+  const raw = process.env.CSP_VIOLATION_RETENTION_DAYS ?? "30";
+  const days = Number(raw);
+  if (!/^[1-9]\d*$/.test(raw) || !Number.isSafeInteger(days) || days > 3650) {
+    throw new Error("CSP_VIOLATION_RETENTION_DAYS must be a whole number from 1 to 3650");
+  }
+  return days;
+}
+
+// Retain reports for 30 days by default (configurable via CSP_VIOLATION_RETENTION_DAYS).
+// Clean once at startup and every 24 hours, using the created_at index for expiry.
+export async function cleanupOldCspViolations(): Promise<void> {
+  const days = cspRetentionDays();
+  await pool.query(
+    "DELETE FROM csp_violations WHERE created_at < NOW() - ($1::integer * INTERVAL '1 day')",
+    [days],
+  );
+}
+
+export async function startCspViolationCleanupScheduler(): Promise<void> {
+  if (cspCleanupTimer) return;
+  // CSP storage is optional; an unavailable table must not prevent the API from starting.
+  try {
+    await cleanupOldCspViolations();
+  } catch (err) {
+    logger.error({ err }, "Initial CSP violation cleanup failed; will retry");
+  }
+  cspCleanupTimer = setInterval(() => {
+    void cleanupOldCspViolations().catch((err: unknown) => {
+      logger.error({ err }, "CSP violation cleanup failed");
+    });
+  }, CSP_CLEANUP_INTERVAL_MS);
+  cspCleanupTimer.unref();
+}
 
 export function getSeedAdminConfig() {
   const productionSeedRequested = process.env.PRODUCTION_SEED === "1";

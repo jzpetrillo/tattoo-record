@@ -31,7 +31,7 @@ import { tagTattooImage } from "../services/ai/vision";
 import { embedPost, isVoyageEnabled } from "../services/ai/embeddings";
 import { embed } from "../services/ai/index";
 import { startDigestScheduler } from "../services/digest";
-import { initDatabase } from "../db-init";
+import { initDatabase, startCspViolationCleanupScheduler } from "../db-init";
 import { isDemoLoginEnabled, isDemoLoginRoleAllowed } from "../config/demo-mode";
 import { sendEmailChangeVerificationEmail, sendPasswordResetEmail } from "../services/password-reset-email";
 
@@ -231,6 +231,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Start background jobs
   if (!isTestEnvironment) {
+    await startCspViolationCleanupScheduler();
     startStoryCleanupScheduler();
     if (flags.aiDigest) startDigestScheduler();
   }
