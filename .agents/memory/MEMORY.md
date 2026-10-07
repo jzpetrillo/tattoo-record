@@ -5,3 +5,5 @@
 - [Object Storage SDK runtime](object-storage-sdk-runtime.md) — Initialize the SDK lazily with the explicit bucket ID and preserve its runtime package boundary.
 - [JSON API cache policy](json-api-cache-policy.md) — Dynamic API responses must not emit ETags; bodyless 304s break React Query reloads.
 - [API integration test isolation](api-integration-test-isolation.md) — WebSocket suites must run in isolated processes; shared registration duplicates upgrade handlers.
+- [Feature activation scope](feature-activation-scope.md) — Product features should be visible and connected, but activation never implies permission to publish or mutate databases.
+- [Browser verification environments](browser-verification-environments.md) — The provided testing browser and workspace Playwright CLI have separate browser provisioning.

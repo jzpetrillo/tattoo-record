@@ -3,12 +3,13 @@ import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import SidebarNav from "@/components/layout/sidebar-nav";
 import MobileNav from "@/components/layout/mobile-nav";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { Zap, Clock, MapPin, AlertCircle } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { FlashSaleCardSkeleton } from "@/components/ui/skeletons";
 import { EmptyState } from "@/components/ui/empty-state";
+import { Button } from "@/components/ui/button";
 
 interface FlashSale {
   id: string;
@@ -41,6 +42,7 @@ function useCountdown() {
 
 export default function FlashSalesPage() {
   const { token } = useAuth();
+  const [, setLocation] = useLocation();
   useCountdown(); // triggers a re-render every minute so timers stay live
 
   const { data: flashSales = [], isLoading, isError, refetch } = useQuery<FlashSale[]>({
@@ -204,13 +206,23 @@ export default function FlashSalesPage() {
                   {cardContent}
                 </div>
               ) : (
-                <Link
-                  key={sale.id}
-                  href={`/u/${sale.artist?.username || ''}`}
-                  data-testid={`flash-sale-${sale.id}`}
-                >
-                  {cardContent}
-                </Link>
+                <div key={sale.id} className="space-y-2">
+                  <Link
+                    href={`/u/${sale.artist?.username || ''}`}
+                    data-testid={`flash-sale-${sale.id}`}
+                  >
+                    {cardContent}
+                  </Link>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full"
+                    data-testid={`button-view-flash-sale-${sale.id}`}
+                    onClick={() => setLocation(`/flash-sales/${sale.id}`)}
+                  >
+                    View sale
+                  </Button>
+                </div>
               );
             })}
           </div>

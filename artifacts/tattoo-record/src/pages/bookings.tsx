@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useLocation, useSearch } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
@@ -23,9 +24,11 @@ import MobileNav from "@/components/layout/mobile-nav";
 import { BookingCardSkeleton } from "@/components/ui/skeletons";
 import { EmptyState } from "@/components/ui/empty-state";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { fetchFlashSale, flashSaleAvailability, useFlashSale } from "@/lib/flash-sales";
 
 const bookingSchema = z.object({
   artistId: z.string().min(1, "Artist is required"),
+  flashSaleId: z.string().uuid().optional(),
   title: z.string().min(1, "Title is required"),
   description: z.string().optional(),
   scheduledAt: z.string().min(1, "Date and time required"),
@@ -45,8 +48,24 @@ const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3
 export default function BookingsPage() {
   const { user, token } = useAuth();
   const { toast } = useToast();
-  const requestedArtistId = new URLSearchParams(window.location.search).get("artist") ?? "";
-  const requestedStudioId = new URLSearchParams(window.location.search).get("studio") ?? "";
+  const [, setLocation] = useLocation();
+  const search = useSearch();
+  const params = new URLSearchParams(search);
+  const requestedArtistId = params.get("artist") ?? "";
+  const requestedStudioId = params.get("studio") ?? "";
+  const requestedFlashSaleId = params.get("flashSale") ?? "";
+  const flashSaleId = UUID_PATTERN.test(requestedFlashSaleId) ? requestedFlashSaleId : "";
+  const saleQuery = useFlashSale(flashSaleId);
+  const sale = saleQuery.data;
+  const initializedSaleId = useRef("");
+  const [now, setNow] = useState(Date.now);
+  useEffect(() => {
+    if (!requestedFlashSaleId) return;
+    const timer = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(timer);
+  }, [requestedFlashSaleId]);
+  const saleBlocked = Boolean(requestedFlashSaleId) &&
+    (!sale || !flashSaleAvailability(sale, now).bookable || saleQuery.isError);
   const preselectedArtistId = UUID_PATTERN.test(requestedArtistId)
     ? requestedArtistId
     : "";
@@ -54,7 +73,7 @@ export default function BookingsPage() {
     ? requestedStudioId
     : "";
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
-  const [createDialogOpen, setCreateDialogOpen] = useState(Boolean(preselectedArtistId || preselectedStudioId));
+  const [createDialogOpen, setCreateDialogOpen] = useState(Boolean(preselectedArtistId || preselectedStudioId || requestedFlashSaleId));
 
   const { data: bookings = [], isLoading, isError, refetch } = useQuery<any[]>({
     queryKey: ["/api/bookings", { status: statusFilter }],
@@ -99,7 +118,8 @@ export default function BookingsPage() {
   const form = useForm<BookingFormData>({
     resolver: zodResolver(bookingSchema),
     defaultValues: {
-      artistId: preselectedArtistId,
+      artistId: requestedFlashSaleId ? "" : preselectedArtistId,
+      flashSaleId: flashSaleId || undefined,
       title: "",
       description: "",
       scheduledAt: "",
@@ -111,20 +131,91 @@ export default function BookingsPage() {
     },
   });
 
+  useEffect(() => {
+    initializedSaleId.current = "";
+    form.reset({
+      artistId: requestedFlashSaleId ? "" : preselectedArtistId,
+      flashSaleId: flashSaleId || undefined,
+      title: "",
+      description: "",
+      scheduledAt: "",
+      durationMinutes: 120,
+      depositCents: 0,
+      totalPriceCents: 0,
+      reminderPreference: "DAY_BEFORE",
+      notes: "",
+    });
+    if (requestedFlashSaleId || preselectedArtistId || preselectedStudioId) setCreateDialogOpen(true);
+  }, [requestedFlashSaleId, preselectedArtistId, preselectedStudioId, flashSaleId, form]);
+
+  useEffect(() => {
+    if (!sale || !createDialogOpen || sale.id !== flashSaleId) return;
+    // Artist and price stay tied to the selected sale, even after a refresh.
+    form.setValue("artistId", sale.artistId);
+    form.setValue("totalPriceCents", sale.flashPriceCents);
+    form.setValue("flashSaleId", sale.id);
+    if (initializedSaleId.current !== sale.id) {
+      form.setValue("title", `Flash sale: ${sale.title}`);
+      form.setValue("description", sale.description ?? "");
+      initializedSaleId.current = sale.id;
+    }
+  }, [sale, createDialogOpen, flashSaleId, form]);
+
+  const bookingArtists = sale
+    ? [sale.artist, ...artists.filter((artist) => artist.id !== sale.artist.id)]
+    : artists;
+
   const createMutation = useMutation({
     mutationFn: async (data: BookingFormData) => {
+      if (requestedFlashSaleId && data.flashSaleId !== flashSaleId) {
+        throw new Error("Load a valid flash sale before requesting a booking.");
+      }
+      let selectedSale = null;
+      if (data.flashSaleId) {
+        selectedSale = await fetchFlashSale(data.flashSaleId);
+        if (!selectedSale || !flashSaleAvailability(selectedSale).bookable) {
+          throw new Error("This flash sale is sold out, expired, or no longer available.");
+        }
+        if (selectedSale.flashPriceCents !== data.totalPriceCents) {
+          throw new Error("The discounted price has changed. Review the updated price and submit again.");
+        }
+      }
       return apiRequest("POST", "/api/bookings", {
         ...data,
+        ...(selectedSale ? {
+          flashSaleId: selectedSale.id,
+          artistId: selectedSale.artistId,
+          totalPriceCents: selectedSale.flashPriceCents,
+        } : {}),
         scheduledAt: new Date(data.scheduledAt).toISOString(),
       });
     },
-    onSuccess: () => {
+    onSuccess: (_response, data) => {
       toast({ title: "Booking created", description: "Your booking request has been sent" });
       queryClient.refetchQueries({ queryKey: ["/api/bookings"] });
       setCreateDialogOpen(false);
-      form.reset();
+      form.reset({
+        artistId: preselectedArtistId,
+        flashSaleId: undefined,
+        title: "",
+        description: "",
+        scheduledAt: "",
+        durationMinutes: 120,
+        depositCents: 0,
+        totalPriceCents: 0,
+        reminderPreference: "DAY_BEFORE",
+        notes: "",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/flash-sales?active=true"] });
+      if (data.flashSaleId) {
+        queryClient.invalidateQueries({ queryKey: [`/api/flash-sales/${data.flashSaleId}`] });
+        setLocation("/bookings", { replace: true });
+      }
     },
     onError: (error: Error) => {
+      if (flashSaleId) {
+        queryClient.invalidateQueries({ queryKey: [`/api/flash-sales/${flashSaleId}`] });
+      }
       toast({ title: "Error", description: error.message, variant: "destructive" });
     },
   });
@@ -216,6 +307,10 @@ export default function BookingsPage() {
   };
 
   const onSubmit = (data: BookingFormData) => {
+    if (saleBlocked) {
+      toast({ title: "Flash sale unavailable", description: "Wait for a valid, available sale before booking.", variant: "destructive" });
+      return;
+    }
     createMutation.mutate(data);
   };
 
@@ -259,7 +354,18 @@ export default function BookingsPage() {
                       Create Booking
                     </DialogTitle>
                   </DialogHeader>
-                  
+
+                  {requestedFlashSaleId && (
+                    <div className="border border-border p-3 text-sm" role="status" data-testid="booking-flash-sale-status">
+                      {!flashSaleId ? "Invalid flash sale." : saleQuery.isLoading ? "Loading flash sale…" :
+                        saleQuery.isError ? (
+                          <span>Could not load flash sale. <button type="button" className="underline" onClick={() => saleQuery.refetch()}>Try again</button></span>
+                        ) : !sale ? "Flash sale not found." :
+                          saleBlocked ? "This flash sale is sold out, expired, or no longer available." :
+                            `Booking flash sale: ${sale.title}. Artist and discounted price are preselected.`}
+                    </div>
+                  )}
+
                   <Form {...form}>
                     <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
                       <FormField
@@ -268,7 +374,7 @@ export default function BookingsPage() {
                         render={({ field }) => (
                           <FormItem>
                             <FormLabel className="text-foreground">Artist</FormLabel>
-                            <Select onValueChange={field.onChange} value={field.value}>
+                            <Select onValueChange={field.onChange} value={field.value} disabled={!!requestedFlashSaleId}>
                               <FormControl>
                                 <SelectTrigger 
                                   className="bg-background border-border text-foreground"
@@ -278,7 +384,7 @@ export default function BookingsPage() {
                                 </SelectTrigger>
                               </FormControl>
                               <SelectContent className="bg-background border-border">
-                                {artists.map((artist: any) => (
+                                {bookingArtists.map((artist: any) => (
                                   <SelectItem key={artist.id} value={artist.id}>
                                     {artist.firstName || artist.lastName
                                       ? `${artist.firstName ?? ""} ${artist.lastName ?? ""}`.trim()
@@ -414,8 +520,9 @@ export default function BookingsPage() {
                                   className="bg-background border-border text-foreground"
                                   placeholder="0.00"
                                   data-testid="input-total-price"
+                                  readOnly={!!requestedFlashSaleId}
                                   onChange={(e) => field.onChange(Math.round(parseFloat(e.target.value || "0") * 100))}
-                                  value={field.value ? (field.value / 100).toFixed(2) : ""}
+                                  value={field.value != null && (field.value !== 0 || requestedFlashSaleId) ? (field.value / 100).toFixed(2) : ""}
                                 />
                               </FormControl>
                               <FormMessage />
@@ -486,7 +593,7 @@ export default function BookingsPage() {
                         </Button>
                         <Button
                           type="submit"
-                          disabled={createMutation.isPending}
+                          disabled={createMutation.isPending || saleBlocked}
                           data-testid="button-submit-booking"
                         >
                           {createMutation.isPending ? "Creating..." : "Create Booking"}

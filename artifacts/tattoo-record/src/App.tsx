@@ -22,6 +22,7 @@ import Auth from "@/pages/auth";
 import AdminDashboard from "@/pages/admin";
 import SavedPosts from "@/pages/saved-posts";
 import FlashSales from "@/pages/flash-sales";
+import FlashSaleDetail from "@/pages/flash-sale-detail";
 import Bookings from "@/pages/bookings";
 import AIRecommendations from "@/pages/ai-recommendations";
 import Settings from "@/pages/settings";
@@ -123,6 +124,7 @@ function Router() {
       <Route path="/reels" component={Reels} />
       <Route path="/posts/:id" component={PostDetail} />
       <Route path="/saved">{() => <ProtectedRoute component={SavedPosts} />}</Route>
+      <Route path="/flash-sales/:id" component={FlashSaleDetail} />
       <Route path="/flash-sales" component={FlashSales} />
       <Route path="/bookings">{() => <ProtectedRoute component={Bookings} />}</Route>
       <Route path="/ai-recommendations">{() => <FeatureRoute enabled={aiEnabled} component={AIRecommendations} requiresAuth />}</Route>
