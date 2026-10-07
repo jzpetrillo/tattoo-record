@@ -36,7 +36,7 @@ interface TattooRecommendation {
   aftercareTips: string[];
 }
 
-const AI_ENABLED = import.meta.env.VITE_AI_ENABLED === "true";
+const AI_ENABLED = import.meta.env.VITE_AI_ENABLED !== "false";
 
 export default function AIRecommendations() {
   // All hooks must be called unconditionally before any early return.

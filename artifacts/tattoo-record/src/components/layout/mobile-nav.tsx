@@ -25,12 +25,12 @@ export default function MobileNav() {
     { path: "/explore", icon: Compass, label: "Explore" },
     { path: "/notifications", icon: Heart, label: "Notifications" },
     { path: "/reels", icon: Video, label: "Reels" },
-    ...(import.meta.env.VITE_LIVE_ENABLED === 'true' ? [{ path: "/live", icon: Radio, label: "Live" }] : []),
+    ...(import.meta.env.VITE_LIVE_ENABLED !== 'false' ? [{ path: "/live", icon: Radio, label: "Live" }] : []),
     { path: "/jobs", icon: Briefcase, label: "Jobs" },
     { path: "/bookings", icon: Calendar, label: "Bookings" },
     { path: "/flash-sales", icon: Zap, label: "Flash Sales" },
     { path: "/saved", icon: Bookmark, label: "Saved" },
-    ...(import.meta.env.VITE_AI_ENABLED === 'true' ? [{ path: "/ai-recommendations", icon: Sparkles, label: "AI Recommendations" }] : []),
+    ...(import.meta.env.VITE_AI_ENABLED !== 'false' ? [{ path: "/ai-recommendations", icon: Sparkles, label: "AI Recommendations" }] : []),
     ...(user?.role === "ADMIN" ? [{ path: "/admin", icon: Shield, label: "Admin" }] : []),
   ];
 

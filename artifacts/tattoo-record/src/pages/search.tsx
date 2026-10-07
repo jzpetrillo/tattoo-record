@@ -14,7 +14,7 @@ import { apiRequest } from "@/lib/queryClient";
 
 export default function Search() {
   const { token } = useAuth();
-  const aiEnabled = import.meta.env.VITE_AI_ENABLED === 'true';
+  const aiEnabled = import.meta.env.VITE_AI_ENABLED !== 'false';
   const [searchQuery, setSearchQuery] = useState(() => new URLSearchParams(window.location.search).get("q") ?? "");
   const [semanticMode, setSemanticMode] = useState(false);
 

@@ -2,10 +2,6 @@ import { ReplitConnectors } from "@replit/connectors-sdk";
 
 const DEFAULT_FROM = "Tattoo Record <onboarding@resend.dev>";
 
-if (process.env.NODE_ENV === "production" && !process.env.RESEND_FROM_EMAIL?.trim()) {
-  throw new Error("RESEND_FROM_EMAIL must be configured with a verified domain sender in production.");
-}
-
 type EmailChangeDelivery = (to: string, verificationUrl: string) => Promise<void>;
 
 let emailChangeDeliveryOverride: EmailChangeDelivery | undefined;
@@ -19,6 +15,10 @@ export function setEmailChangeDeliveryOverride(delivery: EmailChangeDelivery | u
 }
 
 export async function sendPasswordResetEmail(to: string, resetUrl: string) {
+  if (process.env.NODE_ENV === "production" && !process.env.RESEND_FROM_EMAIL?.trim()) {
+    throw new Error("RESEND_FROM_EMAIL must be configured with a verified domain sender in production.");
+  }
+
   const connectors = new ReplitConnectors();
   const response = await connectors.proxy("resend", "/emails", {
     method: "POST",
@@ -53,6 +53,10 @@ export async function sendPasswordResetEmail(to: string, resetUrl: string) {
 }
 
 export async function sendEmailChangeVerificationEmail(to: string, verificationUrl: string) {
+  if (process.env.NODE_ENV === "production" && !process.env.RESEND_FROM_EMAIL?.trim()) {
+    throw new Error("RESEND_FROM_EMAIL must be configured with a verified domain sender in production.");
+  }
+
   if (emailChangeDeliveryOverride) {
     await emailChangeDeliveryOverride(to, verificationUrl);
     return;

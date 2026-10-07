@@ -45,7 +45,7 @@ const coreFeatures = [
 ];
 
 export default function Landing() {
-  const features = import.meta.env.VITE_AI_ENABLED === "true"
+  const features = import.meta.env.VITE_AI_ENABLED !== "false"
     ? [...coreFeatures, { title: "AI Discovery", icon: Sparkles, description: "Find relevant work through richer visual context." }]
     : coreFeatures;
 

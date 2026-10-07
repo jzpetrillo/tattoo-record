@@ -29,8 +29,8 @@ import VerifyEmailChange from "@/pages/verify-email-change";
 import PostDetail from "@/pages/post-detail";
 import { ErrorBoundary } from "@/components/error-boundary";
 
-const liveEnabled = import.meta.env.VITE_LIVE_ENABLED === "true";
-const aiEnabled = import.meta.env.VITE_AI_ENABLED === "true";
+const liveEnabled = import.meta.env.VITE_LIVE_ENABLED !== "false";
+const aiEnabled = import.meta.env.VITE_AI_ENABLED !== "false";
 
 function AdminRoute() {
   const { user, token } = useAuth();
