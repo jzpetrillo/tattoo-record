@@ -7,3 +7,5 @@
 - [API integration test isolation](api-integration-test-isolation.md) — WebSocket suites must run in isolated processes; shared registration duplicates upgrade handlers.
 - [Feature activation scope](feature-activation-scope.md) — Product features should be visible and connected, but activation never implies permission to publish or mutate databases.
 - [Browser verification environments](browser-verification-environments.md) — The provided testing browser and workspace Playwright CLI have separate browser provisioning.
+- [Additive database changes](additive-database-changes.md) — Retained legacy tables are absent from the schema; never full-push or reconcile feature changes.
+- [Community tattoo attribution](community-attribution.md) — Open client-to-professional tagging drives community discovery; profile curation must preserve original posts and privacy.

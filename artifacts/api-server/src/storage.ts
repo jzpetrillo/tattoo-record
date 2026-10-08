@@ -8,7 +8,7 @@ import { alias } from "drizzle-orm/pg-core";
 // enforces this, but the list, profile, studio-feed and search paths did not,
 // so private posts leaked through them. Apply this to every query that returns
 // posts to a client so list and detail views agree.
-function postVisibleToViewer(viewerId?: string) {
+export function postVisibleToViewer(viewerId?: string) {
   if (!viewerId) {
     return eq(schema.posts.visibility, "PUBLIC");
   }
@@ -304,9 +304,37 @@ export class DatabaseStorage implements IStorage {
     return Number(result?.count || 0);
   }
 
-  async createPost(post: schema.InsertPost) {
-    const [newPost] = await db.insert(schema.posts).values(post).returning();
-    return newPost;
+  async createPost(post: schema.InsertPost, taggedAccountIds: string[] = []) {
+    // Commit the post, its attributions, and notifications together. A failed
+    // tag/notification must not leave a partially created post behind.
+    return db.transaction(async (tx) => {
+      if (taggedAccountIds.length > 10 || new Set(taggedAccountIds).size !== taggedAccountIds.length) {
+        throw new InvalidPostTagError("Tag up to 10 different artists or studios");
+      }
+      if (taggedAccountIds.length) {
+        const accounts = await tx.select({ id: schema.users.id }).from(schema.users).where(and(
+          inArray(schema.users.id, taggedAccountIds),
+          inArray(schema.users.role, ["ARTIST", "STUDIO"]),
+          isNull(schema.users.deletedAt),
+          eq(schema.users.isBanned, false),
+        ));
+        if (accounts.length !== taggedAccountIds.length) {
+          throw new InvalidPostTagError("Only active artist or studio accounts can be tagged");
+        }
+      }
+      const [newPost] = await tx.insert(schema.posts).values(post).returning();
+      if (taggedAccountIds.length) {
+        await tx.insert(schema.postAccountTags).values(taggedAccountIds.map((id) => ({
+          postId: newPost.id, taggedAccountId: id, taggedById: post.authorId,
+        })));
+        await tx.insert(schema.notifications).values(taggedAccountIds.map((id) => ({
+          userId: id,
+          type: "POST_TAG" as const,
+          payload: { actorId: post.authorId, postId: newPost.id },
+        })));
+      }
+      return newPost;
+    });
   }
 
   async updatePostCaption(id: string, caption: string | null) {
@@ -1727,5 +1755,7 @@ export class DatabaseStorage implements IStorage {
     }));
   }
 }
+
+export class InvalidPostTagError extends Error {}
 
 export const storage = new DatabaseStorage();

@@ -8,7 +8,8 @@ import rateLimit from "express-rate-limit";
 import { eq, and, isNull, desc } from "drizzle-orm";
 import { db, pool } from "../db";
 import * as schema from "@workspace/db";
-import { storage } from "../storage";
+import { storage, InvalidPostTagError } from "../storage";
+import { registerPostTagRoutes } from "./post-tags";
 import { requireAuth, optionalAuth, requireRole, generateToken, type AuthRequest } from "../middleware/auth";
 import {
   contentTypeFromKey,
@@ -217,6 +218,7 @@ const emailChangeAccountLimiter = rateLimit({
 });
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  registerPostTagRoutes(app);
   const httpServer = createServer(app);
   const isTestEnvironment = process.env.NODE_ENV === "test";
 
@@ -933,10 +935,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/posts", requireAuth, async (req: AuthRequest, res) => {
     try {
       const validated = validation.createPostSchema.parse(req.body);
+      const { taggedAccountIds, ...postInput } = validated;
       const post = await storage.createPost({
-        ...validated,
+        ...postInput,
         authorId: req.userId!
-      });
+      }, taggedAccountIds);
       res.json(post);
 
       // Fire-and-forget AI enrichment after response is sent
@@ -975,6 +978,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         entityType: "post",
       }).catch(() => {});
     } catch (error: any) {
+      if (error instanceof InvalidPostTagError) {
+        res.status(400).json({ message: error.message });
+        return;
+      }
       sendError(res, error);
     }
   });
@@ -2334,7 +2341,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/artists/:artistId/studio", async (req, res) => {
     try {
       const studio = await storage.getArtistStudio(req.params.artistId);
-      res.json(studio);
+      // An independent artist has no studio, but still has a valid profile.
+      // res.json(undefined) sends an empty body that JSON clients cannot parse.
+      res.json(studio ?? {});
     } catch (error: any) {
       sendError(res, error);
     }

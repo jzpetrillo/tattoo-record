@@ -7,6 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, Heart, Bookmark, AlertCircle, Loader2 } from "lucide-react";
 import UserAvatar from "@/components/user-avatar";
 import PostOwnerActions from "@/components/posts/post-owner-actions";
+import PostTags from "@/components/posts/post-tags";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 
@@ -267,6 +268,7 @@ export default function PostDetail() {
             </button>
           </div>
           
+          <div className="mb-4"><PostTags postId={postData.id} /></div>
           {displayedCaption && (
             <div className="mb-6 border-l-2 border-ink pl-4 py-1">
               <p className="font-sans text-[15px] leading-relaxed whitespace-pre-wrap text-ink">

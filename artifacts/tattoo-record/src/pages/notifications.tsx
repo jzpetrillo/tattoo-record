@@ -4,7 +4,7 @@ import { apiRequest } from "@/lib/api";
 import SidebarNav from "@/components/layout/sidebar-nav";
 import MobileNav from "@/components/layout/mobile-nav";
 import { useAuth } from "@/hooks/use-auth";
-import { Heart, MessageCircle, UserPlus, CheckCircle, Bell, UserCheck, Eye, Calendar, XCircle, AlertCircle } from "lucide-react";
+import { Heart, MessageCircle, UserPlus, CheckCircle, Bell, UserCheck, Eye, Calendar, Tag, XCircle, AlertCircle } from "lucide-react";
 import { formatDistanceToNow, isToday, isYesterday, isThisWeek, format } from "date-fns";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
@@ -16,7 +16,7 @@ interface Notification {
   notification: {
     id: string;
     userId: string;
-    type: "FOLLOW" | "LIKE" | "COMMENT" | "APPROVAL" | "SYSTEM" | "CANCELLATION_REQUEST" | "CANCELLATION_APPROVED" | "CANCELLATION_REJECTED";
+    type: "FOLLOW" | "LIKE" | "COMMENT" | "APPROVAL" | "POST_TAG" | "SYSTEM" | "CANCELLATION_REQUEST" | "CANCELLATION_APPROVED" | "CANCELLATION_REJECTED";
     payload: {
       actorId?: string;
       postId?: string;
@@ -116,6 +116,8 @@ export default function Notifications() {
         return <Heart className="w-5 h-5 text-muted-foreground" />;
       case "COMMENT":
         return <MessageCircle className="w-5 h-5 text-muted-foreground" />;
+      case "POST_TAG":
+        return <Tag className="w-5 h-5 text-muted-foreground" />;
       case "APPROVAL":
         return <CheckCircle className="w-5 h-5 text-muted-foreground" />;
       case "CANCELLATION_REQUEST":
@@ -148,6 +150,8 @@ export default function Notifications() {
         return <><span className="font-semibold">{actorName}</span> liked your post</>;
       case "COMMENT":
         return <><span className="font-semibold">{actorName}</span> commented on your post</>;
+      case "POST_TAG":
+        return <><span className="font-semibold">{actorName}</span> tagged you in a post. Take a look at the work</>;
       case "APPROVAL":
         return payload.message || <><span className="font-semibold">{actorName}</span> approved your booking <span className="font-semibold">{resolvedBookingTitle}</span></>;
       case "SYSTEM":
@@ -184,7 +188,7 @@ export default function Notifications() {
     
     if (type === "FOLLOW" && notification.actor) {
       setLocation(`/u/${notification.actor.username}`);
-    } else if ((type === "LIKE" || type === "COMMENT") && payload.postId) {
+    } else if ((type === "LIKE" || type === "COMMENT" || type === "POST_TAG") && payload.postId) {
       setLocation(`/posts/${encodeURIComponent(payload.postId)}`);
     } else if (notification.actor) {
       setLocation(`/u/${notification.actor.username}`);
@@ -342,7 +346,7 @@ export default function Notifications() {
                             </Button>
                           )}
 
-                          {(notification.notification.type === "LIKE" || notification.notification.type === "COMMENT") && notification.notification.payload.postId && (
+                          {(notification.notification.type === "LIKE" || notification.notification.type === "COMMENT" || notification.notification.type === "POST_TAG") && notification.notification.payload.postId && (
                             <Button
                               size="sm"
                               variant="ghost"

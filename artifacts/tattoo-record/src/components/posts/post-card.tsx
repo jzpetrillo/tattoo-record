@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Link } from "wouter";
 import UserAvatar from "@/components/user-avatar";
+import PostTags from "@/components/posts/post-tags";
 import PostOwnerActions from "@/components/posts/post-owner-actions";
 
 interface PostCardProps {
@@ -23,6 +24,9 @@ export default function PostCard({ post, author, isLiked = false, isSaved = fals
   const { token, user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const refreshTaggedProfiles = () => queryClient.invalidateQueries({
+    predicate: (query) => typeof query.queryKey[0] === "string" && query.queryKey[0].endsWith("/tagged-posts"),
+  });
   const [showComments, setShowComments] = useState(false);
   const [showShareDialog, setShowShareDialog] = useState(false);
   const [commentText, setCommentText] = useState("");
@@ -93,6 +97,7 @@ export default function PostCard({ post, author, isLiked = false, isSaved = fals
     onSettled: () => {
       // Always refetch after mutation to ensure server state is correct
       queryClient.invalidateQueries({ queryKey: ["/api/posts"] });
+      refreshTaggedProfiles();
     },
   });
 
@@ -108,6 +113,7 @@ export default function PostCard({ post, author, isLiked = false, isSaved = fals
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/posts/${post.id}/comments`] });
       queryClient.invalidateQueries({ queryKey: ["/api/posts"] });
+      refreshTaggedProfiles();
       setCommentText("");
     },
     onError: (error: Error) => {
@@ -153,6 +159,7 @@ export default function PostCard({ post, author, isLiked = false, isSaved = fals
       });
       queryClient.invalidateQueries({ queryKey: ["/api/saved-posts"] });
       queryClient.invalidateQueries({ queryKey: ["/api/posts"] });
+      refreshTaggedProfiles();
     },
     onError: (error: Error) => {
       toast({ title: "Error", description: error.message, variant: "destructive" });
@@ -245,6 +252,7 @@ export default function PostCard({ post, author, isLiked = false, isSaved = fals
               {currentCaption}
             </p>
           )}
+          <div className="mt-1"><PostTags postId={post.id} /></div>
           {post.commentCount > 0 && (
             <button 
               onClick={() => setShowComments(true)}

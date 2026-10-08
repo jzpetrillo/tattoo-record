@@ -41,7 +41,8 @@ export const notificationTypeEnum = pgEnum("notification_type", [
   "SYSTEM",
   "CANCELLATION_REQUEST",
   "CANCELLATION_APPROVED",
-  "CANCELLATION_REJECTED"
+  "CANCELLATION_REJECTED",
+  "POST_TAG"
 ]);
 export const conversationRoleEnum = pgEnum("conversation_role", ["MEMBER", "ADMIN"]);
 export const approvalStatusEnum = pgEnum("approval_status", [
@@ -185,6 +186,19 @@ export const posts = pgTable("posts", {
   typeIdx: index("posts_type_idx").on(table.type),
   createdAtIdx: index("posts_created_at_idx").on(table.createdAt),
   featuredIdx: index("posts_featured_idx").on(table.isFeatured)
+}));
+
+// Removing a tag from a profile never removes the attribution on the post.
+export const postAccountTags = pgTable("post_account_tags", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  postId: uuid("post_id").notNull().references(() => posts.id, { onDelete: "cascade" }),
+  taggedAccountId: uuid("tagged_account_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  taggedById: uuid("tagged_by_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  removedFromProfile: boolean("removed_from_profile").notNull().default(false),
+}, (table) => ({
+  uniquePostAccount: uniqueIndex("post_account_tags_post_account_idx").on(table.postId, table.taggedAccountId),
+  accountIdx: index("post_account_tags_account_idx").on(table.taggedAccountId, table.removedFromProfile, table.createdAt),
 }));
 
 export const postLikes = pgTable("post_likes", {

@@ -233,6 +233,27 @@ async function ensureCaseInsensitiveEmailUniqueness() {
 }
 
 export async function initDatabase() {
+  // Additive only: deliberately retained legacy tables must never be reconciled
+  // against the schema file. Each statement is safe to repeat on every startup.
+  await pool.query(`ALTER TYPE notification_type ADD VALUE IF NOT EXISTS 'POST_TAG'`);
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS post_account_tags (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      post_id UUID NOT NULL REFERENCES posts(id) ON DELETE CASCADE,
+      tagged_account_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      tagged_by_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+      removed_from_profile BOOLEAN NOT NULL DEFAULT FALSE
+    )
+  `);
+  await pool.query(`
+    CREATE UNIQUE INDEX IF NOT EXISTS post_account_tags_post_account_idx
+      ON post_account_tags (post_id, tagged_account_id)
+  `);
+  await pool.query(`
+    CREATE INDEX IF NOT EXISTS post_account_tags_account_idx
+      ON post_account_tags (tagged_account_id, removed_from_profile, created_at DESC)
+  `);
   await pool.query(`
     ALTER TABLE users
       ADD COLUMN IF NOT EXISTS email_verified_at TIMESTAMPTZ

@@ -17,9 +17,10 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { apiRequest as apiRequestLib, uploadFile } from "@/lib/api";
+import TaggedPostsPanel from "@/components/posts/tagged-posts-panel";
 import UserAvatar from "@/components/user-avatar";
 
-type TabType = "POSTS" | "VIDEOS" | "PORTFOLIO" | "ARTIST_FEED";
+type TabType = "POSTS" | "VIDEOS" | "PORTFOLIO" | "ARTIST_FEED" | "TAGGED";
 
 interface UserProfile {
   id: string;
@@ -71,6 +72,9 @@ export default function Profile() {
   const params = useParams();
   const username = params.username;
   const [activeTab, setActiveTab] = useState<TabType>("POSTS");
+  useEffect(() => {
+    setActiveTab("POSTS");
+  }, [username]);
   const [, navigate] = useLocation();
   const [showAddPortfolio, setShowAddPortfolio] = useState(false);
   const [editingPortfolio, setEditingPortfolio] = useState<PortfolioItem | null>(null);
@@ -553,7 +557,7 @@ export default function Profile() {
           </div>
 
         {/* Artist's Studio Connection */}
-        {user?.role === "ARTIST" && studioConnection && (
+        {user?.role === "ARTIST" && studioConnection?.studio && (
           <div className="border-b border-border px-6 py-4 bg-card">
             <div className="flex items-center gap-3">
               <Building2 className="w-5 h-5 text-muted-foreground" />
@@ -566,7 +570,7 @@ export default function Profile() {
         )}
 
         {/* Studio Connection Dialog for Artists viewing their own profile */}
-        {isOwnProfile && user?.role === "ARTIST" && !studioConnection && (
+        {isOwnProfile && user?.role === "ARTIST" && !studioConnection?.studio && (
           <div className="mb-6">
             <StudioConnectionDialog />
           </div>
@@ -653,7 +657,7 @@ export default function Profile() {
 
         {/* Tabs - Posts, Videos, Portfolio */}
         <div className="border-b border-border">
-          <div className={`grid min-w-0 ${(connectedArtists?.length ?? 0) > 0 && user?.role === "STUDIO" ? "grid-cols-4" : "grid-cols-3"}`}>
+          <div className="grid min-w-0 grid-flow-col auto-cols-fr">
             <button
               onClick={() => setActiveTab("POSTS")}
               className={`flex min-w-0 items-center justify-center gap-2 px-2 py-3 transition-colors ${
@@ -700,11 +704,27 @@ export default function Profile() {
                 <span className="meta text-[10px] sm:text-xs">Artist Feed</span>
               </button>
             )}
+            {(user?.role === "STUDIO" || user?.role === "ARTIST") && (
+              <button
+                onClick={() => setActiveTab("TAGGED")}
+                className={`flex min-w-0 items-center justify-center gap-2 px-2 py-3 transition-colors ${
+                  activeTab === "TAGGED" ? "bg-cobalt text-white font-semibold" : "text-muted-foreground hover:text-foreground hover:bg-secondary"
+                }`}
+                data-testid="tab-tagged"
+              >
+                <UserPlus className="w-4 h-4" />
+                <span className="meta text-[10px] sm:text-xs">{user.role === "STUDIO" ? "Our Clients" : "Client Work"}</span>
+              </button>
+            )}
           </div>
         </div>
 
+        {activeTab === "TAGGED" && user && (user.role === "STUDIO" || user.role === "ARTIST") && (
+          <TaggedPostsPanel accountId={user.id} role={user.role} isOwnProfile={isOwnProfile} />
+        )}
+
         {/* Posts/Videos Grid */}
-        {activeTab !== "PORTFOLIO" && (
+        {activeTab !== "PORTFOLIO" && activeTab !== "TAGGED" && (
           <>
             <div className="grid grid-cols-3 gap-px mt-1">
               {(activeTab === "ARTIST_FEED" ? artistFeedPosts : userPosts)?.map((item: any, idx: number) => (

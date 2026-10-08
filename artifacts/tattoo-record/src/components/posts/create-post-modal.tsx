@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import TagPicker, { type TaggableAccount } from "@/components/posts/tag-picker";
 import { ImageIcon, VideoIcon, Clock, X } from "lucide-react";
 
 interface CreatePostModalProps {
@@ -84,6 +85,7 @@ export default function CreatePostModal({ open, onClose, defaultTab = "post" }: 
   const [caption, setCaption] = useState("");
   const [files, setFiles] = useState<File[]>([]);
   const [visibility, setVisibility] = useState<"PUBLIC" | "FOLLOWERS">("PUBLIC");
+  const [tagged, setTagged] = useState<TaggableAccount[]>([]);
   const [activeTab, setActiveTab] = useState<"post" | "story" | "reel">(defaultTab);
   const uploadStatusQuery = useQuery<{ available: boolean }>({
     queryKey: ["/api/upload/status"],
@@ -109,11 +111,15 @@ export default function CreatePostModal({ open, onClose, defaultTab = "post" }: 
           caption,
           media,
           visibility,
+          taggedAccountIds: tagged.map((t) => t.id),
         },
         token!
       );
     },
     onSuccess: () => {
+      queryClient.invalidateQueries({
+        predicate: (query) => typeof query.queryKey[0] === "string" && query.queryKey[0].endsWith("/tagged-posts"),
+      });
       queryClient.invalidateQueries({ queryKey: ["/api/posts"] });
       toast({ title: "Success", description: "Post created successfully!" });
       onClose();
@@ -166,6 +172,7 @@ export default function CreatePostModal({ open, onClose, defaultTab = "post" }: 
           media: [media],
           visibility,
           type: "REEL",
+          taggedAccountIds: tagged.map((t) => t.id),
         },
         token!
       );
@@ -184,6 +191,7 @@ export default function CreatePostModal({ open, onClose, defaultTab = "post" }: 
   const resetForm = () => {
     setCaption("");
     setFiles([]);
+    setTagged([]);
     setVisibility("PUBLIC");
     setActiveTab("post");
   };
@@ -264,6 +272,8 @@ export default function CreatePostModal({ open, onClose, defaultTab = "post" }: 
                 data-testid="textarea-caption"
               />
             </div>
+
+            <TagPicker selected={tagged} onChange={setTagged} />
 
             <div>
               <label className="block text-sm font-medium mb-2">Visibility</label>
@@ -365,6 +375,8 @@ export default function CreatePostModal({ open, onClose, defaultTab = "post" }: 
                 data-testid="textarea-reel-caption"
               />
             </div>
+
+            <TagPicker selected={tagged} onChange={setTagged} />
 
             <div>
               <label className="block text-sm font-medium mb-2">Visibility</label>

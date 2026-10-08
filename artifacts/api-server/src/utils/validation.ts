@@ -128,6 +128,8 @@ export const registerSchema = z.object({
 });
 
 export const createPostSchema = z.object({
+  taggedAccountIds: z.array(z.string().uuid()).max(10, "You can tag up to 10 artists or studios").default([])
+    .refine((ids) => new Set(ids).size === ids.length, "An account can only be tagged once"),
   type: z.enum(["POST", "REEL", "STORY"]).default("POST"),
   caption: z.string().optional(),
   media: z.array(mediaItemSchema).optional().default([]),
